@@ -13,12 +13,12 @@ if __name__ == '__main__':
     GROUP_NAME = 'equation_of_state'
     CommonWorflows = WorkflowFactory('common_workflows.eos')
     node_type = CommonWorflows 
-    CREATE_SURFACE = False
-    STRUCTURES_GROUP_LABEL = 'fcc_111/surfaces'
+    CREATE_SURFACE = True
+    STRUCTURES_GROUP_LABEL = 'fcc_111/6x6x4/surfaces/initial_structures'
 
     CREATE_ADSORBATES = True
-    C_STRUCTURE_GROUP_LABEL = 'fcc_111/c_adsorption'
-    O_STRUCTURE_GROUP_LABEL = 'fcc_111/o_adsorption'
+    C_STRUCTURE_GROUP_LABEL = 'fcc_111/6x6x4/c_adsorption/initial_structures'
+    O_STRUCTURE_GROUP_LABEL = 'fcc_111/6x6x4/o_adsorption/initial_structures'
     
     StructureData = DataFactory('structure')
 
@@ -65,7 +65,7 @@ if __name__ == '__main__':
         
         if CREATE_ADSORBATES:
             a = v0**(1/3)
-            surface = fcc111(metal, size=(4,4,4), vacuum=10, a=a)
+            surface = fcc111(metal, size=(6,6,4), vacuum=10, a=a)
 
             # Add a carbon
             c_ase_structure = surface.copy()

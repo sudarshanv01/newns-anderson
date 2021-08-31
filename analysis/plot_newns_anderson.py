@@ -13,7 +13,7 @@ BaseGPAW = WorkflowFactory('ase.gpaw.base')
 if __name__ == '__main__':
 
     # Query for the data of the group
-    GROUP_NAME = 'fcc_111/c_adsorption/scf_calculation'
+    GROUP_NAME = 'fcc_111/6x6x4/c_adsorption/scf_calculation'
     TYPE_OF_CALC = BaseGPAW 
     POSSIBLE_ADSORBATE_INDEX = ['C', 'O', 'N', 'H']
     ADSORBATE_BASIS_INDEX = 13 # Last elements of the H, S matrix
@@ -58,15 +58,19 @@ if __name__ == '__main__':
         adsorbate_index = all_index[-ADSORBATE_BASIS_INDEX:]
         metal_index = all_index[:-ADSORBATE_BASIS_INDEX]
 
+        # Range of values for which we want delta to be plotted
+        delta_range = np.array([-6, 6]) + fermi_energy 
+        # Decide if more padding with zero's is required
+        PAD_RANGE = np.array([10, 10]) # Pad with zeros 10 eV on either side
         # Perform all the manipulations of the Newns-Anderson model
-        newns = NewnsAndersonLCAO(H_MM, S_MM, adsorbate_index, metal_index, broadening_width=0.2)
+        newns = NewnsAndersonLCAO(H_MM, S_MM, adsorbate_index, metal_index,
+                                    broadening_width=0.1, cutoff_range=delta_range,
+                                    pad_range=PAD_RANGE)
         # Plot the relevant quantities
         for i, eps_a in enumerate(newns.eigenval_ads):
             figa, axa = plt.subplots(1, 1, figsize=(8,4), constrained_layout=True)
             axa.axvline(fermi_energy, color='black', linestyle='--', label='Fermi Energy')
-            index_plot = [a for a in range(len(newns.eigenval_metal)) 
-                    if fermi_energy - 3 < newns.eigenval_metal[a] < fermi_energy + 3]
-            axa.plot(newns.eigenval_metal[index_plot], newns.delta[i][index_plot], label='Delta', lw=3)
-            # axa.plot(newns.eigenval_metal[index_plot], newns.Lambda[i][index_plot], label='Lambda', lw=3)
+            axa.plot(newns.eigenval_metal, newns.delta[i], label='Delta', lw=3)
+            axa.plot(newns.eigenval_metal, newns.Lambda[i], label='Lambda', lw=3)
             figa.savefig('output/delta/{}_delta_{}.png'.format(metal_name, np.round(eps_a,2)))
             plt.close(figa)

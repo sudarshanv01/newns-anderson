@@ -13,7 +13,7 @@ def runner(structure):
     builder.structure = structure
 
     # Code specifications
-    code = load_code('gpaw.21.6.0@dtu_xeon8')
+    code = load_code('gpaw.21.6.0@dtu_xeon16')
     builder.gpaw.code = code
 
     # k-point information
@@ -68,8 +68,8 @@ def runner(structure):
     subgroup.add_nodes(calculation)
 
 if __name__ == '__main__':
-    GROUP_NAME = 'fcc_111/surfaces/initial_structures'
-    CALC_GROUPNAME = 'fcc_111/surfaces/scf_calculation'
+    GROUP_NAME = 'fcc_111/6x6x4/o_adsorption/initial_structures'
+    CALC_GROUPNAME = 'fcc_111/6x6x4/o_adsorption/scf_calculation'
     subgroup, _ = orm.Group.objects.get_or_create(label=CALC_GROUPNAME)
 
     qb = QueryBuilder()
@@ -77,5 +77,4 @@ if __name__ == '__main__':
     qb.append(Node, with_group='Group', tag='Screening')
 
     for i, node in enumerate(qb.all(flat=True)):
-        if i > 0:
-            runner(node)
+        runner(node)

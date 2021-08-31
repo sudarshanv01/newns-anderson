@@ -10,12 +10,16 @@ class NewnsAndersonLCAO:
     S_MM: list
     adsorbate_basis_index: list
     metal_basis_index: list
-    broadening_width:float = 0.1
+    cutoff_range: list 
+    pad_range: list
+    broadening_width: float
 
     def __post_init__(self):
         """Post initialization method."""
         self.get_chemisorption_function()
         self.order_chemsorption_function_by_energy()
+        self.cutoff_delta()
+        self.pad_with_zeros()
         self.smoothen_chemisorption_function()
         self.get_adsorbate_density_of_states()
 
@@ -38,7 +42,7 @@ class NewnsAndersonLCAO:
                 translation[index[i], index[j]] = eigenvec[i, j]
         
         # Unitary transform to convert the overall H
-        # Trans^T . H . Trans
+        # Trans^T* . H . Trans
         self.H_MM = np.dot(np.transpose(np.conj(translation)), np.dot(self.H_MM, translation)) 
         self.S_MM = np.dot(np.transpose(np.conj(translation)), np.dot(self.S_MM, translation))
 
@@ -66,6 +70,26 @@ class NewnsAndersonLCAO:
         self.eigenval_ads = np.real(eigenval_ads)
         self.eigenval_metal = np.real(eigenval_metal)
     
+    def cutoff_delta(self):
+        """Cutoff the delta function at a certain distance away from the fermi energy."""
+        accepted_index = [index for index in range(len(self.eigenval_metal)) 
+                                if self.eigenval_metal[index] > self.cutoff_range[0] and
+                                self.eigenval_metal[index] < self.cutoff_range[1]]
+        self.delta = self.delta[:, accepted_index]
+        self.eigenval_metal = self.eigenval_metal[accepted_index]
+    
+    def pad_with_zeros(self):
+        """Pad the chemisorption function with zeros."""
+        shape_delta = self.delta.shape + np.array([0, self.pad_range[0]+self.pad_range[1]])
+        padded_delta = np.zeros(shape_delta)
+        for i in range(len(self.delta)):
+            padded_delta[i] = np.pad(self.delta[i], (self.pad_range[0], self.pad_range[1]), 'constant')
+        self.delta = padded_delta
+        # Extra energy values
+        negative_energies = np.linspace(-10, 0, self.pad_range[0]) + self.eigenval_metal[0]
+        positive_energies = np.linspace(0, 10, self.pad_range[1]) + self.eigenval_metal[-1]
+        self.eigenval_metal = np.concatenate((negative_energies, self.eigenval_metal, positive_energies), axis=None)
+
     def order_chemsorption_function_by_energy(self):
         """Order the chemisorption function by energy."""
         for i in range(len(self.delta)):
