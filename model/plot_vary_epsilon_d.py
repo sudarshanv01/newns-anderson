@@ -1,53 +1,74 @@
-"""Plot the Newns-Anderson model for some specific instances."""
+
+from NewnsAnderson import NewnsAndersonAnalytical
 
 import numpy as np
 import matplotlib.pyplot as plt
-from NewnsAnderson import NewnsAndersonModel
 from plot_params import get_plot_params
 get_plot_params()
 
-
 if __name__ == '__main__':
-    # Define the parameters
-    ADSORBATE_ENERGIES = [-5, -2.5, 0]
-    COUPLING = [4, 6]
-    ENERGY_RANGE = np.linspace(-30, 20 , 1000)
-    METAL_ENERGIES = np.linspace(-15, 6, 100) 
-    PLOT_IDEAL_DOS = False
 
-    fig, ax = plt.subplots(1, 1, figsize=(12, 6), constrained_layout=True)
-    
-    for i, eps_a in enumerate(ADSORBATE_ENERGIES):
-        for j, V in enumerate(COUPLING):
-            energies = np.zeros(len(METAL_ENERGIES))
-            figd, axd = plt.subplots(1, len(METAL_ENERGIES), figsize=(4*len(METAL_ENERGIES), 5), constrained_layout=True)
+    EPSILON_RANGE = np.linspace(-20, 20, 2000) # in eV
+    BETA_PRIME = [1, 1.5] # in 2beta
+    EPSILON_SIGMA = [0., -2.5, -5.] # in eV
+    EPSILON_D = np.linspace(-7, 4, 5) # in eV
+    BETA = 0.5 # in units of eV
+    PLOT_DOS = True
+
+    fige, axe = plt.subplots(1, 1, figsize=(8, 6), constrained_layout=True)
+
+    for s, eps_sigma in enumerate(EPSILON_SIGMA):
+
+        if PLOT_DOS:
+            fig, ax = plt.subplots(len(BETA_PRIME), len(EPSILON_D), figsize=(5*len(EPSILON_D), 4*len(BETA_PRIME)), constrained_layout=True)
+
+        for b, beta_p in enumerate(BETA_PRIME):
+
             all_energies = []
-            for k, eps_d in enumerate(METAL_ENERGIES):
-                n = NewnsAndersonModel(
-                    eps_a=eps_a, 
-                    coupling=V,
-                    eps_d=eps_d, 
-                    eps=ENERGY_RANGE)
-                n.calculate()
-                if PLOT_IDEAL_DOS:
-                    axd[k].plot(n.Delta, n.eps, color='k', lw=3)
-                    axd[k].plot(n.Lambda, n.eps, color='tab:blue')
-                    axd[k].plot(n.eps-n.eps_a, n.eps, color='tab:red')
-                    axd[k].axhline(n.eps_d, color='k', ls='--')
-                    axd[k].axhline(n.eps_a, color='tab:green', ls='--')
-                    axd[k].plot(n.na, n.eps, color='tab:green', lw=3)
-                    xlim = [-2*np.max(n.Delta), 2*np.max(n.Delta)]
-                    axd[k].set_xlim(xlim)
-                    axd[k].set_ylabel(r'$\epsilon - \epsilon_{F}$')
-                    axd[k].set_xticks([])
-                all_energies.append([n.eps_d, n.energy])
-            if PLOT_IDEAL_DOS:
-                figd.savefig('output/NewnsAnderson_eps_a_%1.2f_%1.2f.png' % (eps_a, V))
-            all_d, all_hyb = np.array(all_energies).T
-            all_d_sorted = all_d[np.argsort(all_d)]
-            all_hyb_sorted = all_hyb[np.argsort(all_d)]
-            ax.plot(all_d_sorted, all_hyb_sorted, '.-', label=f'$\epsilon_a$ = {eps_a} eV, $V$ = {V} eV')
-    ax.set_xlabel('$\epsilon_d$ (eV)')
-    ax.set_ylabel('Hybridisation Energy (eV)')
-    ax.legend(bbox_to_anchor=(1.04,0), loc="lower left", borderaxespad=0)
-    fig.savefig('output/hybridisation_energy_vary_eps_d.png')
+            for d, eps_d in enumerate(EPSILON_D):
+
+                newns = NewnsAndersonAnalytical(beta = beta_p, 
+                                                beta_p = beta_p,
+                                                eps_d = eps_d,
+                                                eps_sigma = eps_sigma,
+                                                eps = EPSILON_RANGE )
+
+                if PLOT_DOS:
+                    # All quantities plotted in units of 2beta
+                    ax[b,d].plot( newns.eps , newns.Delta, label = r'$\Delta$' )
+                    ax[b,d].plot( newns.eps , newns.Lambda, label = r'$\Lambda$' )
+                    ax[b,d].plot( newns.eps , newns.eps - newns.eps_sigma, label = r'$\epsilon$' )
+                    ax[b,d].fill_between( newns.eps , newns.rho_aa, color='tab:red', label='$\rho_{aa}$')
+
+                    ax[b,d].annotate( r"$\beta' = %.1f$" % beta_p,
+                                        xy = (0.01, 0.9),
+                                        xycoords='axes fraction',
+                                        horizontalalignment='left',
+                                        verticalalignment='top' )
+                    print(newns.lower_band_edge*2*beta_p)
+                    ax[b,d].axvline(newns.root_positive, ls='--', color='tab:grey')
+
+                    ylim = [ - np.max(BETA_PRIME) - 0.2, np.max(BETA_PRIME) + 0.2 ]
+                    ax[b,d].set_ylim(ylim)
+
+
+                    if d == 0:
+                        ax[b,d].set_ylabel( r'$\Delta, \Lambda$ ($2\beta$)' )
+                    ax[b,d].set_xlabel( r'$\epsilon (eV)$' )
+
+                all_energies.append(newns.DeltaE)
+                if newns.has_localised_occupied_state:
+                    axe.plot(eps_d, newns.DeltaE, 'v', color='k')
+            
+            axe.plot(EPSILON_D, all_energies, '-o', label = r"$ \beta' = %1.2f, \epsilon_\sigma = %1.2f$"%(beta_p, eps_sigma))
+
+        if PLOT_DOS:
+            fig.savefig('output/NewnsAnderson_analytical_eps_sigma_%1.2f.png'%eps_sigma)
+
+    axe.set_xlabel(r'$\epsilon_\d$ (eV) ')
+    axe.set_ylabel(r'$\Delta E_{\sigma}$ ($2\beta$)')
+    axe.legend(loc='best')
+
+    fige.savefig('output/NewnsAnderson_analytical_energy.png')
+
+
