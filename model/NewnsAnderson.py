@@ -120,11 +120,9 @@ class NewnsAndersonAnalytical:
 
         # Adsorbate density of states ( in the units of 2 beta)
         self.rho_aa = 1 / np.pi * self.Delta / ( ( self.eps - self.eps_sigma - self.Lambda )**2 + self.Delta**2 )
-        # rho_aa = 2 / np.pi * self.beta_p**2 * ( 1 - self.eps_wrt_d**2 )**0.5 
-        # rho_aa /= (self.eps_wrt_d**2 * (1 - 4*self.beta_p**2) - 2*self.eps_wrt_d*self.eps_sigma*(1 - 2*self.beta_p**2) + 4*self.beta_p**4 + self.eps_sigma**2)
-        # self.rho_aa = rho_aa
 
         # ---------------- Check all the possible root combinations ----------------
+
         # Check if there is a virtual root
         if 4 * self.beta**2 + self.eps_sigma**2 < 1:
             self.has_complex_root = True
@@ -132,35 +130,19 @@ class NewnsAndersonAnalytical:
             self.has_complex_root = False 
         
         if not self.has_complex_root:
-        #     self.eps_sigma_d = self.eps_sigma + self.eps_d
-        #     if self.beta_p != 0.5:
-        #         root_positive = ( 1 - 2*self.beta_p**2 ) *  self.eps_sigma_d
-        #         root_positive += 2*self.beta_p**2 * (4*self.beta_p**2 + self.eps_sigma_d**2 - 1)**0.5
-        #         root_positive /= ( 1 - 4 * self.beta_p**2 )
-        #         root_negative = ( 1 - 2*self.beta_p**2 ) * self.eps_sigma_d
-        #         root_negative -= 2*self.beta_p**2 * (4*self.beta_p**2 + self.eps_sigma_d**2 - 1)**0.5
-        #         root_negative /= ( 1 - 4 * self.beta_p**2 )
-        #     else:
-        #         root_positive = 1 + 4*self.eps_sigma_d**2
-        #         root_positive /= ( 4 * self.eps_sigma_d)
-        #         root_negative = root_positive
-
-            # General expressions for the roots
-            # root_positive = ( self.eps_d + self.eps_sigma ) / 2 
-            # root_positive += ( (self.eps_sigma - self.eps_d )**2 + 4*self.beta**2 )**0.5 / 2
-            # root_negative = ( self.eps_d + self.eps_sigma ) / 2
-            # root_negative -= ( (self.eps_sigma - self.eps_d )**2 + 4*self.beta**2 )**0.5 / 2
-
             # Find where the epsilon - epsilon_sigma line equals the Lambda line
             lower_lambda_expression = 2 * self.beta_p**2 * ( self.eps_wrt_d[lower_hilbert_args] 
                                     + (self.eps_wrt_d[lower_hilbert_args]**2 - 1)**0.5 ) 
             upper_lambda_expression = 2 * self.beta_p**2 * ( self.eps_wrt_d[upper_hilbert_args] 
                                     - (self.eps_wrt_d[upper_hilbert_args]**2 - 1)**0.5 ) 
-
+            
             assert np.isnan(lower_lambda_expression).any() == False
             assert np.isnan(upper_lambda_expression).any() == False
+            assert all(j > 0 for j in upper_lambda_expression)
+            assert all(j < 0 for j in lower_lambda_expression)
 
             linear_energy = self.eps - self.eps_sigma
+            # There is no restriction on the sign of eps - eps_a in this region
             linear_energy_lower = linear_energy[lower_hilbert_args]
             linear_energy_upper = linear_energy[upper_hilbert_args]
 
@@ -168,8 +150,8 @@ class NewnsAndersonAnalytical:
             index_positive_root = np.argmin(np.abs(linear_energy_lower - lower_lambda_expression))
             index_negative_root = np.argmin(np.abs(linear_energy_upper - upper_lambda_expression))
 
-            root_positive = self.eps[index_positive_root]
-            root_negative = self.eps[index_negative_root]            
+            root_positive = self.eps[lower_hilbert_args][index_positive_root]
+            root_negative = self.eps[upper_hilbert_args][index_negative_root]            
 
         elif self.has_complex_root:
             root_positive = ( 1 - 2*self.beta_p**2 ) * self.eps_sigma \
@@ -182,7 +164,7 @@ class NewnsAndersonAnalytical:
             # We do not care about the imaginary root for now
             root_positive = np.real(root_positive)
             root_negative = np.real(root_negative)
-            print('Is complex root...')
+            print('Has a complex root...')
 
             assert root_negative == root_positive
 
@@ -195,7 +177,7 @@ class NewnsAndersonAnalytical:
 
         # Determine if there is an occupied localised state
         if self.eps_l_sigma < self.lower_band_edge and self.lower_band_edge - self.eps_sigma > self.Lambda_at_band_edge: 
-            # assert np.min(np.abs(linear_energy_lower - lower_lambda_expression)) < 1e-1
+            assert np.min(np.abs(linear_energy_lower - lower_lambda_expression)) < 1e-1
             self.has_localised_occupied_state = True
         else:
             self.has_localised_occupied_state = False
@@ -254,3 +236,22 @@ class NewnsAndersonAnalytical:
         # if self.has_complex_root:
 
             # use the analytical expressions
+
+        #     self.eps_sigma_d = self.eps_sigma + self.eps_d
+        #     if self.beta_p != 0.5:
+        #         root_positive = ( 1 - 2*self.beta_p**2 ) *  self.eps_sigma_d
+        #         root_positive += 2*self.beta_p**2 * (4*self.beta_p**2 + self.eps_sigma_d**2 - 1)**0.5
+        #         root_positive /= ( 1 - 4 * self.beta_p**2 )
+        #         root_negative = ( 1 - 2*self.beta_p**2 ) * self.eps_sigma_d
+        #         root_negative -= 2*self.beta_p**2 * (4*self.beta_p**2 + self.eps_sigma_d**2 - 1)**0.5
+        #         root_negative /= ( 1 - 4 * self.beta_p**2 )
+        #     else:
+        #         root_positive = 1 + 4*self.eps_sigma_d**2
+        #         root_positive /= ( 4 * self.eps_sigma_d)
+        #         root_negative = root_positive
+
+            # General expressions for the roots
+            # root_positive = ( self.eps_d + self.eps_sigma ) / 2 
+            # root_positive += ( (self.eps_sigma - self.eps_d )**2 + 4*self.beta**2 )**0.5 / 2
+            # root_negative = ( self.eps_d + self.eps_sigma ) / 2
+            # root_negative -= ( (self.eps_sigma - self.eps_d )**2 + 4*self.beta**2 )**0.5 / 2
