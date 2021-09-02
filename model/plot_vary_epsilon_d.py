@@ -62,12 +62,12 @@ if __name__ == '__main__':
     EPSILON_RANGE = np.linspace(-20, 10, 10000) # range of energies plot in dos
     BETA_PRIME = [1, 2] # Interaction of metal and adsorbate # in eV 
     EPSILON_SIGMA = [-2.5, -5.] # renormalised energy of adsorbate
-    EPSILON_D = np.linspace(-10, 2, 20) # Band center in eV 
+    EPSILON_D = np.linspace(-10, 2, 30) # Band center in eV 
     BETA = 2 # in units of eV
     PLOT_DOS = False
 
     fige, axe = plt.subplots(1, 1, figsize=(12, 6), constrained_layout=True)
-    figs, axs = plt.subplots(1, 1, figsize=(8, 6), constrained_layout=True)
+    figs, axs = plt.subplots(1, 2, figsize=(12, 5), constrained_layout=True)
 
     for s, eps_sigma in enumerate(EPSILON_SIGMA):
 
@@ -78,25 +78,28 @@ if __name__ == '__main__':
 
             all_energies = []
             all_eps_sigma = [] # See the variation of the localised state if it exists
+            all_tan_comp = []
             for d, eps_d in enumerate(EPSILON_D):
                 newns = NewnsAndersonAnalytical(beta = BETA, 
                                                 beta_p = beta_p, 
                                                 eps_d = eps_d,
                                                 eps_sigma = eps_sigma,
                                                 eps = EPSILON_RANGE )
-                if not newns.has_complex_root and newns.has_localised_occupied_state: 
-                    all_eps_sigma.append([ eps_d, newns.eps_sigma ] )
 
                 if PLOT_DOS:
                     plot_dos()
                 if newns.has_localised_occupied_state:
                     all_energies.append([ newns.eps_d, newns.DeltaE ])
+                    all_eps_sigma.append([ eps_d, newns.eps_l_sigma ] )
+                    all_tan_comp.append( [ eps_d, newns.arctan_component ] )
             
             all_energies = np.array(all_energies).T
             axe.plot(all_energies[0], all_energies[1], '-o', alpha=0.5, label = r"$ \beta' = %1.2f, \epsilon_\sigma = %1.2f$"%(beta_p, eps_sigma))
             try:
                 all_eps_sigma = np.array(all_eps_sigma).T
-                axs.plot( all_eps_sigma[0], all_eps_sigma[1], '-o', alpha=0.5, label = r"$ \beta' = %1.2f, \epsilon_\sigma = %1.2f$"%(beta_p, eps_sigma/2/BETA))
+                axs[0].plot( all_eps_sigma[0], all_eps_sigma[1], '-o', alpha=0.5, label = r"$ \beta' = %1.2f, \epsilon_\sigma = %1.2f$"%(beta_p, newns.eps_sigma))
+                all_tan_comp = np.array(all_tan_comp).T
+                axs[1].plot(all_tan_comp[0], all_tan_comp[1], '-o', alpha=0.5, label = r"$ \beta' = %1.2f, \epsilon_\sigma = %1.2f$"%(beta_p, newns.eps_sigma))
             except IndexError:
                 pass
 
@@ -108,9 +111,11 @@ if __name__ == '__main__':
     axe.legend(bbox_to_anchor=(1.04,0), loc="lower left", borderaxespad=0)
     fige.savefig('output/NewnsAnderson_vary_eps_d.png')
 
-    axs.set_xlabel(r'$\epsilon_d$ (eV) ')
-    axs.set_ylabel(r'$\epsilon_{l,\sigma}$ ($2\beta$)')
-    axs.legend(loc='best')
+    axs[0].set_xlabel(r'$\epsilon_d$ (eV) ')
+    axs[0].set_ylabel(r'$\epsilon_{l,\sigma}$ ($2\beta$)')
+    axs[1].set_xlabel(r'$\epsilon_d$ (eV) ')
+    axs[1].set_ylabel(r'$\int \mathregular{arctan} ( \Delta / \epsilon - \epsilon_{\sigma} - \Lambda ) $ ($2\beta$)')
+    axs[1].legend(loc='best')
     figs.savefig('output/NewnsAnderson_vary_eps_d_plot_eps_ls.png')
 
 

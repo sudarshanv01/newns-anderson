@@ -223,6 +223,9 @@ class NewnsAndersonAnalytical:
             assert all(tan_integrand <= np.pi)
             assert np.allclose(np.tan(tan_integrand), check_tan)
             self.energy =  np.trapz(tan_integrand, self.eps[occupied_states] ) / np.pi + self.eps_l_sigma
+        
+        # Store the arctan component for later
+        self.arctan_component = np.trapz(tan_integrand, self.eps[occupied_states] ) / np.pi
 
         # Calculate the Delta E for U = 0
         self.DeltaE = 2 * self.energy  -  self.eps_sigma + self.fermi_energy
