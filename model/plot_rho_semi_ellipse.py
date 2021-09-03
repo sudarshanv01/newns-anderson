@@ -28,13 +28,16 @@ if __name__ == '__main__':
                                              beta=BETA, 
                                              eps_sigma=epsilon_sigma, 
                                              eps_d=epsilon_d, 
-                                             eps=epsilon_range)
-        
+                                             eps=epsilon_range,
+                                             use_analytical_roots=True)
+        if analytical.has_localised_occupied_state:
+            print('Localised occupied state found') 
         # Convert rho into eV
         rho_aa_eV = analytical.rho_aa / 2 / BETA
 
         # Plot in terms of 2beta
-        axe.plot(analytical.eps, rho_aa_eV, '-', label=r"$\beta' = %1.2f, \epsilon_{\sigma}=%1.2f$"%(beta_p, analytical.eps_sigma))
+        axe.plot(analytical.eps, rho_aa_eV, '-', lw=3,
+                label=r"$\beta' = %1.2f, \epsilon_{\sigma}=%1.2f$"%(beta_p, analytical.eps_sigma))
 
         axe.set_ylabel(r'$\rho_{aa}^{\sigma}$ (eV$^{-1}$)')
         axe.set_xlabel(r'$\epsilon / 2\beta $')

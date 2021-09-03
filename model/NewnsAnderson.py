@@ -65,13 +65,19 @@ class NewnsAndersonAnalytical:
             center of Delta in units of eV
         eps_range: list
             Range of energies to plot in units of eV
+        fermi_energy: float
+            Fermi energy in the units of 2 beta
+        
+        NB: The energies in this class, just like in the Newns paper are referenced to 
+            the metal band center.
     """ 
     beta_p: float
     eps_sigma: float
     eps: list
     eps_d : float
     beta: float
-    fermi_energy:float = 0.0
+    fermi_energy: float = 0.0
+    use_analytical_roots: bool = False
 
     def __post_init__(self):
         """ Create the output quantities."""
@@ -85,10 +91,10 @@ class NewnsAndersonAnalytical:
         """ Create the needed quantities for the Newns Anderson model."""
 
         # Convert the energies to units of 2beta
+        # The zero of these energies is defined by the d-band center
         self.eps = self.eps / 2 / self.beta
         self.eps_d = self.eps_d / 2 / self.beta
         self.eps_sigma = self.eps_sigma / 2 / self.beta
-        self.eps -= self.fermi_energy
 
         self.eps_wrt_d = self.eps - self.eps_d
 
@@ -130,28 +136,42 @@ class NewnsAndersonAnalytical:
             self.has_complex_root = False 
         
         if not self.has_complex_root:
-            # Find where the epsilon - epsilon_sigma line equals the Lambda line
-            lower_lambda_expression = 2 * self.beta_p**2 * ( self.eps_wrt_d[lower_hilbert_args] 
-                                    + (self.eps_wrt_d[lower_hilbert_args]**2 - 1)**0.5 ) 
-            upper_lambda_expression = 2 * self.beta_p**2 * ( self.eps_wrt_d[upper_hilbert_args] 
-                                    - (self.eps_wrt_d[upper_hilbert_args]**2 - 1)**0.5 ) 
             
-            assert np.isnan(lower_lambda_expression).any() == False
-            assert np.isnan(upper_lambda_expression).any() == False
-            assert all(j > 0 for j in upper_lambda_expression)
-            assert all(j < 0 for j in lower_lambda_expression)
+            if self.use_analytical_roots:
+                if self.beta_p != 0.5:
+                    root_positive = ( 1 - 2*self.beta_p**2 ) *  self.eps_sigma
+                    root_positive += 2*self.beta_p**2 * (4*self.beta_p**2 + self.eps_sigma**2 - 1)**0.5
+                    root_positive /= ( 1 - 4 * self.beta_p**2 )
+                    root_negative = ( 1 - 2*self.beta_p**2 ) * self.eps_sigma
+                    root_negative -= 2*self.beta_p**2 * (4*self.beta_p**2 + self.eps_sigma**2 - 1)**0.5
+                    root_negative /= ( 1 - 4 * self.beta_p**2 )
+                else:
+                    root_positive = 1 + 4*self.eps_sigma**2
+                    root_positive /= ( 4 * self.eps_sigma)
+                    root_negative = root_positive
 
-            linear_energy = self.eps - self.eps_sigma
-            # There is no restriction on the sign of eps - eps_a in this region
-            linear_energy_lower = linear_energy[lower_hilbert_args]
-            linear_energy_upper = linear_energy[upper_hilbert_args]
+            elif not self.use_analytical_roots:
+                lower_lambda_expression = 2 * self.beta_p**2 * ( self.eps_wrt_d[lower_hilbert_args] 
+                                        + (self.eps_wrt_d[lower_hilbert_args]**2 - 1)**0.5 ) 
+                upper_lambda_expression = 2 * self.beta_p**2 * ( self.eps_wrt_d[upper_hilbert_args] 
+                                        - (self.eps_wrt_d[upper_hilbert_args]**2 - 1)**0.5 ) 
+                
+                assert np.isnan(lower_lambda_expression).any() == False
+                assert np.isnan(upper_lambda_expression).any() == False
+                assert all(j > 0 for j in upper_lambda_expression)
+                assert all(j < 0 for j in lower_lambda_expression)
 
-            # Find the roots of the two lines
-            index_positive_root = np.argmin(np.abs(linear_energy_lower - lower_lambda_expression))
-            index_negative_root = np.argmin(np.abs(linear_energy_upper - upper_lambda_expression))
+                linear_energy = self.eps - self.eps_sigma
+                # There is no restriction on the sign of eps - eps_a in this region
+                linear_energy_lower = linear_energy[lower_hilbert_args]
+                linear_energy_upper = linear_energy[upper_hilbert_args]
 
-            root_positive = self.eps[lower_hilbert_args][index_positive_root]
-            root_negative = self.eps[upper_hilbert_args][index_negative_root]            
+                # Find the roots of the two lines
+                index_positive_root = np.argmin(np.abs(linear_energy_lower - lower_lambda_expression))
+                index_negative_root = np.argmin(np.abs(linear_energy_upper - upper_lambda_expression))
+
+                root_positive = self.eps[lower_hilbert_args][index_positive_root]
+                root_negative = self.eps[upper_hilbert_args][index_negative_root]            
 
         elif self.has_complex_root:
             root_positive = ( 1 - 2*self.beta_p**2 ) * self.eps_sigma \
@@ -177,7 +197,8 @@ class NewnsAndersonAnalytical:
 
         # Determine if there is an occupied localised state
         if self.eps_l_sigma < self.lower_band_edge and self.lower_band_edge - self.eps_sigma > self.Lambda_at_band_edge: 
-            assert np.min(np.abs(linear_energy_lower - lower_lambda_expression)) < 1e-1
+            if not self.use_analytical_roots:
+                assert np.min(np.abs(linear_energy_lower - lower_lambda_expression)) < 1e-1
             self.has_localised_occupied_state = True
         else:
             self.has_localised_occupied_state = False
@@ -185,10 +206,6 @@ class NewnsAndersonAnalytical:
         # ---------- Calculate the energy ----------
 
         occupied_states = [i for i in range(len(self.eps)) if self.lower_band_edge < self.eps[i] < 0]
-
-        # eps_wrt_d_region = eps_wrt_d[occupied_states]
-        # pre_tan_function_numer = -1 * self.beta_p**2 / self.beta * ( 1 - eps_wrt_d_region**2 )**0.5 
-        # pre_tan_function_denom = ((self.beta_p**2 / self.beta - 1 ) * eps_wrt_d_region + self.eps_sigma)
 
         pre_tan_function_numer = self.Delta[occupied_states] 
         pre_tan_function_denom = (self.eps - self.eps_sigma - self.Lambda)
@@ -199,15 +216,14 @@ class NewnsAndersonAnalytical:
         assert all(tan_integrand <= np.pi/2)
         assert all(tan_integrand >= -np.pi/2)
 
-        # Modify the range of arctan depending on 
-        # if there is a localised state or not
-        # if there is it must be within 0 to pi
-        # otherwise it must be between -pi to 0
-        # In addition, if there is a localised state
-        # it must also have the extra energy associated with 
-        # that state epsilon_l_sigma
+        # Modify the range of arctan depending on if there is a localised state or not
+        # if there is it must be within 0 to pi otherwise it must be between -pi to 0
+        # In addition, if there is a localised state it must also have the extra energy 
+        # associated with that state: epsilon_l_sigma
         if not self.has_localised_occupied_state:
+            # tan_integrand -= np.pi 
             for i in range(len(tan_integrand)):
+                # if -3*np.pi/2 < tan_integrand[i] < -np.pi:
                 if tan_integrand[i] > 0:
                     tan_integrand[i] -= np.pi
             assert all(tan_integrand <= 0)
@@ -216,7 +232,9 @@ class NewnsAndersonAnalytical:
             self.energy =  np.trapz(tan_integrand, self.eps[occupied_states] ) / np.pi
 
         elif self.has_localised_occupied_state:
+            # tan_integrand += np.pi
             for i in range(len(tan_integrand)):
+                # if np.pi < tan_integrand[i] < 3*np.pi/2:
                 if tan_integrand[i] < 0:
                     tan_integrand[i] += np.pi
             assert all(tan_integrand >= 0)
@@ -228,33 +246,8 @@ class NewnsAndersonAnalytical:
         self.arctan_component = np.trapz(tan_integrand, self.eps[occupied_states] ) / np.pi
 
         # Calculate the Delta E for U = 0
-        self.DeltaE = 2 * self.energy  -  self.eps_sigma + self.fermi_energy
-
-
-        # Analytical rho
-        # rho_aa = 2 / np.pi * self.beta_p**2 * ( 1 - eps_wrt_d**2 )**0.5 
-        # rho_aa /= (eps_wrt_d**2 * (1 - 4*self.beta_p**2) - 2*eps_wrt_d*self.eps_sigma*(1 - 2*self.beta_p**2) + 4*self.beta_p**4 + self.eps_sigma**2)
-        # self.rho_aa = rho_aa
-
-        # if self.has_complex_root:
-
-            # use the analytical expressions
-
-        #     self.eps_sigma_d = self.eps_sigma + self.eps_d
-        #     if self.beta_p != 0.5:
-        #         root_positive = ( 1 - 2*self.beta_p**2 ) *  self.eps_sigma_d
-        #         root_positive += 2*self.beta_p**2 * (4*self.beta_p**2 + self.eps_sigma_d**2 - 1)**0.5
-        #         root_positive /= ( 1 - 4 * self.beta_p**2 )
-        #         root_negative = ( 1 - 2*self.beta_p**2 ) * self.eps_sigma_d
-        #         root_negative -= 2*self.beta_p**2 * (4*self.beta_p**2 + self.eps_sigma_d**2 - 1)**0.5
-        #         root_negative /= ( 1 - 4 * self.beta_p**2 )
-        #     else:
-        #         root_positive = 1 + 4*self.eps_sigma_d**2
-        #         root_positive /= ( 4 * self.eps_sigma_d)
-        #         root_negative = root_positive
-
-            # General expressions for the roots
-            # root_positive = ( self.eps_d + self.eps_sigma ) / 2 
-            # root_positive += ( (self.eps_sigma - self.eps_d )**2 + 4*self.beta**2 )**0.5 / 2
-            # root_negative = ( self.eps_d + self.eps_sigma ) / 2
-            # root_negative -= ( (self.eps_sigma - self.eps_d )**2 + 4*self.beta**2 )**0.5 / 2
+        # if self.has_localised_occupied_state:
+        self.DeltaE_1sigma = 2 * self.energy + self.fermi_energy
+        self.DeltaE = 2 * self.energy   + self.fermi_energy -  self.eps_sigma
+        # elif not self.has_localised_occupied_state:
+            # self.DeltaE = 2 * self.energy  + self.fermi_energy

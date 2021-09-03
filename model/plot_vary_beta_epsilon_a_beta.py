@@ -104,7 +104,7 @@ if __name__ == '__main__':
                 ax.plot(all_a_sorted, all_hyb_sorted, '--', alpha=0.25, label=r"$\epsilon_f$ = %1.2f, $\beta$ = %1.2f"%(e_fermi, beta))
             ax.axvline(0, color='k', ls='--')
 
-    ax.set_xlabel(r"$\epsilon_a - \epsilon_{f}$ ($2 \beta'$) ")
+    ax.set_xlabel(r"$\epsilon_a $ ($2 \beta'$) ")
     ax.set_ylabel(r" $\Delta E$ ($2 \beta'$)")
     ax.set_xlim([-1, 1])
     ax.legend(bbox_to_anchor=(1.04,0), loc="lower left", borderaxespad=0)
