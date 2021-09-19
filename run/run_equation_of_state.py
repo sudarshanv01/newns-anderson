@@ -10,12 +10,12 @@ from aiida_common_workflows.plugins import load_workflow_entry_point
 from aiida_submission_controller import FromGroupSubmissionController
 
 DRY_RUN = False
-MAX_CONCURRENT = 5
+MAX_CONCURRENT = 10
 PLUGIN_NAME = 'gpaw'
-CODE_LABEL = 'gpaw.21.6.0@dtu_xeon8'
+CODE_LABEL = 'gpaw.21.6.0@dtu_xeon16'
 
 STRUCTURES_GROUP_LABEL = 'initial_bulk_structures' 
-WORKFLOWS_GROUP_LABEL = 'equation_of_state' 
+WORKFLOWS_GROUP_LABEL = 'equation_of_state/pw' 
 
 class EosSubmissionController(FromGroupSubmissionController):
     """A SubmissionController for submitting EOS with Quantum ESPRESSO common workflows."""
@@ -63,11 +63,11 @@ class EosSubmissionController(FromGroupSubmissionController):
 
         inputs = {
             'structure': structure,
-            'scale_count': orm.Int(15),
-            'scale_increment': orm.Float(0.03),
+            # 'scale_count': orm.Int(15),
+            # 'scale_increment': orm.Float(0.03),
             'generator_inputs': {  # code-agnostic inputs for the relaxation
                 'engines': engines,
-                'protocol': 'precise_lcao',
+                'protocol': 'precise_pw',
                 'relax_type': RelaxType.POSITIONS,
                 'electronic_type': ElectronicType.METAL,
                 'spin_type': SpinType.NONE,

@@ -8,49 +8,6 @@ import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning) 
 
 @dataclass
-class NewnsAndersonModel:
-    """ Perform the Newns-Anderson model calculations."""
-    coupling: float
-    eps_a: float
-    eps_d: float
-    eps: float
-
-    def create_semi_elliptical_dos(self):
-        """ Create the semi-elliptical DOS."""
-        delta_ =  (1 - ( self.eps - self.eps_d )**2 / self.coupling**2)**0.5 
-        # convert nan to zeros
-        self.Delta = np.nan_to_num(delta_)
-        self.Lambda = np.imag(signal.hilbert(self.Delta))
-
-    
-    def generate_adsorbate_states(self):
-        """ Generate the adsorbate states."""
-        na_ = self.Delta / ( (self.eps - self.eps_a - self.Lambda)**2 + self.Delta**2 )
-        self.na = na_ / np.pi
-    
-    def calculate(self):
-        """ Calculate the Newns-Anderson model."""
-        self.create_semi_elliptical_dos()
-        self.generate_adsorbate_states()
-
-        # Get the negative energies
-        neg_index = [ a for a in range(len(self.eps)) if self.eps[a] < 0 ]
-        self.fill_energy = self.eps[neg_index]
-        self.fill_na = self.na[neg_index]
-        self.fill_Delta = self.Delta[neg_index]
-        self.fill_Lambda = self.Lambda[neg_index]
-
-        pre_tan_function = self.fill_Delta / (self.fill_energy - self.eps_a - self.fill_Lambda) 
-        hybridisation_ = np.arctan(pre_tan_function)
-        for i, hyb in enumerate(hybridisation_):
-            if hyb > 0:
-                hybridisation_[i] = hyb - np.pi 
-        assert all(hybridisation_ <= 0)
-        assert all(hybridisation_ >= -np.pi)
-
-        self.energy = 2 / np.pi * np.trapz(hybridisation_, self.fill_energy) 
-
-@dataclass
 class NewnsAndersonAnalytical:
     """ Perform the Newns-Anderson model analytically for a semi-elliplical delta.
         Inputs 
@@ -66,7 +23,7 @@ class NewnsAndersonAnalytical:
         eps_range: list
             Range of energies to plot in units of eV
         fermi_energy: float
-            Fermi energy in the units of 2 beta
+            Fermi energy in the units of eV 
         
         NB: The energies in this class, just like in the Newns paper are referenced to 
             the metal band center.
@@ -77,7 +34,6 @@ class NewnsAndersonAnalytical:
     eps_d : float
     beta: float
     fermi_energy: float = 0.0
-    use_analytical_roots: bool = False
 
     def __post_init__(self):
         """ Create the output quantities."""
@@ -89,89 +45,80 @@ class NewnsAndersonAnalytical:
 
     def create_quantities(self):
         """ Create the needed quantities for the Newns Anderson model."""
+        # coversion factor to divide by to convert to 2beta units
+        self.convert = 2 * self.beta
 
         # Convert the energies to units of 2beta
         # The zero of these energies is defined by the d-band center
-        self.eps = self.eps / 2 / self.beta
-        self.eps_d = self.eps_d / 2 / self.beta
-        self.eps_sigma = self.eps_sigma / 2 / self.beta
+        self.eps = self.eps / self.convert 
+        self.eps_d = self.eps_d / self.convert
+        self.eps_sigma = self.eps_sigma / self.convert 
+        self.fermi_energy = self.fermi_energy / self.convert
 
+        # Energies referenced to the d-band center
         self.eps_wrt_d = self.eps - self.eps_d
-
-        # Calculate the lower band edge
-        self.lower_band_edge = - 1 + self.eps_d 
-        index_lower_band_edge = np.argmin(np.abs(self.eps - self.lower_band_edge))
+        self.eps_sigma_wrt_d = self.eps_sigma - self.eps_d
 
         # Construct Delta in units of 2beta
+        self.width_of_band =  1 
         self.Delta = 2 * self.beta_p**2 * ( 1 - self.eps_wrt_d**2 )**0.5
         self.Delta = np.nan_to_num(self.Delta)
-        self.Delta_at_band_edge = self.Delta[index_lower_band_edge]
+
+        # Calculate the positions of the upper and lower band edge
+        self.lower_band_edge = - self.width_of_band + self.eps_d 
+        self.upper_band_edge = + self.width_of_band + self.eps_d
+        index_lower_band_edge = np.argmin(np.abs(self.eps - self.lower_band_edge))
+        index_upper_band_edge = np.argmin(np.abs(self.eps - self.upper_band_edge))
+        self.Delta_at_lower_band_edge = self.Delta[index_lower_band_edge]
+        self.Delta_at_upper_band_edge = self.Delta[index_upper_band_edge]
 
         # Construct Lambda in units of 2beta
         lower_hilbert_args = []
         upper_hilbert_args = []
         for i, eps in enumerate(self.eps_wrt_d):
-            if np.abs(eps) <= 1: 
+            if np.abs(eps) <= self.width_of_band: 
                 self.Lambda[i] = 2 * self.beta_p**2 * eps 
-            elif eps > 1:
+            elif eps > self.width_of_band:
                 self.Lambda[i] = 2 * self.beta_p**2 * ( eps - (eps**2 - 1)**0.5 )
                 upper_hilbert_args.append(i)
-            elif eps < -1:
+            elif eps < -self.width_of_band:
                 self.Lambda[i] = 2 * self.beta_p**2 * ( eps + (eps**2 - 1)**0.5 )
                 lower_hilbert_args.append(i)
             else:
                 raise ValueError("The epsilon value is not valid.")
 
-        self.Lambda_at_band_edge = self.Lambda[index_lower_band_edge]
+        self.Lambda_at_lower_band_edge = self.Lambda[index_lower_band_edge]
+        self.Lambda_at_upper_band_edge = self.Lambda[index_upper_band_edge]
 
-        # Adsorbate density of states ( in the units of 2 beta)
-        self.rho_aa = 1 / np.pi * self.Delta / ( ( self.eps - self.eps_sigma - self.Lambda )**2 + self.Delta**2 )
+        # ---------------- Adsorbate density of states ( in the units of 2 beta)
+        rho_aa_ = self.eps_wrt_d**2 * ( 1 - 4 * self.beta_p**2 )
+        rho_aa_ += - 2 * self.eps_wrt_d * self.eps_sigma_wrt_d * ( 1 - 2 * self.beta_p**2 )
+        rho_aa_ += 4 *self.beta_p**4 + self.eps_sigma_wrt_d**2
+        self.rho_aa = 2 * self.beta_p**2 * ( 1 - self.eps_wrt_d**2 )**0.5
+        self.rho_aa /= rho_aa_ 
+        self.rho_aa /= np.pi
+        self.rho_aa = np.nan_to_num(self.rho_aa)
 
         # ---------------- Check all the possible root combinations ----------------
-
         # Check if there is a virtual root
-        if 4 * self.beta**2 + self.eps_sigma**2 < 1:
+        if 4 * self.beta_p**2 + self.eps_sigma_wrt_d**2 < 1:
             self.has_complex_root = True
+            print('Complex root found!')
         else:
             self.has_complex_root = False 
         
         if not self.has_complex_root:
-            
-            if self.use_analytical_roots:
-                if self.beta_p != 0.5:
-                    root_positive = ( 1 - 2*self.beta_p**2 ) *  self.eps_sigma
-                    root_positive += 2*self.beta_p**2 * (4*self.beta_p**2 + self.eps_sigma**2 - 1)**0.5
-                    root_positive /= ( 1 - 4 * self.beta_p**2 )
-                    root_negative = ( 1 - 2*self.beta_p**2 ) * self.eps_sigma
-                    root_negative -= 2*self.beta_p**2 * (4*self.beta_p**2 + self.eps_sigma**2 - 1)**0.5
-                    root_negative /= ( 1 - 4 * self.beta_p**2 )
-                else:
-                    root_positive = 1 + 4*self.eps_sigma**2
-                    root_positive /= ( 4 * self.eps_sigma)
-                    root_negative = root_positive
-
-            elif not self.use_analytical_roots:
-                lower_lambda_expression = 2 * self.beta_p**2 * ( self.eps_wrt_d[lower_hilbert_args] 
-                                        + (self.eps_wrt_d[lower_hilbert_args]**2 - 1)**0.5 ) 
-                upper_lambda_expression = 2 * self.beta_p**2 * ( self.eps_wrt_d[upper_hilbert_args] 
-                                        - (self.eps_wrt_d[upper_hilbert_args]**2 - 1)**0.5 ) 
-                
-                assert np.isnan(lower_lambda_expression).any() == False
-                assert np.isnan(upper_lambda_expression).any() == False
-                assert all(j > 0 for j in upper_lambda_expression)
-                assert all(j < 0 for j in lower_lambda_expression)
-
-                linear_energy = self.eps - self.eps_sigma
-                # There is no restriction on the sign of eps - eps_a in this region
-                linear_energy_lower = linear_energy[lower_hilbert_args]
-                linear_energy_upper = linear_energy[upper_hilbert_args]
-
-                # Find the roots of the two lines
-                index_positive_root = np.argmin(np.abs(linear_energy_lower - lower_lambda_expression))
-                index_negative_root = np.argmin(np.abs(linear_energy_upper - upper_lambda_expression))
-
-                root_positive = self.eps[lower_hilbert_args][index_positive_root]
-                root_negative = self.eps[upper_hilbert_args][index_negative_root]            
+            if self.beta_p != 0.5:
+                root_positive = ( 1 - 2*self.beta_p**2 ) *  self.eps_sigma_wrt_d
+                root_positive += 2*self.beta_p**2 * (4*self.beta_p**2 + self.eps_sigma_wrt_d**2 - 1)**0.5
+                root_positive /= ( 1 - 4 * self.beta_p**2 )
+                root_negative = ( 1 - 2*self.beta_p**2 ) * self.eps_sigma_wrt_d
+                root_negative -= 2*self.beta_p**2 * (4*self.beta_p**2 + self.eps_sigma_wrt_d**2 - 1)**0.5
+                root_negative /= ( 1 - 4 * self.beta_p**2 )
+            else:
+                root_positive = 1 + 4*self.eps_sigma_wrt_d**2
+                root_positive /= ( 4 * self.eps_sigma_wrt_d)
+                root_negative = root_positive
 
         elif self.has_complex_root:
             root_positive = ( 1 - 2*self.beta_p**2 ) * self.eps_sigma \
@@ -188,66 +135,106 @@ class NewnsAndersonAnalytical:
 
             assert root_negative == root_positive
 
-        self.root_positive = root_positive
-        self.root_negative = root_negative
+        # Store the root referenced to the d-band center
+        self.root_positive = root_positive + self.eps_d
+        self.root_negative = root_negative + self.eps_d
         
-        # The energy for the state which is finally occupied or not 
-        # It is the lowest lying state for the adsorbate
-        self.eps_l_sigma = self.root_positive
-
         # Determine if there is an occupied localised state
-        if self.eps_l_sigma < self.lower_band_edge and self.lower_band_edge - self.eps_sigma > self.Lambda_at_band_edge: 
-            if not self.use_analytical_roots:
-                assert np.min(np.abs(linear_energy_lower - lower_lambda_expression)) < 1e-1
-            self.has_localised_occupied_state = True
+        if self.root_positive < self.lower_band_edge and self.lower_band_edge - self.eps_sigma > self.Lambda_at_lower_band_edge:
+            # Check if the root is below the Fermi level
+            if self.root_positive < 0:
+                # the energy for this point is to be included
+                self.has_localised_occupied_state_positive = True
+            else:
+                self.has_localised_occupied_state_positive = False
+            # in both cases it is appropriate to store it as eps_l_sigma because it is localised state
+            self.eps_l_sigma_pos = self.root_positive
         else:
-            self.has_localised_occupied_state = False
+            self.eps_l_sigma_pos = None
+            self.has_localised_occupied_state_positive = False
+        
+        # Check if there is a localised occupied state for the negative root
+        if self.root_negative > self.upper_band_edge and self.upper_band_edge - self.eps_sigma < self.Lambda_at_upper_band_edge:
+            # Check if the root is below the Fermi level
+            if self.root_negative < 0:
+                # the energy for this point is to be included
+                self.has_localised_occupied_state_negative = True
+            else:
+                self.has_localised_occupied_state_negative = False
+            # in both cases it is appropriate to store it as eps_l_sigma because it is localised state
+            self.eps_l_sigma_neg = self.root_negative
+        else:
+            self.eps_l_sigma_neg = None
+            self.has_localised_occupied_state_negative = False
+
+        # Expectancy value of the occupied localised state
+        if self.has_localised_occupied_state_positive:
+            # Compute the expectancy value
+            if self.beta_p != 0.5:
+                self.na_sigma_pos = (1 - 2 * self.beta_p**2)
+                self.na_sigma_pos -= 2 * self.beta_p**2 * self.eps_sigma_wrt_d * (4 * self.beta_p**2 + self.eps_sigma_wrt_d**2 - 1)**0.5 
+                self.na_sigma_pos /= (1 - 4 * self.beta_p**2)
+            else:
+                self.na_sigma_pos = 4 * self.eps_sigma_wrt_d**2 - 1
+                self.na_sigma_pos /= (4 * self.eps_sigma_wrt_d**2)
+        else:
+            self.na_sigma_pos = None
+        
+        if self.has_localised_occupied_state_negative:
+            # Compute the expectancy value
+            if self.beta_p != 0.5:
+                self.na_sigma_neg = (1 - 2 * self.beta_p**2)
+                self.na_sigma_neg += 2 * self.beta_p**2 * self.eps_sigma_wrt_d * (4 * self.beta_p**2 + self.eps_sigma_wrt_d**2 - 1)**0.5 
+                self.na_sigma_neg /= (1 - 4 * self.beta_p**2)
+            else:
+                self.na_sigma_neg = 4 * self.eps_sigma_wrt_d**2 - 1
+                self.na_sigma_neg /= (4 * self.eps_sigma_wrt_d**2)
 
         # ---------- Calculate the energy ----------
+        # Determine the upper bounds for the contour integration
+        if self.upper_band_edge > 0:
+            upper_bound = 0
+        else:
+            upper_bound = self.upper_band_edge
+        occupied_states = [i for i in range(len(self.eps)) if self.lower_band_edge < self.eps[i] < upper_bound]
 
-        occupied_states = [i for i in range(len(self.eps)) if self.lower_band_edge < self.eps[i] < 0]
+        # Determine the integrand 
+        energy_occ = self.eps_wrt_d[occupied_states]
+        numerator = - 2 * self.beta_p**2 * (1 - energy_occ**2)**0.5
+        denominator = energy_occ * (2*self.beta_p**2 - 1) + self.eps_sigma_wrt_d
 
-        pre_tan_function_numer = self.Delta[occupied_states] 
-        pre_tan_function_denom = (self.eps - self.eps_sigma - self.Lambda)
-        pre_tan_function_denom = pre_tan_function_denom[occupied_states]
-        tan_integrand = np.arctan(pre_tan_function_numer / pre_tan_function_denom)
+        # This number will always be between [-pi, 0]
+        arctan_integrand = np.arctan2(numerator, denominator)
+        assert all(arctan_integrand < 0)
+        assert all(arctan_integrand > -np.pi)
 
-        check_tan = np.tan(tan_integrand)
-        assert all(tan_integrand <= np.pi/2)
-        assert all(tan_integrand >= -np.pi/2)
 
-        # Modify the range of arctan depending on if there is a localised state or not
-        # if there is it must be within 0 to pi otherwise it must be between -pi to 0
-        # In addition, if there is a localised state it must also have the extra energy 
-        # associated with that state: epsilon_l_sigma
-        if not self.has_localised_occupied_state:
-            # tan_integrand -= np.pi 
-            for i in range(len(tan_integrand)):
-                # if -3*np.pi/2 < tan_integrand[i] < -np.pi:
-                if tan_integrand[i] > 0:
-                    tan_integrand[i] -= np.pi
-            assert all(tan_integrand <= 0)
-            assert all(tan_integrand >= -np.pi)
-            assert np.allclose(np.tan(tan_integrand), check_tan)
-            self.energy =  np.trapz(tan_integrand, self.eps[occupied_states] ) / np.pi
-
-        elif self.has_localised_occupied_state:
-            # tan_integrand += np.pi
-            for i in range(len(tan_integrand)):
-                # if np.pi < tan_integrand[i] < 3*np.pi/2:
-                if tan_integrand[i] < 0:
-                    tan_integrand[i] += np.pi
-            assert all(tan_integrand >= 0)
-            assert all(tan_integrand <= np.pi)
-            assert np.allclose(np.tan(tan_integrand), check_tan)
-            self.energy =  np.trapz(tan_integrand, self.eps[occupied_states] ) / np.pi + self.eps_l_sigma
+        if self.has_localised_occupied_state_positive and self.has_localised_occupied_state_negative:
+            # Both positive and negative root are localised and occupied
+            arctan_integrand += np.pi
+            self.arctan_component =  np.trapz( arctan_integrand, energy_occ )
+            self.arctan_component /= np.pi
+            self.energy = self.arctan_component
+            self.energy += self.eps_l_sigma_pos - self.eps_l_sigma_neg
+        elif self.has_localised_occupied_state_positive:
+            # Has only positive root and it is a localised occupied state 
+            arctan_integrand += np.pi
+            self.arctan_component =  np.trapz( arctan_integrand, energy_occ )
+            self.arctan_component /= np.pi
+            self.energy = self.arctan_component
+            self.energy += self.eps_l_sigma_pos
+        elif self.has_localised_occupied_state_negative:
+            # Has only negative root and it is a localosied occupied state
+            self.arctan_component =  np.trapz( arctan_integrand, energy_occ )
+            self.arctan_component /= np.pi
+            self.energy = self.arctan_component
+            self.energy -= self.eps_l_sigma_neg
+            self.energy += self.upper_band_edge
+        else:
+            # Has no localised occupied states
+            self.arctan_component =  np.trapz( arctan_integrand, energy_occ )
+            self.arctan_component /= np.pi
+            self.energy = self.arctan_component
         
-        # Store the arctan component for later
-        self.arctan_component = np.trapz(tan_integrand, self.eps[occupied_states] ) / np.pi
-
-        # Calculate the Delta E for U = 0
-        # if self.has_localised_occupied_state:
-        self.DeltaE_1sigma = 2 * self.energy + self.fermi_energy
-        self.DeltaE = 2 * self.energy   + self.fermi_energy -  self.eps_sigma
-        # elif not self.has_localised_occupied_state:
-            # self.DeltaE = 2 * self.energy  + self.fermi_energy
+        self.DeltaE_1sigma = self.energy 
+        self.DeltaE = 2 * self.DeltaE_1sigma + self.fermi_energy -  1 * self.eps_sigma

@@ -10,7 +10,7 @@ from ase import Atoms
 from ase.data import covalent_radii, atomic_numbers
 
 if __name__ == '__main__':
-    GROUP_NAME = 'equation_of_state'
+    GROUP_NAME = 'equation_of_state/pw'
     CommonWorflows = WorkflowFactory('common_workflows.eos')
     node_type = CommonWorflows 
     CREATE_SURFACE = True
