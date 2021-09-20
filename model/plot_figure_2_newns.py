@@ -16,7 +16,8 @@ if __name__ == '__main__':
     EPSILON_RANGE = np.linspace(-2.5, 2.5, 200) # in units of -2beta 
     BETA_PRIME = np.linspace(-1.25, 1.25, 200) # in units of -2beta 
     EPSILON_SIGMA = np.linspace(-1.5, 1.5, 200) # in units of -2beta
-    EPSILON_D = 0 
+    EPSILON_D = 0
+    ERROR = 1e-2 # error in the numerical integration
 
     # Create the figure
     fige, axe = plt.subplots(1, 1, figsize=(8, 6), constrained_layout=True)
@@ -53,6 +54,14 @@ if __name__ == '__main__':
                     solutions_ += 1
             
             solutions[i,j] = solutions_
+            print(analytical.na_sigma_pos, analytical.na_sigma_neg)
+            if analytical.na_sigma_pos is not None:
+                assert analytical.na_sigma_pos < 1.0 + ERROR
+                assert analytical.na_sigma_pos > 0.0 - ERROR
+            if analytical.na_sigma_neg is not None:
+                assert analytical.na_sigma_neg < 1.0 + ERROR
+                assert analytical.na_sigma_neg > 0.0 - ERROR
+
 
     solutions = np.array(solutions) 
     cplot = axe.imshow(solutions.T, cmap='viridis', 

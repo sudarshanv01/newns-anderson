@@ -48,6 +48,8 @@ if __name__ == '__main__':
 
                 if newns.has_localised_occupied_state_positive:
                     ax.plot(eps_a_wrt_fermi, newns.DeltaE * convert, '*', color='k')
+                if newns.has_localised_occupied_state_negative:
+                    ax.plot(eps_a_wrt_fermi, newns.DeltaE * convert, 'v', color='k')
 
             all_a, all_hyb = np.array(all_energies).T
             all_a_sorted = all_a[np.argsort(all_a)]
@@ -66,6 +68,6 @@ if __name__ == '__main__':
 
     ax.set_xlabel(r"$\epsilon_a $ ($2 \beta'$) ")
     ax.set_ylabel(r" $\Delta E$ ($2 \beta'$)")
-    ax.set_xlim([-1, 1])
+    ax.set_xlim([-1.2, 1.2])
     ax.legend(bbox_to_anchor=(1.04,0), loc="lower left", borderaxespad=0)
     fig.savefig('output/figure_4_newns.png')

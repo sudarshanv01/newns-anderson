@@ -32,7 +32,7 @@ if __name__ == '__main__':
     The energy is in units of 2beta and the d-band center is in units of 2beta.
     """
     EPSILON_RANGE = np.linspace(-15, 15, 4000) # range of energies plot in dos
-    BETA_PRIME = [2, 2.5] # Interaction of metal and adsorbate in 2beta units 
+    BETA_PRIME = [0.5, 2, 2.5] # Interaction of metal and adsorbate in 2beta units 
     EPSILON_SIGMA = [ -2, -4 ] # renormalised energy of adsorbate
     EPSILON_D = np.linspace(-8, 2) # Band center in eV 
     BETA = 1 # in units of eV

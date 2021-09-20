@@ -24,9 +24,8 @@ class NewnsAndersonAnalytical:
             Range of energies to plot in units of eV
         fermi_energy: float
             Fermi energy in the units of eV 
-        
-        NB: The energies in this class, just like in the Newns paper are referenced to 
-            the metal band center.
+        U: float
+            Coulomb interaction parameter in units of eV
     """ 
     beta_p: float
     eps_sigma: float
@@ -34,6 +33,7 @@ class NewnsAndersonAnalytical:
     eps_d : float
     beta: float
     fermi_energy: float = 0.0
+    U: float = 0.0
 
     def __post_init__(self):
         """ Create the output quantities."""
@@ -54,6 +54,7 @@ class NewnsAndersonAnalytical:
         self.eps_d = self.eps_d / self.convert
         self.eps_sigma = self.eps_sigma / self.convert 
         self.fermi_energy = self.fermi_energy / self.convert
+        self.U = self.U / self.convert
 
         # Energies referenced to the d-band center
         self.eps_wrt_d = self.eps - self.eps_d
@@ -139,7 +140,8 @@ class NewnsAndersonAnalytical:
         self.root_negative = root_negative + self.eps_d
         
         # Determine if there is an occupied localised state
-        if self.root_positive < self.lower_band_edge and self.lower_band_edge - self.eps_sigma > self.Lambda_at_lower_band_edge:
+        # if self.root_positive < self.lower_band_edge and self.lower_band_edge - self.eps_sigma > self.Lambda_at_lower_band_edge:
+        if self.root_positive < self.lower_band_edge and self.eps_sigma_wrt_d > 2 * self.beta_p**2 - 1:
             # Check if the root is below the Fermi level
             if self.root_positive < self.fermi_energy:
                 # the energy for this point is to be included
@@ -153,7 +155,8 @@ class NewnsAndersonAnalytical:
             self.has_localised_occupied_state_positive = False
         
         # Check if there is a localised occupied state for the negative root
-        if self.root_negative > self.upper_band_edge and self.upper_band_edge - self.eps_sigma < self.Lambda_at_upper_band_edge:
+        # if self.root_negative > self.upper_band_edge and self.upper_band_edge - self.eps_sigma < self.Lambda_at_upper_band_edge:
+        if self.root_negative > self.upper_band_edge and self.eps_sigma_wrt_d > 1 - 2 * self.beta_p**2:
             # Check if the root is below the Fermi level
             if self.root_negative < self.fermi_energy:
                 # the energy for this point is to be included
@@ -171,7 +174,7 @@ class NewnsAndersonAnalytical:
             # Compute the expectancy value
             if self.beta_p != 0.5:
                 self.na_sigma_pos = (1 - 2 * self.beta_p**2)
-                self.na_sigma_pos -= 2 * self.beta_p**2 * self.eps_sigma_wrt_d * (4 * self.beta_p**2 + self.eps_sigma_wrt_d**2 - 1)**0.5 
+                self.na_sigma_pos += 2 * self.beta_p**2 * self.eps_sigma_wrt_d * (4 * self.beta_p**2 + self.eps_sigma_wrt_d**2 - 1)**-0.5 
                 self.na_sigma_pos /= (1 - 4 * self.beta_p**2)
             else:
                 self.na_sigma_pos = 4 * self.eps_sigma_wrt_d**2 - 1
@@ -183,11 +186,13 @@ class NewnsAndersonAnalytical:
             # Compute the expectancy value
             if self.beta_p != 0.5:
                 self.na_sigma_neg = (1 - 2 * self.beta_p**2)
-                self.na_sigma_neg += 2 * self.beta_p**2 * self.eps_sigma_wrt_d * (4 * self.beta_p**2 + self.eps_sigma_wrt_d**2 - 1)**0.5 
+                self.na_sigma_neg -= 2 * self.beta_p**2 * self.eps_sigma_wrt_d * (4 * self.beta_p**2 + self.eps_sigma_wrt_d**2 - 1)**-0.5 
                 self.na_sigma_neg /= (1 - 4 * self.beta_p**2)
             else:
                 self.na_sigma_neg = 4 * self.eps_sigma_wrt_d**2 - 1
                 self.na_sigma_neg /= (4 * self.eps_sigma_wrt_d**2)
+        else:
+            self.na_sigma_neg = None
 
         # ---------- Calculate the energy ----------
         # Determine the upper bounds for the contour integration
@@ -233,6 +238,10 @@ class NewnsAndersonAnalytical:
             self.arctan_component =  np.trapz( arctan_integrand, energy_occ )
             self.arctan_component /= np.pi
             self.energy = self.arctan_component
-        
+
+        # The one electron energy is just the difference of eigenvalues 
         self.DeltaE_1sigma = self.energy 
+
+        # Determine the energy
+        # coulomb_energy = self.U *  
         self.DeltaE = 2 * self.DeltaE_1sigma + self.fermi_energy -  1 * self.eps_sigma
