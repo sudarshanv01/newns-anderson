@@ -11,6 +11,7 @@ if __name__ == '__main__':
     """Recreate Figure 6 of the Newns paper. 
     The plot has the adsorption energy for H* for four
     different metals Ni, Cr, Ti and Cu."""
+
     # Load data
     parameters = yaml.safe_load(open('parameters_figure_6.yaml'))
 
@@ -18,9 +19,14 @@ if __name__ == '__main__':
     beta_prime = np.linspace(1, 7, 100)
 
     # The adsorbate state is chosen as 
-    eps_sigma = 0.0 #-14.3 # eV
+    eps_a = -13.6 # eV
+
     # Reference everything to the Fermi level
     eps_d = 0.0
+
+    # Coulomb term
+    U = 12.9 # eV
+
     # Range of energies
     EPSILON_RANGE = np.linspace(-25, 15, 1000) # range of energies plot in dos
 
@@ -36,9 +42,11 @@ if __name__ == '__main__':
             newns = NewnsAndersonAnalytical(beta = beta, 
                                             beta_p = beta_p/2/beta, 
                                             eps_d = eps_d,
-                                            eps_sigma = eps_sigma,
+                                            eps_a = eps_a,
                                             eps = EPSILON_RANGE,
-                                            fermi_energy = fermi_energy/2/beta)
+                                            fermi_energy = fermi_energy/2/beta,
+                                            U = U)
+            newns.self_consistent_calculation()
             # The quantity that we want to plot
             energy_in_eV = newns.DeltaE * 2 * beta
             all_energies.append(energy_in_eV)
