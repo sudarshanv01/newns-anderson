@@ -65,7 +65,7 @@ class NewnsAndersonAnalytical:
         self.Delta = np.nan_to_num(self.Delta)
 
         # Calculate the positions of the upper and lower band edge
-        self.lower_band_edge = - self.width_of_band + self.eps_d 
+        self.lower_band_edge = - self.width_of_band + self.eps_d
         self.upper_band_edge = + self.width_of_band + self.eps_d
         index_lower_band_edge = np.argmin(np.abs(self.eps - self.lower_band_edge))
         index_upper_band_edge = np.argmin(np.abs(self.eps - self.upper_band_edge))
@@ -131,9 +131,8 @@ class NewnsAndersonAnalytical:
             # We do not care about the imaginary root for now
             root_positive = np.real(root_positive)
             root_negative = np.real(root_negative)
-            print('Has a complex root...')
 
-            assert root_negative == root_positive
+            # assert root_negative == root_positive
 
         # Store the root referenced to the d-band center
         self.root_positive = root_positive + self.eps_d
@@ -142,7 +141,7 @@ class NewnsAndersonAnalytical:
         # Determine if there is an occupied localised state
         if self.root_positive < self.lower_band_edge and self.lower_band_edge - self.eps_sigma > self.Lambda_at_lower_band_edge:
             # Check if the root is below the Fermi level
-            if self.root_positive < 0:
+            if self.root_positive < self.fermi_energy:
                 # the energy for this point is to be included
                 self.has_localised_occupied_state_positive = True
             else:
@@ -156,7 +155,7 @@ class NewnsAndersonAnalytical:
         # Check if there is a localised occupied state for the negative root
         if self.root_negative > self.upper_band_edge and self.upper_band_edge - self.eps_sigma < self.Lambda_at_upper_band_edge:
             # Check if the root is below the Fermi level
-            if self.root_negative < 0:
+            if self.root_negative < self.fermi_energy:
                 # the energy for this point is to be included
                 self.has_localised_occupied_state_negative = True
             else:
@@ -193,7 +192,7 @@ class NewnsAndersonAnalytical:
         # ---------- Calculate the energy ----------
         # Determine the upper bounds for the contour integration
         if self.upper_band_edge > 0:
-            upper_bound = 0
+            upper_bound = 0 
         else:
             upper_bound = self.upper_band_edge
         occupied_states = [i for i in range(len(self.eps)) if self.lower_band_edge < self.eps[i] < upper_bound]
@@ -207,7 +206,6 @@ class NewnsAndersonAnalytical:
         arctan_integrand = np.arctan2(numerator, denominator)
         assert all(arctan_integrand < 0)
         assert all(arctan_integrand > -np.pi)
-
 
         if self.has_localised_occupied_state_positive and self.has_localised_occupied_state_negative:
             # Both positive and negative root are localised and occupied
@@ -224,7 +222,7 @@ class NewnsAndersonAnalytical:
             self.energy = self.arctan_component
             self.energy += self.eps_l_sigma_pos
         elif self.has_localised_occupied_state_negative:
-            # Has only negative root and it is a localosied occupied state
+            # Has only negative root and it is a localised occupied state
             self.arctan_component =  np.trapz( arctan_integrand, energy_occ )
             self.arctan_component /= np.pi
             self.energy = self.arctan_component

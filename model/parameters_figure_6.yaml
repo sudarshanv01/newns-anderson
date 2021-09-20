@@ -1,0 +1,17 @@
+---
+Ti:
+  width: 8.60
+  fermi_level: -2.04
+  beta_prime: 3.72
+Cr:
+  width: 6.10
+  fermi_level: 0.69
+  beta_prime: 3.75
+Ni:
+  width: 3.80
+  fermi_level: 1.76
+  beta_prime: 3.75
+Cu:
+  width: 2.70
+  fermi_level: 2.90
+  beta_prime: 4.17
