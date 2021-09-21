@@ -18,6 +18,8 @@ if __name__ == '__main__':
     EPSILON_SIGMA = np.linspace(-1.5, 1.5, 200) # in units of -2beta
     EPSILON_D = 0
     ERROR = 1e-2 # error in the numerical integration
+    U = 0 # No colomb interaction
+    FERMI_ENERGY = 0.0
 
     # Create the figure
     fige, axe = plt.subplots(1, 1, figsize=(8, 6), constrained_layout=True)
@@ -37,30 +39,32 @@ if __name__ == '__main__':
 
             analytical = NewnsAndersonAnalytical(beta_p=beta_p,
                                                 beta=beta_p, 
-                                                eps_sigma=epsilon_sigma, 
+                                                eps_a=epsilon_sigma, 
                                                 eps_d=epsilon_d, 
-                                                eps=epsilon_range)
+                                                eps=epsilon_range,
+                                                U=U,
+                                                fermi_energy=FERMI_ENERGY)
+            analytical.self_consistent_calculation()
             # Number can only go up
             solutions_ = 0.0 
             # now try to figure out the other solutions
-            if analytical.eps_l_sigma_pos is not None:
-                solutions_ += 1
-            if analytical.eps_l_sigma_neg is not None:
-                solutions_ += 1
-            if analytical.eps_l_sigma_pos == None and analytical.eps_l_sigma_neg == None:
-                if analytical.has_complex_root:
-                    solutions_ += 0
-                else:
+            if analytical.has_complex_root:
+                solutions_ += 0
+            else:
+                if analytical.eps_l_sigma_pos is not None:
+                    solutions_ += 1
+                if analytical.eps_l_sigma_neg is not None:
+                    solutions_ += 1
+                if analytical.eps_l_sigma_pos == None and analytical.eps_l_sigma_neg == None:
                     solutions_ += 1
             
             solutions[i,j] = solutions_
-            print(analytical.na_sigma_pos, analytical.na_sigma_neg)
-            if analytical.na_sigma_pos is not None:
-                assert analytical.na_sigma_pos < 1.0 + ERROR
-                assert analytical.na_sigma_pos > 0.0 - ERROR
-            if analytical.na_sigma_neg is not None:
-                assert analytical.na_sigma_neg < 1.0 + ERROR
-                assert analytical.na_sigma_neg > 0.0 - ERROR
+            # if analytical.na_sigma_pos is not None:
+            #     assert analytical.na_sigma_pos < 1.0 + ERROR
+            #     assert analytical.na_sigma_pos > 0.0 - ERROR
+            # if analytical.na_sigma_neg is not None:
+            #     assert analytical.na_sigma_neg < 1.0 + ERROR
+            #     assert analytical.na_sigma_neg > 0.0 - ERROR
 
 
     solutions = np.array(solutions) 

@@ -20,7 +20,8 @@ if __name__ == '__main__':
     BETA_PRIME = 2 # Interaction with the adsorbate, eV 
     ADSORBATE_ENERGIES = np.linspace(-1, 1, 25) # 2beta' CONVERT UNITS
     EPSILON_RANGE = np.linspace(-10, 10 , 10000) # 2beta CONVERT UNITS
-    FERMI_LEVEL = [0.0, 0.9]
+    FERMI_LEVEL = [0.0, 1.8]
+    U = 0.0 # Fermi level, eV
 
     fig, ax = plt.subplots(1, 1, figsize=(10, 6.5), constrained_layout=True)
     colors = cm.viridis(np.linspace(0, 1, len(BETA)))
@@ -32,17 +33,19 @@ if __name__ == '__main__':
             # prepare the unit coverter from beta to beta_p
             convert = beta / BETA_PRIME
             for d, eps_sigma in enumerate(ADSORBATE_ENERGIES):
-
+                # I don't want the epsilon_sigma to change when I am changing
+                # the Fermi level
                 eps_sigma_eV = eps_sigma * 2 * BETA_PRIME + e_fermi
-                eps_range = EPSILON_RANGE * 2 * beta
+                eps_range = EPSILON_RANGE * 2 * beta # Already wrt to Fermi level
 
                 newns = NewnsAndersonAnalytical(beta = beta, 
                                                 beta_p = BETA_PRIME/beta,
                                                 eps_d = METAL_ENERGIES,
-                                                eps_sigma = eps_sigma_eV,
+                                                eps_a = eps_sigma_eV,
                                                 eps = eps_range,
-                                                fermi_energy=e_fermi)
-
+                                                fermi_energy=e_fermi,
+                                                U=U)
+                newns.self_consistent_calculation()
                 eps_a_wrt_fermi = newns.eps_sigma * convert - e_fermi / 2 / BETA_PRIME
                 all_energies.append( [ eps_a_wrt_fermi, newns.DeltaE * convert ] )
 

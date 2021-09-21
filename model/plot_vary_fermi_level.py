@@ -1,4 +1,4 @@
-"""Plot the variation of the energy against the d-band center."""
+"""Plot the variation of the energy against changing the Fermi level."""
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -17,6 +17,12 @@ def plot_dos(ax):
     ax.axvline( newns.root_positive, ls='-.', color='tab:olive')
     ax.axvline( newns.root_negative, ls='-.', color='tab:olive')
 
+    # Plot the Fermi level
+    ax.axvline( newns.fermi_energy, ls='--', color='k')
+
+    # Plot the adsorbate energy level
+    ax.axvline( newns.eps_a, ls='--', color='tab:orange')
+
     # Plot the density of states of the adsorbate
     ax.fill_between( newns.eps , newns.rho_aa, color='tab:red', label='$\rho_{aa}$')
 
@@ -32,20 +38,17 @@ if __name__ == '__main__':
     The energy is in units of 2beta and the d-band center is in units of 2beta.
     """
     EPSILON_RANGE = np.linspace(-15, 15, 4000) # range of energies plot in dos
-    BETA_PRIME = [2, 2.4] # Interaction of metal and adsorbate in 2beta units 
-    EPSILON_SIGMA = [ 2.5 ] # renormalised energy of adsorbate
-    EPSILON_D = np.linspace(-8, 2) # Band center in eV 
+    BETA_PRIME = [2, 2.5] # Interaction of metal and adsorbate in 2beta units 
+    EPSILON_SIGMA = [ 2.5, -2, -4 ] # renormalised energy of adsorbate wrt to the Fermi level
+    FERMI_LEVEL = np.linspace(8, -2) # Band center in eV 
+    EPSILON_D = 0.0
     BETA = 1 # in units of eV
     NUM_DENSITY_OF_STATES = 5 # Number of density of states to plot
-    colors = cm.RdBu(np.linspace(0, 1, len(EPSILON_SIGMA) * len(BETA_PRIME)))
-    FERMI_ENERGY = 0.0 # Fermi energy in 2beta units
+    colors = cm.viridis(np.linspace(0, 1, len(EPSILON_SIGMA) * len(BETA_PRIME)))
     U = 0.0 # no coulomb interaction
 
     # Plot the energies in this figure
-    fige, axe = plt.subplots(1, 1, figsize=(6, 6), constrained_layout=True)
-    # Specifics
-    axe.axvline(-2 * BETA, ls='--', color='k', alpha=0.5)
-    axe.annotate(r'$\it{d}$-band' +'\noutside \nFermi level', xy=(0.6, 0.7), xycoords='axes fraction',)
+    fige, axe = plt.subplots(1, 1, figsize=(6, 8.5), constrained_layout=True)
     # Plot the components of the energy in this figure
     figs, axs = plt.subplots(1, 2, figsize=(14, 5.5), constrained_layout=True)
 
@@ -62,20 +65,22 @@ if __name__ == '__main__':
             # Plot a subsection of the density of states at different epsilon_d values
             figd, axd = plt.subplots(1, NUM_DENSITY_OF_STATES, figsize=(18, 4), constrained_layout=True)
             # Pick 5 evenly spread out indices for the density of states
-            plot_indices = np.linspace(0, len(EPSILON_D) - 1, NUM_DENSITY_OF_STATES)
+            plot_indices = np.linspace(0, len(FERMI_LEVEL) - 1, NUM_DENSITY_OF_STATES)
             plot_indices = np.int_(plot_indices)
             plotted_index = 0
 
-            for d, eps_d in enumerate(EPSILON_D):
+            for d, eps_f in enumerate(FERMI_LEVEL):
+                # The adsorbate state must also be this far away from the Fermi level
+                eps_a_wrt_f = eps_sigma + eps_f
                 newns = NewnsAndersonAnalytical(beta = BETA, 
-                                                beta_p = beta_p/2/BETA, 
-                                                eps_d = eps_d,
-                                                eps_a = eps_sigma,
+                                                beta_p = beta_p / 2 / BETA, 
+                                                eps_d = EPSILON_D,
+                                                eps_a = eps_a_wrt_f,
                                                 eps = EPSILON_RANGE,
-                                                fermi_energy = FERMI_ENERGY,
+                                                fermi_energy = eps_f,  
                                                 U = U)
                 newns.self_consistent_calculation()
-                energy_in_eV = newns.eps_d * 2 * BETA
+                energy_in_eV = -1 * newns.fermi_energy * 2 * BETA
                 deltaE_in_eV = newns.DeltaE * 2 * BETA
                 # The quantity that we want to plot
                 all_energies.append     ( [ energy_in_eV, deltaE_in_eV           ] )
@@ -89,9 +94,9 @@ if __name__ == '__main__':
                     # axe.plot( energy_in_eV, deltaE_in_eV, '*', color='k')
                     # axe.annotate('L+', xy=( energy_in_eV, deltaE_in_eV+0.3), fontsize=8)
                     # axe.plot( energy_in_eV, deltaE_in_eV, 'o', color=colors[index])
-                if newns.has_localised_occupied_state_negative:
+                # if newns.has_localised_occupied_state_negative:
                     # axe.annotate('L-', xy=( energy_in_eV, deltaE_in_eV+0.3), fontsize=8)
-                    axe.plot( energy_in_eV, deltaE_in_eV, 'v', color='k')
+                    # axe.plot( energy_in_eV, deltaE_in_eV, 'v', color='k')
                 
                 if d in plot_indices:
                     plot_dos(axd[plotted_index])
@@ -100,7 +105,7 @@ if __name__ == '__main__':
             # Plot the energies 
             eps_a_in_eV = newns.eps_sigma * 2 * BETA
             all_energies = np.array(all_energies).T
-            axe.plot( all_energies[0], all_energies[1], '-o', alpha=0.5, color=colors[index],
+            axe.plot( all_energies[0], all_energies[1], '-o', color=colors[index],
                      label = r"$ V_{\rm ak} = %1.2f$ eV, $\epsilon_a = %1.2f$ eV"%(beta_p, eps_a_in_eV))
 
             all_eps_sigma_pos = np.array(all_eps_sigma_pos).T
@@ -118,7 +123,7 @@ if __name__ == '__main__':
                         label = r"$ \beta' = %1.2f, \epsilon_\sigma = %1.2f$"%(beta_p, newns.eps_sigma))
 
             # Save the figure for the density of states
-            figd.savefig('output/dos/dos_%1.2f_%1.2f.png'%(beta_p, eps_sigma))
+            figd.savefig('output/dos_fermi/dos_%1.2f_%1.2f.png'%(beta_p, eps_sigma))
             index += 1
             
 
@@ -127,14 +132,14 @@ if __name__ == '__main__':
     # axe.legend(bbox_to_anchor=(1.04,0), loc="lower left", borderaxespad=0)
     axe.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
                 mode="expand", borderaxespad=0, ncol=1)
-    fige.savefig('output/NewnsAnderson_vary_eps_d.png')
+    fige.savefig('output/NewnsAnderson_vary_fermi.png')
 
     axs[0].set_xlabel(r'$\epsilon_d$ (eV) ')
     axs[0].set_ylabel(r'$\epsilon_{l,\sigma}$ ($2\beta$)')
     axs[1].set_xlabel(r'$\epsilon_d$ ($2\beta$) ')
     axs[1].set_ylabel(r'$\pi^{-1}\int \mathregular{arctan} ( \Delta / \epsilon - \epsilon_{\sigma} - \Lambda ) $ ($2\beta$)')
     axs[0].legend(bbox_to_anchor=(1.04,0), loc="lower left", borderaxespad=0)
-    figs.savefig('output/NewnsAnderson_vary_eps_d_components.png')
+    figs.savefig('output/NewnsAnderson_vary_fermi_components.png')
 
 
 

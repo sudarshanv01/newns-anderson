@@ -16,11 +16,13 @@ if __name__ == '__main__':
     EPSILON_RANGE = np.linspace(-2.5, 2.5, 1000) # in units of -2beta 
     BETA_PRIME = [0.5, 1.5] # in units of -2beta 
     # Choose epsilon_{sigma} such that it resemble the plots in the figues
-    EPSILON_SIGMA = [
+    EPSILON_A = [
         [ -1.5, -0.4, 0.75 ],
         [ -0.25             ],
     ] 
     EPSILON_D = 0 
+    U = 0 # There is no coulomb interaction
+    FERMI_ENERGY = 0 # No fermi energy shift
 
     # Create the figure
     fige, axe = plt.subplots(2, 1, figsize=(6, 10), constrained_layout=True)
@@ -29,19 +31,22 @@ if __name__ == '__main__':
     for i, beta_p in enumerate(BETA_PRIME):
         print('beta prime = {} (units: 2beta)'.format(beta_p))
         # Choose only the right epsilon_{sigma}
-        for j, _epsilon_sigma in enumerate(EPSILON_SIGMA[i]):
+        for j, _epsilon_a in enumerate(EPSILON_A[i]):
 
             # All energy quantities in eV
-            epsilon_sigma = _epsilon_sigma * 2 * beta_p 
+            epsilon_a = _epsilon_a * 2 * beta_p 
             epsilon_d = EPSILON_D 
             epsilon_range = EPSILON_RANGE * 2 * beta_p
 
             analytical = NewnsAndersonAnalytical(beta_p=beta_p,
                                                 beta=beta_p, 
-                                                eps_sigma=epsilon_sigma, 
+                                                eps_a=epsilon_a, 
                                                 eps_d=epsilon_d, 
-                                                eps=epsilon_range)
+                                                eps=epsilon_range,
+                                                U=U,
+                                                fermi_energy=FERMI_ENERGY)
 
+            analytical.self_consistent_calculation()
             # Plot in terms of 2beta
             if j == 0:
                 axe[i].plot(analytical.eps, analytical.Delta, '--', lw=3, color='k', alpha=0.5)
@@ -60,8 +65,6 @@ if __name__ == '__main__':
                 axe[i].plot(analytical.root_negative, 0, '*', color=colors[j], ms=16)
                 axe[i].axvline(analytical.root_negative, color=colors[j], ls='-.', alpha=0.25)
                 print(f'Occupancy of the occupied state (negative root) is {analytical.na_sigma_neg}')
-
-            
 
         for a in axe:
             a.set_ylabel(r'$\rho_{aa}^{\sigma}$ ($2\beta$)')

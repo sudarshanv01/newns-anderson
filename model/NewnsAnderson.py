@@ -5,6 +5,7 @@ import numpy as np
 from scipy import signal
 from scipy import integrate
 import warnings
+from pprint import pprint
 warnings.filterwarnings("ignore", category=RuntimeWarning) 
 
 @dataclass
@@ -21,7 +22,7 @@ class NewnsAndersonAnalytical:
         eps_d: float
             center of Delta in units of eV wrt Fermi level
         eps: list
-            Range of energies to plot in units of eV wrt Fermi level
+            Range of energies to plot in units of eV wrt d-band center 
         fermi_energy: float
             Fermi energy in the units of eV
         U: float
@@ -34,6 +35,7 @@ class NewnsAndersonAnalytical:
     beta: float
     fermi_energy: float
     U: float
+    grid_size = 20
 
     def __post_init__(self):
         """Setup the quantities for a self-consistent calculation."""
@@ -41,8 +43,8 @@ class NewnsAndersonAnalytical:
         # To determine the lowest energy spin configuration determine the variation
         # n_-sigma with a fixed n_sigma and vice-versa. The point where the two
         # curves meet is the self-consistency point.
-        self.nsigma_range = np.linspace(0, 1.0, 100)
-        self.nmsigma_range = np.linspace(0, 1.0, 100)
+        self.nsigma_range = np.linspace(0, 1.0, self.grid_size)
+        self.nmsigma_range = np.linspace(0, 1.0, self.grid_size)
         # Unit conversion details
         # coversion factor to divide by to convert to 2beta units
         self.convert = 2 * self.beta
@@ -51,61 +53,88 @@ class NewnsAndersonAnalytical:
         self.eps = self.eps / self.convert 
         self.eps_d = self.eps_d / self.convert
         self.fermi_energy = self.fermi_energy / self.convert
+        # The quantities that will be of interest here 
+        self.Delta = np.zeros(len(self.eps))
+        self.Lambda = np.zeros(len(self.eps))
+        self.rho_aa = np.zeros(len(self.eps))
+        # Print out details of the quantities
+        input_data = {
+            "beta_p": self.beta_p,
+            "eps_a": self.eps_a,
+            "eps_d": self.eps_d,
+            "beta": self.beta,
+            "fermi_energy": self.fermi_energy,
+            "U": self.U,
+        }
+        pprint(input_data)
+
     
     def self_consistent_calculation(self):
         """ Calculate the self-consistency point for the given parameters."""
-        # Find the lowest maximum value for varying n_down
-        lowest_energy = None
-        index_nup_overall = None
-        index_ndown_overall = None
-        for j, n_down in enumerate(self.nmsigma_range):
-            # Fix n_minus sigma and determine energies for different 
-            # values of n_plus sigma
-            energies_down = np.zeros(len(self.nsigma_range))
-            for i, n_up in enumerate(self.nsigma_range):
-                self.eps_sigma_up = self.eps_a + self.U * n_down 
-                self.eps_sigma_down = self.eps_a + self.U * n_up
-                # The quantities that will be of interest here 
-                self.Delta = np.zeros(len(self.eps))
-                self.Lambda = np.zeros(len(self.eps))
-                self.rho_aa = np.zeros(len(self.eps))
+        if self.U == 0:
+            # There is no columb interaction, so the self-consistency point is
+            print('No need for self-consistent calculation, U=0')
+            self.n_minus_sigma = 1.
+            self.n_plus_sigma = 1.
+        else:
+            # Find the lowest maximum value for varying n_down
+            lowest_energy = None
+            index_nup_overall = None
+            index_ndown_overall = None
+            # Store all the energies of the grid
+            self.energies_grid = np.zeros((len(self.nsigma_range), len(self.nmsigma_range)))
+            for j, n_down in enumerate(self.nmsigma_range):
+                # Fix n_minus sigma and determine energies for different 
+                # values of n_plus sigma
+                energies_down = np.zeros(len(self.nsigma_range))
+                for i, n_up in enumerate(self.nsigma_range):
 
-                # Calculate the 1electron energies
-                # First calculate the spin up energy
-                self.eps_sigma = self.eps_sigma_up
-                self.calculate_energies()
-                energies_down_ = self.DeltaE_1sigma
-                # Now calculate the spin down energy
-                self.eps_sigma = self.eps_sigma_down
-                self.calculate_energies()
-                energies_down_ += self.DeltaE_1sigma
+                    # Define the energies for up and down spins
+                    self.eps_sigma_up = self.eps_a + self.U * n_down 
+                    self.eps_sigma_down = self.eps_a + self.U * n_up
 
-                # Calculate the coulomb contribution
-                coulomb_energy = self.U * n_down * n_up
-                energies_down_ -= coulomb_energy
+                    # Calculate the 1electron energies
+                    # First calculate the spin up energy
+                    self.eps_sigma = self.eps_sigma_up
+                    self.calculate_energies()
+                    energies_down_ = self.DeltaE_1sigma
+                    # Now calculate the spin down energy
+                    self.eps_sigma = self.eps_sigma_down
+                    self.calculate_energies()
+                    energies_down_ += self.DeltaE_1sigma
 
-                # Subtract the adsorbate energy
-                energies_down_ -= self.eps_a 
+                    # Calculate the coulomb contribution
+                    coulomb_energy = self.U * n_down * n_up
+                    energies_down_ -= coulomb_energy
 
-                # Store the energies to check if it is the lowest
-                energies_down[i] = energies_down_
+                    # Subtract the adsorbate energy
+                    energies_down_ -= self.eps_a 
 
-            # determine the maximum value of the energy
-            maximum_energy = np.max(energies_down)
-            index_nup = np.argmax(energies_down)
-            if lowest_energy is not None:
-                lowest_energy = maximum_energy if maximum_energy < lowest_energy else lowest_energy
-                index_nup_overall = index_nup if maximum_energy < lowest_energy else index_nup_overall
-                index_ndown_overall = j if maximum_energy < lowest_energy else index_ndown_overall
-            else:
-                lowest_energy = maximum_energy
-                index_nup_overall = index_nup
-                index_ndown_overall = j
-        
-        # Determine the values that give the lowest energy
-        self.n_minus_sigma = self.nmsigma_range[index_ndown_overall]
-        self.n_plus_sigma = self.nsigma_range[index_nup_overall]
-        
+                    # Store the energies to check if it is the lowest
+                    energies_down[i] = energies_down_
+
+                # determine the maximum value of the energy
+                maximum_energy = np.max(energies_down)
+                index_nup = np.argmax(energies_down)
+                # Store the energies for the grid
+                self.energies_grid[:, j] = energies_down
+                
+                # Choose whether to store this energy or not
+                if lowest_energy is not None:
+                    lowest_energy = maximum_energy if maximum_energy <= lowest_energy else lowest_energy
+                    index_nup_overall = index_nup if maximum_energy <= lowest_energy else index_nup_overall
+                    index_ndown_overall = j if maximum_energy <= lowest_energy else index_ndown_overall
+                else:
+                    # First run, store these quantities
+                    lowest_energy = maximum_energy
+                    index_nup_overall = index_nup
+                    index_ndown_overall = j
+            
+            # Determine the values that give the lowest energy
+            self.n_minus_sigma = self.nmsigma_range[index_ndown_overall]
+            self.n_plus_sigma = self.nsigma_range[index_nup_overall]
+
+
         # Store all the quantities for the self-consistency point
         self.eps_sigma_up = self.eps_a + self.U * self.n_minus_sigma 
         self.eps_sigma_down = self.eps_a + self.U * self.n_plus_sigma
@@ -113,12 +142,15 @@ class NewnsAndersonAnalytical:
         # Sum up the energies from both of the spins
         self.eps_sigma = self.eps_sigma_up
         self.calculate_energies()
-        self.rhoaa_up = self.rho_aa
+        self.rho_aa_up = self.rho_aa
         DeltaE_ = self.DeltaE_1sigma
         self.eps_sigma = self.eps_sigma_down
         self.calculate_energies()
-        self.rhoaa_down = self.rho_aa
+        self.rho_aa_down = self.rho_aa
         DeltaE_ += self.DeltaE_1sigma
+
+        # The variable rhoaa will be the sum of the two rhos
+        self.rho_aa = self.rho_aa_up + self.rho_aa_down 
 
         # Coulomb contribution
         DeltaE_ -= self.U * self.n_minus_sigma * self.n_plus_sigma
@@ -131,13 +163,14 @@ class NewnsAndersonAnalytical:
         self.DeltaE = DeltaE_ 
 
         # Print out the final results
+        print('--------------------------')
         print(f"Spin up expectation value   : {self.n_minus_sigma} e")
         print(f"Spin down expectation value : {self.n_plus_sigma} e")
-        print(f"Self-consistency energy     : {self.DeltaE} eV")
+        print(f"Self-consistency energy     : {self.DeltaE} (2beta)")
 
 
     def calculate_energies(self):
-        """Calculate the energies from the Newns-Anderson model."""
+        """Calculate the 1e energies from the Newns-Anderson model."""
 
         # Energies referenced to the d-band center
         # Needed for some manipulations later
@@ -217,18 +250,19 @@ class NewnsAndersonAnalytical:
             root_negative = np.real(root_negative)
 
             # The real parts must be the same
-            assert root_negative == root_positive
+            # assert root_negative == root_positive
 
         # Store the root referenced to the energy reference scale that was chosen 
-        self.root_positive = root_positive + self.eps_d
-        self.root_negative = root_negative + self.eps_d
+        self.root_positive = root_positive + self.eps_d #- self.fermi_energy
+        self.root_negative = root_negative + self.eps_d #- self.fermi_energy
         
         # Determine if there is an occupied localised state
         if not self.has_complex_root:
-            if self.root_positive < self.lower_band_edge and self.eps_sigma_wrt_d > 2 * self.beta_p**2 - 1:
+            if self.root_positive < self.lower_band_edge and self.eps_sigma_wrt_d < 2 * self.beta_p**2 - 1:
                 # Check if the root is below the Fermi level
-                if self.root_positive < 0:
+                if self.root_positive < self.fermi_energy:
                     # the energy for this point is to be included
+                    # print('Positive root is below the Fermi level.')
                     self.has_localised_occupied_state_positive = True
                 else:
                     self.has_localised_occupied_state_positive = False
@@ -241,8 +275,9 @@ class NewnsAndersonAnalytical:
             # Check if there is a localised occupied state for the negative root
             if self.root_negative > self.upper_band_edge and self.eps_sigma_wrt_d > 1 - 2 * self.beta_p**2:
                 # Check if the root is below the Fermi level
-                if self.root_negative < 0:
+                if self.root_negative < self.fermi_energy:
                     # the energy for this point is to be included
+                    # print('Negative root is below the Fermi level.')
                     self.has_localised_occupied_state_negative = True
                 else:
                     self.has_localised_occupied_state_negative = False
@@ -282,12 +317,10 @@ class NewnsAndersonAnalytical:
             self.has_localised_occupied_state_positive = False
             self.has_localised_occupied_state_negative = False
 
-
-
         # ---------- Calculate the energy ----------
         # Determine the upper bounds for the contour integration
-        if self.upper_band_edge > 0:
-            upper_bound = 0 
+        if self.upper_band_edge > self.fermi_energy:
+            upper_bound = self.fermi_energy
         else:
             upper_bound = self.upper_band_edge
         occupied_states = [i for i in range(len(self.eps)) if self.lower_band_edge < self.eps[i] < upper_bound]
@@ -295,6 +328,7 @@ class NewnsAndersonAnalytical:
         # Determine the integrand 
         energy_occ = self.eps_wrt_d[occupied_states]
         numerator = - 2 * self.beta_p**2 * (1 - energy_occ**2)**0.5
+        numerator = np.nan_to_num(numerator)
         denominator = energy_occ * (2*self.beta_p**2 - 1) + self.eps_sigma_wrt_d
 
         # This number will always be between [-pi, 0]
@@ -316,6 +350,7 @@ class NewnsAndersonAnalytical:
             self.arctan_component /= np.pi
             self.energy = self.arctan_component
             self.energy += self.eps_l_sigma_pos
+            self.energy -= self.fermi_energy
         elif self.has_localised_occupied_state_negative:
             # Has only negative root and it is a localised occupied state
             self.arctan_component =  np.trapz( arctan_integrand, energy_occ )
@@ -331,7 +366,3 @@ class NewnsAndersonAnalytical:
 
         # The one electron energy is just the difference of eigenvalues 
         self.DeltaE_1sigma = self.energy 
-
-        # Determine the energy
-        # coulomb_energy = self.U *  
-        # self.DeltaE = 2 * self.DeltaE_1sigma + self.fermi_energy -  1 * self.eps_sigma

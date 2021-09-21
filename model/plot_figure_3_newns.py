@@ -13,6 +13,8 @@ if __name__ == '__main__':
     BETA = 0.5 # eV 
     EPSILON_SIGMA = np.array([1/2, 0, 0, -0.258]) * 2 * BETA # units of eV
     EPSILON_D = np.array([0, 0, 0, 0]) # in eV
+    FERMI_ENERGY = 0.0
+    U = 0.0 # no columb term
 
     fige, axe = plt.subplots(1, 1, figsize=(8, 6), constrained_layout=True)
     colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:orange']
@@ -27,17 +29,17 @@ if __name__ == '__main__':
 
         analytical = NewnsAndersonAnalytical(beta_p=beta_p,
                                              beta=BETA, 
-                                             eps_sigma=epsilon_sigma, 
+                                             eps_a=epsilon_sigma, 
                                              eps_d=epsilon_d, 
-                                             eps=epsilon_range)
+                                             eps=epsilon_range,
+                                             fermi_energy = FERMI_ENERGY,
+                                             U=U)
+        analytical.self_consistent_calculation()
         # Plot in terms of 2beta
         axe.plot(analytical.eps, analytical.rho_aa, '-', lw=3, color=colors[i],
                 label=r"$\beta' = %1.2f, \epsilon_{\sigma}=%1.2f$"%(beta_p, analytical.eps_sigma))
         if analytical.has_localised_occupied_state_positive:
             axe.plot(analytical.eps_l_sigma_pos, 0, '*', ms=16, color=colors[i])
-        if analytical.has_localised_occupied_state_negative:
-            axe.plot(analytical.eps_l_sigma_neg, 0, '*', ms=16, color=colors[i])
-        elif analytical.eps_l_sigma_neg is not None:
             axe.plot(analytical.eps_l_sigma_neg, 0, '*', ms=16, color=colors[i], alpha=0.5)
 
 
