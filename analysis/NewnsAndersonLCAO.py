@@ -1,4 +1,4 @@
-
+"""Parameters for the Newns-Anderson model from LCAO calculations."""
 from dataclasses import dataclass
 import numpy as np
 from scipy import signal
@@ -24,7 +24,7 @@ class NewnsAndersonLCAO:
         self.get_adsorbate_density_of_states()
 
     def _subdiagonalize(self, index):
-        """ Subdiagonalize the Hamiltonian. """
+        """Subdiagonalize the Hamiltonian. """
         H = self.H_MM.take(index, axis=0).take(index, axis=1) 
         S = self.S_MM.take(index, axis=0).take(index, axis=1) 
 
@@ -50,8 +50,7 @@ class NewnsAndersonLCAO:
 
     def get_chemisorption_function(self):
         """Get the Chemisorption function for the Newns-Anderson Model
-           Delta = Sigma_{k} = | e_k * s_{ak} - v_{ak} | ^2
-        """
+           Delta = Sigma_{k} = | e_k * s_{ak} - v_{ak} | ^2"""
         eigenval_ads = self._subdiagonalize(self.adsorbate_basis_index)
         eigenval_metal = self._subdiagonalize(self.metal_basis_index)
 

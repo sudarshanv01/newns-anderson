@@ -1,5 +1,5 @@
 """Plots the results of LCAO calculations for the Newns Anderson Model."""
-
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.core.defchararray import index
@@ -13,10 +13,10 @@ BaseGPAW = WorkflowFactory('ase.gpaw.base')
 if __name__ == '__main__':
 
     # Query for the data of the group
-    GROUP_NAME = 'fcc_111/6x6x4/c_adsorption/scf_calculation'
+    GROUP_NAME = 'scf_calculations/C'
+    ADSORBATE = GROUP_NAME.split('/')[1]
     TYPE_OF_CALC = BaseGPAW 
-    POSSIBLE_ADSORBATE_INDEX = ['C', 'O', 'N', 'H']
-    ADSORBATE_BASIS_INDEX = 13 # Last elements of the H, S matrix
+    POSSIBLE_ADSORBATE_INDEX = list(ADSORBATE) 
 
     # Query for the data of the calculation
     qb = orm.QueryBuilder()
@@ -25,6 +25,8 @@ if __name__ == '__main__':
 
 
     for results in qb.all(flat=True):
+        if not results.is_finished_ok:
+            continue
 
         # Define the figures
         figd, axd = plt.subplots(1, 1, figsize=(10, 10), constrained_layout=True)
@@ -46,6 +48,7 @@ if __name__ == '__main__':
         energies_dos = arrays.get_array('energies_dos')
         weights_dos = arrays.get_array('weights_dos')
         eigenvalues = arrays.get_array('eigenvalues')
+        adsorbate_basis_index = arrays.get_array('basis_func_adsorbate')
         fermi_energy = results.outputs.parameters.get_attribute('fermi_energy')
 
         # Choose the right index for the subdiagonalisation
@@ -55,22 +58,25 @@ if __name__ == '__main__':
 
         # Partitition the index
         all_index = np.arange(len(H_MM[0]))
-        adsorbate_index = all_index[-ADSORBATE_BASIS_INDEX:]
-        metal_index = all_index[:-ADSORBATE_BASIS_INDEX]
+        adsorbate_index = adsorbate_basis_index 
+        metal_index = np.delete(all_index, adsorbate_basis_index) 
 
         # Range of values for which we want delta to be plotted
-        delta_range = np.array([-6, 6]) + fermi_energy 
+        delta_range = np.array([-10, 10]) + fermi_energy 
         # Decide if more padding with zero's is required
-        PAD_RANGE = np.array([10, 10]) # Pad with zeros 10 eV on either side
+        PAD_RANGE = np.array([15, 15]) # Pad with zeros 10 eV on either side
         # Perform all the manipulations of the Newns-Anderson model
         newns = NewnsAndersonLCAO(H_MM, S_MM, adsorbate_index, metal_index,
                                     broadening_width=0.1, cutoff_range=delta_range,
                                     pad_range=PAD_RANGE)
-        # Plot the relevant quantities
-        for i, eps_a in enumerate(newns.eigenval_ads):
-            figa, axa = plt.subplots(1, 1, figsize=(8,4), constrained_layout=True)
-            axa.axvline(fermi_energy, color='black', linestyle='--', label='Fermi Energy')
-            axa.plot(newns.eigenval_metal, newns.delta[i], label='Delta', lw=3)
-            axa.plot(newns.eigenval_metal, newns.Lambda[i], label='Lambda', lw=3)
-            figa.savefig('output/delta/{}_delta_{}.png'.format(metal_name, np.round(eps_a,2)))
-            plt.close(figa)
+        data_to_pickle = {}
+        # Need to only store one Delta
+        data_to_pickle['Delta'] = newns.delta[0].tolist()
+        data_to_pickle['eigenval_ads'] = newns.eigenval_ads.tolist()
+        data_to_pickle['eigenval_metal'] = newns.eigenval_metal.tolist()
+        data_to_pickle['fermi_energy'] = fermi_energy
+        data_to_pickle['metal'] = metal_name
+        data_to_pickle['adsorbate'] = ADSORBATE
+        with open('output/delta/{a}_{b}_lcao_data.pkl'.format(a=metal_name, b=ADSORBATE), 'wb') as f:
+            pickle.dump(data_to_pickle, f)
+

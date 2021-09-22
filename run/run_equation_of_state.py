@@ -15,7 +15,7 @@ PLUGIN_NAME = 'gpaw'
 CODE_LABEL = 'gpaw.21.6.0@dtu_xeon16'
 
 STRUCTURES_GROUP_LABEL = 'initial_bulk_structures' 
-WORKFLOWS_GROUP_LABEL = 'equation_of_state/pw' 
+WORKFLOWS_GROUP_LABEL = 'equation_of_state' 
 
 class EosSubmissionController(FromGroupSubmissionController):
     """A SubmissionController for submitting EOS with Quantum ESPRESSO common workflows."""
@@ -26,18 +26,11 @@ class EosSubmissionController(FromGroupSubmissionController):
         self._process_class = WorkflowFactory('common_workflows.eos')
 
     def get_extra_unique_keys(self):
-        """Return a tuple of the keys of the unique extras that will be used to uniquely identify your workchains.
-
-        Here: the chemical symbol of the element, and the configuration (XO, XO2, X2O3, ...).
-        """
+        """Return a tuple of the keys of the unique extras that will be used to uniquely identify your workchains."""
         return ['metal', 'crystalstructure']
 
     def get_inputs_and_processclass_from_extras(self, extras_values):
-        """Return inputs and process class for the submission of this specific process.
-
-        I just submit an ArithmeticAdd calculation summing the two values stored in the extras:
-        ``left_operand + right_operand``.
-        """
+        """Return inputs and process class for the submission of this specific process."""
         structure = self.get_parent_node_from_extras(extras_values)
 
         sub_process_cls = load_workflow_entry_point('relax', 'gpaw')
@@ -63,12 +56,11 @@ class EosSubmissionController(FromGroupSubmissionController):
 
         inputs = {
             'structure': structure,
-            # 'scale_count': orm.Int(15),
-            # 'scale_increment': orm.Float(0.03),
+            'scale_count': orm.Int(13),
             'generator_inputs': {  # code-agnostic inputs for the relaxation
                 'engines': engines,
-                'protocol': 'precise_pw',
-                'relax_type': RelaxType.POSITIONS,
+                'protocol': 'precise_lcao',
+                'relax_type': RelaxType.NONE,
                 'electronic_type': ElectronicType.METAL,
                 'spin_type': SpinType.NONE,
             },

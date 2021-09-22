@@ -31,10 +31,10 @@ def runner(structure):
                 'basis': 'dzp',
                 'occupations':
                     {
-                        'name' : 'marzari-vanderbilt',
+                        'name' : 'fermi-dirac',
                         'width' : 0.1,
                     },
-                'xc': 'RPBE',
+                'xc': 'PBE',
             },
         },
         'extra_imports':[
@@ -48,10 +48,22 @@ def runner(structure):
             "results['H_skMM'] = H_skMM.tolist()",
             "dos = RestartLCAODOS(calculator)",
             "energies, weights = dos.get_atomic_subspace_pdos(range(len(atoms)))",
+            f"adsorbate_index = [atom.index for atom in atoms if atom.symbol in list('{ADSORBATE}')]",
+            "basis_func_index = dos.get_atom_indices(adsorbate_index)",
             "results['energies_dos'] = energies.tolist()",
             "results['weights_dos'] = weights.tolist()",
+            "results['basis_func_adsorbate'] = list(basis_func_index)",            
         ],
     }
+
+    # Make sure that a few useful things are stored
+    parameters['atoms_getters'] = [
+        'temperature',
+        ['forces', {
+            'apply_constraint': True
+        }],
+        ['masses', {}],
+    ]
 
     builder.gpaw.parameters = orm.Dict(dict=parameters)
 
@@ -61,15 +73,16 @@ def runner(structure):
 
     # Specifications of the time and resources
     builder.gpaw.metadata.options.resources = {'num_machines': 1}
-    builder.gpaw.metadata.options.max_wallclock_seconds = 5 * 60 * 60
+    builder.gpaw.metadata.options.max_wallclock_seconds = 15 * 60 * 60
 
     calculation = engine.submit(BaseGPAW, **builder)
     
     subgroup.add_nodes(calculation)
 
 if __name__ == '__main__':
-    GROUP_NAME = 'fcc_111/6x6x4/o_adsorption/initial_structures'
-    CALC_GROUPNAME = 'fcc_111/6x6x4/o_adsorption/scf_calculation'
+    ADSORBATE = 'OH'
+    GROUP_NAME = f'initial_structures/{ADSORBATE}'
+    CALC_GROUPNAME = f'scf_calculations/{ADSORBATE}'
     subgroup, _ = orm.Group.objects.get_or_create(label=CALC_GROUPNAME)
 
     qb = QueryBuilder()
