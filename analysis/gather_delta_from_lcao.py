@@ -13,7 +13,7 @@ BaseGPAW = WorkflowFactory('ase.gpaw.base')
 if __name__ == '__main__':
 
     # Query for the data of the group
-    GROUP_NAME = 'scf_calculations/C'
+    GROUP_NAME = 'scf_calculations/O'
     ADSORBATE = GROUP_NAME.split('/')[1]
     TYPE_OF_CALC = BaseGPAW 
     POSSIBLE_ADSORBATE_INDEX = list(ADSORBATE) 
@@ -27,10 +27,6 @@ if __name__ == '__main__':
     for results in qb.all(flat=True):
         if not results.is_finished_ok:
             continue
-
-        # Define the figures
-        figd, axd = plt.subplots(1, 1, figsize=(10, 10), constrained_layout=True)
-        fige, axe = plt.subplots(1, 1, figsize=(10, 10), constrained_layout=True)
 
         # Get the structure and get relevant information
         # from that data

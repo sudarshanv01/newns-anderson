@@ -80,7 +80,7 @@ def runner(structure):
     subgroup.add_nodes(calculation)
 
 if __name__ == '__main__':
-    ADSORBATE = 'OH'
+    ADSORBATE = 'NH'
     GROUP_NAME = f'initial_structures/{ADSORBATE}'
     CALC_GROUPNAME = f'scf_calculations/{ADSORBATE}'
     subgroup, _ = orm.Group.objects.get_or_create(label=CALC_GROUPNAME)

@@ -10,14 +10,14 @@ if __name__ == '__main__':
     """Recreate Figure 1 of the Newns paper.
     The units along both the dos and energy axis are -2beta, 
     where beta is the interaction of the chain with itself. More
-    secifically it is the width of the d-band.
+    specifically it is the width of the d-band.
     """
     # Parameters to recreate the figure
     EPSILON_RANGE = np.linspace(-2.5, 2.5, 1000) # in units of -2beta 
     BETA_PRIME = [0.5, 1.5] # in units of -2beta 
     # Choose epsilon_{sigma} such that it resemble the plots in the figues
     EPSILON_A = [
-        [ -1.5, -0.4, 0.75 ],
+        [ -1.5, 0.75 ],
         [ -0.25             ],
     ] 
     EPSILON_D = 0 
@@ -49,12 +49,12 @@ if __name__ == '__main__':
             analytical.self_consistent_calculation()
             # Plot in terms of 2beta
             if j == 0:
-                axe[i].plot(analytical.eps, analytical.Delta, '--', lw=3, color='k', alpha=0.5)
-                axe[i].plot(analytical.eps, analytical.Lambda, '-', lw=3, color='k')
+                axe[i].plot(analytical.eps, analytical.Delta, '--', lw=3, color='k', label=r"$\Delta$")
+                axe[i].plot(analytical.eps, analytical.Lambda, '-', lw=3, color='k', label=r"$\Lambda$")
                 axe[i].set_title(r"$\beta'=%1.2f$"%(beta_p))
-            axe[i].plot(analytical.eps, analytical.eps - analytical.eps_sigma, '-', lw=2, color=colors[j])
-            axe[i].plot(analytical.eps, analytical.rho_aa, '-', lw=3, color=colors[j],
-                    label=r"$\epsilon_{\sigma}=%1.2f$"%(analytical.eps_sigma), alpha=0.5)
+            axe[i].plot(analytical.eps, analytical.eps - analytical.eps_sigma, '-', lw=3, color=colors[j])
+            axe[i].plot(analytical.eps, analytical.rho_aa, '-', lw=3, color=colors[j])
+                    # label=r"$\epsilon_{\sigma}=%1.2f$"%(analytical.eps_sigma), alpha=0.5)
             axe[i].set_ylim([-3*beta_p**2, 3*beta_p**2])
 
             if analytical.has_localised_occupied_state_positive:
@@ -65,6 +65,9 @@ if __name__ == '__main__':
                 axe[i].plot(analytical.root_negative, 0, '*', color=colors[j], ms=16)
                 axe[i].axvline(analytical.root_negative, color=colors[j], ls='-.', alpha=0.25)
                 print(f'Occupancy of the occupied state (negative root) is {analytical.na_sigma_neg}')
+            
+        if i == 1:
+            axe[i].legend(loc='best')
 
         for a in axe:
             a.set_ylabel(r'$\rho_{aa}^{\sigma}$ ($2\beta$)')

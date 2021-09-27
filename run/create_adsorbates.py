@@ -11,11 +11,13 @@ from aiida import orm
 # aiida specific
 StructureData = DataFactory('structure')
 
+SPECIFIC_SURFACES = ['Al']
+
 if __name__ == '__main__':
     """Create adsorbates from the metals lattice constants 
     for different crystal strcutures and surface facets."""
     # Choose the adsorbate to create
-    ADSORBATE = 'OH'
+    ADSORBATE = 'NH'
     # Closest atom to the surface
     MOL_INDEX = 0
     # Choose the group to put it in
@@ -37,9 +39,19 @@ if __name__ == '__main__':
               'Os':'001', 'Ir':'111', 'Pt':'111', 'Au':'111',
               'Al': '111'}
 
-    for bulk_structure in lattices:
+    if SPECIFIC_SURFACES:
+        consider = []
+        for atoms in lattices:
+            for surface in SPECIFIC_SURFACES:
+                if surface in atoms.get_chemical_formula():
+                    consider.append(atoms)
+    else:
+        consider = lattices
+
+    for bulk_structure in consider:
         # Only choose metals that have a calculated lattice constant
         metal = np.unique(bulk_structure.symbols)[0]
+        # bulk_structure = lattices[metal]
         print(f'Creating surface for {metal}')
         if facets[metal] == '001':
             layers = 2

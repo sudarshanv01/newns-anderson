@@ -33,7 +33,7 @@ if __name__ == '__main__':
     """
     EPSILON_RANGE = np.linspace(-15, 15, 4000) # range of energies plot in dos
     BETA_PRIME = [2, 2.4] # Interaction of metal and adsorbate in 2beta units 
-    EPSILON_SIGMA = [ 2.5 ] # renormalised energy of adsorbate
+    EPSILON_SIGMA = [ -2, -4 ] # renormalised energy of adsorbate
     EPSILON_D = np.linspace(-8, 2) # Band center in eV 
     BETA = 1 # in units of eV
     NUM_DENSITY_OF_STATES = 5 # Number of density of states to plot
@@ -43,7 +43,7 @@ if __name__ == '__main__':
 
     # Plot the energies in this figure
     fige, axe = plt.subplots(1, 1, figsize=(6, 6), constrained_layout=True)
-    # Specifics
+    # Specifics of the plot
     axe.axvline(-2 * BETA, ls='--', color='k', alpha=0.5)
     axe.annotate(r'$\it{d}$-band' +'\noutside \nFermi level', xy=(0.6, 0.7), xycoords='axes fraction',)
     # Plot the components of the energy in this figure
