@@ -32,10 +32,10 @@ if __name__ == '__main__':
     The energy is in units of 2beta and the d-band center is in units of 2beta.
     """
     EPSILON_RANGE = np.linspace(-15, 15, 4000) # range of energies plot in dos
-    BETA_PRIME = [2, 2.4] # Interaction of metal and adsorbate in 2beta units 
+    BETA_PRIME = [ 2, 4 ] # Interaction of metal and adsorbate in 2beta units 
     EPSILON_SIGMA = [ -2, -4 ] # renormalised energy of adsorbate
     EPSILON_D = np.linspace(-8, 2) # Band center in eV 
-    BETA = 1 # in units of eV
+    BETA = 2 # in units of eV
     NUM_DENSITY_OF_STATES = 5 # Number of density of states to plot
     colors = cm.RdBu(np.linspace(0, 1, len(EPSILON_SIGMA) * len(BETA_PRIME)))
     FERMI_ENERGY = 0.0 # Fermi energy in 2beta units
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     fige, axe = plt.subplots(1, 1, figsize=(6, 6), constrained_layout=True)
     # Specifics of the plot
     axe.axvline(-2 * BETA, ls='--', color='k', alpha=0.5)
-    axe.annotate(r'$\it{d}$-band' +'\noutside \nFermi level', xy=(0.6, 0.7), xycoords='axes fraction',)
+    # axe.annotate(r'$\it{d}$-band' +'\noutside \nFermi level', xy=(0.6, 0.7), xycoords='axes fraction',)
     # Plot the components of the energy in this figure
     figs, axs = plt.subplots(1, 2, figsize=(14, 5.5), constrained_layout=True)
 
@@ -85,8 +85,8 @@ if __name__ == '__main__':
                     all_eps_sigma_neg.append( [ energy_in_eV, newns.eps_l_sigma_neg  ] )
                 all_tan_comp.append     ( [ energy_in_eV, newns.arctan_component ] )
 
-                # if newns.has_localised_occupied_state_positive:
-                    # axe.plot( energy_in_eV, deltaE_in_eV, '*', color='k')
+                if newns.has_localised_occupied_state_positive:
+                    axe.plot( energy_in_eV, deltaE_in_eV, '*', color='k')
                     # axe.annotate('L+', xy=( energy_in_eV, deltaE_in_eV+0.3), fontsize=8)
                     # axe.plot( energy_in_eV, deltaE_in_eV, 'o', color=colors[index])
                 if newns.has_localised_occupied_state_negative:

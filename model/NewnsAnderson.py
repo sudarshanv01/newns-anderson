@@ -9,6 +9,72 @@ from pprint import pprint
 warnings.filterwarnings("ignore", category=RuntimeWarning) 
 
 @dataclass
+class NewnsAndersonNumerical:
+    """Perform numerical calculations of the Newns-Anderson model to get 
+    the chemisorption energy.
+    Vak: float
+        Coupling matrix element
+    eps_a: float
+        Energy of the adsorbate
+    eps_d: float
+        Energy of the d-band
+    eps: list
+        Energy range to consider
+    width: float
+        Width of the d-band
+    """
+    Vak: float
+    eps_a: float
+    width: float
+    eps_d: float
+    eps: float
+
+    def __post_init__(self):
+        """Perform numerical calculations of the Newns-Anderson model to get 
+        the chemisorption energy."""
+        # Store some useful variables
+        self.eps_wrt_d = self.eps - self.eps_d
+    
+    def _create_Delta(self):
+        """Create Delta from Vak and eps_d."""
+        self.Delta =  self.Vak**2 * ( 1  - ( self.eps_wrt_d )**2 / ( self.width )**2  )**0.5
+        self.Delta = np.nan_to_num(self.Delta)
+    
+    def _create_Lambda(self):
+        """Create Lambda by performing the Hilbert transform of Delta."""
+        self.Lambda = np.imag(signal.hilbert(self.Delta))
+    
+    def calculate_energy(self):
+        self._create_Delta()
+        self._create_Lambda()
+
+        # Create the arctan integrand
+        numerator = self.Delta
+        denominator = self.eps - self.eps_a - self.Lambda
+
+        assert all( numerator >= 0), "Numerator must be positive"
+
+        # find where self.eps is lower than 0
+        filled_eps_index = [i for i in range(len(self.eps)) if self.eps[i] <= 0]
+        arctan_integrand = np.arctan2(numerator[filled_eps_index], denominator[filled_eps_index])
+        arctan_integrand -= np.pi
+
+
+        # Integrate to get the energies
+        delta_E_ = 1 * np.trapz( arctan_integrand , self.eps[filled_eps_index] )
+        delta_E_ *= 2 
+        delta_E_ /= np.pi
+
+        # Subtract the energy of the adsorbate
+        delta_E_ -= 2 * self.eps_a
+
+        # if delta_E_ > 0:
+        #     delta_E_ = 0
+
+        # Store the energy 
+        self.DeltaE = delta_E_
+    
+@dataclass
 class NewnsAndersonAnalytical:
     """ Perform the Newns-Anderson model analytically for a semi-elliplical delta.
         Inputs 
@@ -249,9 +315,6 @@ class NewnsAndersonAnalytical:
             root_positive = np.real(root_positive)
             root_negative = np.real(root_negative)
 
-            # The real parts must be the same
-            # assert root_negative == root_positive
-
         # Store the root referenced to the energy reference scale that was chosen 
         self.root_positive = root_positive + self.eps_d #- self.fermi_energy
         self.root_negative = root_negative + self.eps_d #- self.fermi_energy
@@ -298,7 +361,7 @@ class NewnsAndersonAnalytical:
                     self.na_sigma_pos = 4 * self.eps_sigma_wrt_d**2 - 1
                     self.na_sigma_pos /= (4 * self.eps_sigma_wrt_d**2)
             else:
-                self.na_sigma_pos = None
+                self.na_sigma_pos = 0.0
             
             if self.has_localised_occupied_state_negative:
                 # Compute the expectancy value
@@ -310,12 +373,14 @@ class NewnsAndersonAnalytical:
                     self.na_sigma_neg = 4 * self.eps_sigma_wrt_d**2 - 1
                     self.na_sigma_neg /= (4 * self.eps_sigma_wrt_d**2)
             else:
-                self.na_sigma_neg = None
+                self.na_sigma_neg = 0.0
         else:
             # This is a complex root
             assert self.has_complex_root
             self.has_localised_occupied_state_positive = False
             self.has_localised_occupied_state_negative = False
+            self.na_sigma_neg = 0
+            self.na_sigma_pos = 0
 
         # ---------- Calculate the energy ----------
         # Determine the upper bounds for the contour integration
@@ -342,7 +407,8 @@ class NewnsAndersonAnalytical:
             self.arctan_component =  np.trapz( arctan_integrand, energy_occ )
             self.arctan_component /= np.pi
             self.energy = self.arctan_component
-            self.energy += self.eps_l_sigma_pos - self.eps_l_sigma_neg
+            self.energy += self.eps_l_sigma_pos 
+            self.energy -= self.eps_l_sigma_neg 
         elif self.has_localised_occupied_state_positive:
             # Has only positive root and it is a localised occupied state 
             arctan_integrand += np.pi
@@ -366,3 +432,8 @@ class NewnsAndersonAnalytical:
 
         # The one electron energy is just the difference of eigenvalues 
         self.DeltaE_1sigma = self.energy 
+        # assert self.na_sigma_pos + self.na_sigma_neg <= 1.0
+        # assert self.na_sigma_pos >= 0
+        # assert self.na_sigma_neg >= 0
+        # self.DeltaE_1sigma -= ( self.na_sigma_pos + self.na_sigma_neg ) * self.eps_sigma
+        # self.DeltaE_1sigma -= self.eps_sigma

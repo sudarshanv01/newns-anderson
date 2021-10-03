@@ -13,7 +13,7 @@ BaseGPAW = WorkflowFactory('ase.gpaw.base')
 if __name__ == '__main__':
 
     # Query for the data of the group
-    GROUP_NAME = 'scf_calculations/O'
+    GROUP_NAME = 'scf_calculations/NH'
     ADSORBATE = GROUP_NAME.split('/')[1]
     TYPE_OF_CALC = BaseGPAW 
     POSSIBLE_ADSORBATE_INDEX = list(ADSORBATE) 
