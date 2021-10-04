@@ -37,8 +37,11 @@ class NewnsAndersonNumerical:
     
     def _create_Delta(self):
         """Create Delta from Vak and eps_d."""
-        self.Delta =  self.Vak**2 * ( 1  - ( self.eps_wrt_d )**2 / ( self.width )**2  )**0.5
+        self.Delta =  self.Vak * ( 1  - ( self.eps_wrt_d )**2 / ( self.width / 2 )**2  )**0.5
         self.Delta = np.nan_to_num(self.Delta)
+        self.Delta /= integrate.simps(self.Delta, self.eps)
+        # covert it to make Delta max out at 1
+        self.Delta *= np.pi 
     
     def _create_Lambda(self):
         """Create Lambda by performing the Hilbert transform of Delta."""
@@ -50,8 +53,7 @@ class NewnsAndersonNumerical:
 
         # Create the arctan integrand
         numerator = self.Delta
-        denominator = self.eps - self.eps_a - self.Lambda
-
+        denominator = self.eps  - self.eps_a - self.Lambda
         assert all( numerator >= 0), "Numerator must be positive"
 
         # find where self.eps is lower than 0
@@ -59,17 +61,14 @@ class NewnsAndersonNumerical:
         arctan_integrand = np.arctan2(numerator[filled_eps_index], denominator[filled_eps_index])
         arctan_integrand -= np.pi
 
+        assert all(arctan_integrand <= 0), "Arctan integrand must be negative"
+        assert all(arctan_integrand >= -np.pi), "Arctan integrand must be greater than -pi"
 
         # Integrate to get the energies
-        delta_E_ = 1 * np.trapz( arctan_integrand , self.eps[filled_eps_index] )
-        delta_E_ *= 2 
-        delta_E_ /= np.pi
+        delta_E_ = 2 / np.pi * integrate.simps( arctan_integrand , self.eps[filled_eps_index] )
 
         # Subtract the energy of the adsorbate
         delta_E_ -= 2 * self.eps_a
-
-        # if delta_E_ > 0:
-        #     delta_E_ = 0
 
         # Store the energy 
         self.DeltaE = delta_E_

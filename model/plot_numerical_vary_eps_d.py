@@ -14,7 +14,7 @@ if __name__ == '__main__':
     WIDTHS = [ 2, 4, 6 ]
     eps_ds = np.linspace(-6, 5.5, 100)
     EPS_A = -5
-    EPS_RANGE = np.linspace(-20, 20, 40000)
+    EPS_RANGE = np.linspace(-20, 20, 200000)
 
     for i, width in enumerate(WIDTHS):
         energies = []
@@ -34,5 +34,5 @@ if __name__ == '__main__':
 
     ax.legend(loc='best')
     ax.set_xlabel('$\epsilon_d$ (eV)')
-    ax.set_ylabel('$\Delta E$ (eV)')
+    ax.set_ylabel('$\Delta E_{\mathregular{d-hyb}}$ (eV)')
     fig.savefig('output/NewnsAndersonNumerical_vary_epsd.png')
