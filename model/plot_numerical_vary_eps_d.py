@@ -12,11 +12,11 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(1, 2, figsize=(14, 5), constrained_layout=True)
 
     WIDTHS = [ 2, 4, 6 ]
-    K_VALUES = [ 0 ]
+    K_VALUES = [ 2 ]
     eps_ds = np.linspace(-6, 5.5, 100)
     EPS_A = -1
     EPS_RANGE = np.linspace(-20, 20, 200000)
-    Vak = 3
+    Vak = 1
 
     # Create a range of sequential colors
     colors = plt.cm.viridis(np.linspace(0, 1, len(WIDTHS)))

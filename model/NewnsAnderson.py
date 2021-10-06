@@ -43,24 +43,16 @@ class NewnsAndersonNumerical:
         self.Delta =  ( 1  - ( self.eps_wrt_d )**2 / ( self.width / 2 )**2  )**0.5
         self.Delta = np.nan_to_num(self.Delta, nan=0)
         # Add a constant Delta0 to the Delta
-        self.Delta /= integrate.simps(self.Delta, self.eps)
-        # Convert delta such that the integral comes out to pi
-        # self.Delta *= np.pi**2
-        # self.Delta *= self.Vak**2
-        Vak_sq_chosen = integrate.simps(self.Delta, self.eps)
-        Vak_sq_chosen /= np.pi
-        self.Delta /= Vak_sq_chosen
+        area_under_Delta = integrate.simps(self.Delta, self.eps)
+        self.Delta /= area_under_Delta 
+        # This pi**2 must come from the change in beta to Vak
         self.Delta *= np.pi**2
-        self.Delta *= self.Vak**2
-        
+        # The area that it should be for a certain Vak
+        area_should_be = np.pi * self.Vak
+        self.Delta *= area_should_be
 
-        # Make all 0 values in Delta k
-        # self.sp_contributions = self.k
-        # make a semi-ellipse out of the sp contributions
-        # self.sp_contributions =  (1 - (self.eps_wrt_d)**2 / (self.k)**2)**0.5
-        # self.sp_contributions = np.nan_to_num(self.sp_contributions, nan=0)
-        # self.sp_contributions /= integrate.simps(self.sp_contributions, self.eps)
-        # self.Delta += self.sp_contributions
+        self.sp_contributions = self.k
+        self.Delta += self.sp_contributions
 
     
     def _create_Lambda(self):
