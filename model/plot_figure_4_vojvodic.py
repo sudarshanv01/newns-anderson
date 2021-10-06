@@ -12,7 +12,9 @@ if __name__ == '__main__':
     widths = np.linspace(0.2, 12, 100)
     eps_ds = np.linspace(-6, 5.5, 100)
     EPS_A = -5
-    EPS_RANGE = np.linspace(-20, 20, 200000)
+    EPS_RANGE = np.linspace(-20, 20, 10000)
+    k = 0
+    Vak = 1
 
     energy_matrix = np.zeros((len(widths), len(eps_ds)))
 
@@ -21,10 +23,11 @@ if __name__ == '__main__':
 
             newns = NewnsAndersonNumerical(
                 width = width,
-                Vak = 1, 
+                Vak = Vak, 
                 eps_a = EPS_A,
                 eps_d = eps_d,
                 eps = EPS_RANGE,
+                k = k, 
             )
             newns.calculate_energy()
 
@@ -36,9 +39,9 @@ if __name__ == '__main__':
     cbar = fig.colorbar(cax, ax=ax)
     # plot the contour lines
     ax.contour(widths, eps_ds, energy_matrix, levels=10, colors='k')
-    ax.set_xlabel(r'width')
-    ax.set_ylabel(r'$\epsilon_d$')
-    ax.set_title(r'Chemisorption Energy')
+    ax.set_xlabel(r'width (eV)')
+    ax.set_ylabel(r'$\epsilon_d$ (eV)')
+    ax.set_title(r'Chemisorption Energy (eV)')
     fig.savefig('output/figure_4_vojvodic.png')
 
 

@@ -22,12 +22,15 @@ class NewnsAndersonNumerical:
         Energy range to consider
     width: float
         Width of the d-band
+    k: float
+        Parameter to control the amount of added extra states
     """
     Vak: float
     eps_a: float
     width: float
     eps_d: float
     eps: float
+    k: float
 
     def __post_init__(self):
         """Perform numerical calculations of the Newns-Anderson model to get 
@@ -37,11 +40,28 @@ class NewnsAndersonNumerical:
     
     def _create_Delta(self):
         """Create Delta from Vak and eps_d."""
-        self.Delta =  self.Vak * ( 1  - ( self.eps_wrt_d )**2 / ( self.width / 2 )**2  )**0.5
-        self.Delta = np.nan_to_num(self.Delta)
+        self.Delta =  ( 1  - ( self.eps_wrt_d )**2 / ( self.width / 2 )**2  )**0.5
+        self.Delta = np.nan_to_num(self.Delta, nan=0)
+        # Add a constant Delta0 to the Delta
         self.Delta /= integrate.simps(self.Delta, self.eps)
-        # covert it to make Delta max out at 1
-        self.Delta *= np.pi 
+        # Convert delta such that the integral comes out to pi
+        # self.Delta *= np.pi**2
+        # self.Delta *= self.Vak**2
+        Vak_sq_chosen = integrate.simps(self.Delta, self.eps)
+        Vak_sq_chosen /= np.pi
+        self.Delta /= Vak_sq_chosen
+        self.Delta *= np.pi**2
+        self.Delta *= self.Vak**2
+        
+
+        # Make all 0 values in Delta k
+        # self.sp_contributions = self.k
+        # make a semi-ellipse out of the sp contributions
+        # self.sp_contributions =  (1 - (self.eps_wrt_d)**2 / (self.k)**2)**0.5
+        # self.sp_contributions = np.nan_to_num(self.sp_contributions, nan=0)
+        # self.sp_contributions /= integrate.simps(self.sp_contributions, self.eps)
+        # self.Delta += self.sp_contributions
+
     
     def _create_Lambda(self):
         """Create Lambda by performing the Hilbert transform of Delta."""
@@ -69,6 +89,9 @@ class NewnsAndersonNumerical:
 
         # Subtract the energy of the adsorbate
         delta_E_ -= 2 * self.eps_a
+
+        if delta_E_ > 0:
+            delta_E_ = 0
 
         # Store the energy 
         self.DeltaE = delta_E_
