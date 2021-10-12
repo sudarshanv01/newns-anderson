@@ -61,7 +61,7 @@ class JensNewnsAnderson:
         assert all(hybridisation_energy <= 0), "Hybridisation energy is negative"
 
         # orthonogonalisation energy
-        ortho_energy = 2 * (1 + filling ) * alpha * np.sqrt(beta) * self.Vsd**2
+        ortho_energy = 2 * (1 + self.filling ) * alpha * np.sqrt(beta) * self.Vsd**2
         ortho_energy = np.array(ortho_energy)
         # Ensure that the orthonogonalisation energy is positive always
         assert all(ortho_energy >= 0), "Orthogonalisation energy is positive"
