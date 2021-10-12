@@ -13,14 +13,14 @@ THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl']
 if __name__ == "__main__":
     """Plot the variation of epsilon_d, width and Vsd with elements."""
     # Load the moments
-    with open("output/pdos_moments.json", 'r') as handle:
+    FUNCTIONAL = 'RPBE'
+    with open(f"output/pdos_moments_{FUNCTIONAL}.json", 'r') as handle:
         moments = json.load(handle)
-    pprint(moments)
     # Load the Vsd and filling data
     with open("inputs/data_from_LMTO.json", 'r') as handle:
         data_from_LMTO = json.load(handle)
     
-    Vsd_data = data_from_LMTO["Vsd"]
+    Vsd_data = data_from_LMTO["Vsdsq"]
     filling_data = data_from_LMTO["filling"]
 
     # Plot the epsilon_d, width and Vsd
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         # Get the filling
         filling = filling_data[metal]
         # Get the Vsd
-        Vsd = Vsd_data[metal]
+        Vsd = np.sqrt(Vsd_data[metal])
 
         # Decide on the color based on the metal
         if metal in FIRST_ROW:
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     ax[2].set_ylabel("$V_{sd}$ (eV)")
 
     # Save the figure
-    fig.savefig("output/parameter_variation.png")
+    fig.savefig(f"output/parameter_variation_{FUNCTIONAL}.png")
 
 
 

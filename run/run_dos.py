@@ -43,7 +43,7 @@ class DOSSubmissionController(FromGroupSubmissionController):
 
         parameters_nscf = deepcopy(parameters_scf)
         parameters_nscf['CONTROL']['calculation'] = 'nscf'
-        parameters_nscf['SYSTEM']['occupations'] = 'tetrahedra'
+        # parameters_nscf['SYSTEM']['occupations'] = 'tetrahedra'
 
         pseudos = relax_workchain.inputs.pw.pseudos
 
@@ -118,10 +118,10 @@ if __name__ == '__main__':
 
     # For the submission controller
     DRY_RUN = False
-    MAX_CONCURRENT = 10
+    MAX_CONCURRENT = 1
     CODE_LABEL = f'pw_6-7@{COMPUTER}'
     STRUCTURES_GROUP_LABEL = f'transition_metals/relaxed/{SYSTEM}'
-    WORKFLOWS_GROUP_LABEL = f'transition_metals/relaxed/density_of_states/{SYSTEM}'
+    WORKFLOWS_GROUP_LABEL = f'transition_metals/relaxed/density_of_states/cold_smearing/{SYSTEM}'
 
     controller = DOSSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,

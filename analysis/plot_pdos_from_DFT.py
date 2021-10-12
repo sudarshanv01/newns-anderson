@@ -39,7 +39,8 @@ def moment_generator(energies, all_dos, moment):
 
 if __name__ == "__main__":
     """Plot the pdos for the metal and of the adsorbates from a DFT calculation."""
-    with open('output/pdos.json', 'r') as handle:
+    FUNCTIONAL = 'PBE_fixed'
+    with open(f'output/pdos_{FUNCTIONAL}.json', 'r') as handle:
         pdos_data = json.load(handle)
     METALS = [FIRST_ROW, SECOND_ROW, THIRD_ROW]
 
@@ -66,7 +67,10 @@ if __name__ == "__main__":
 
         # make pdos and energies into numpy arrays
         energies = np.array(energies)
-        pdos = np.array(pdos)
+        if len(pdos) == 2:
+            pdos = np.array(pdos).sum(axis=0)
+        else:
+            pdos = np.array(pdos)
 
         ax[i,j].plot(pdos, energies)
         ax[i,j].set_title(metal)
@@ -93,10 +97,10 @@ if __name__ == "__main__":
             if (i,j) not in used_ij:
                 fig.delaxes(ax[i,j])
 
-    fig.savefig('output/pdos.png')
+    fig.savefig(f'output/pdos_{FUNCTIONAL}.png')
 
 
-    with open('output/pdos_moments.json', 'w') as handle:
+    with open(f'output/pdos_moments_{FUNCTIONAL}.json', 'w') as handle:
         json.dump(moments, handle, indent=4)
 
         
