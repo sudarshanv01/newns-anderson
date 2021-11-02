@@ -91,10 +91,26 @@ if __name__ == '__main__':
         c_energies = []
         o_energies = []
 
-        min_vsd = np.min(vsd_all[i])
-        max_vsd = np.max(vsd_all[i])
-        min_width = np.min(width_all[i])
-        max_width = np.max(width_all[i])
+        # min_vsd = np.min(vsd_all[i])
+        # max_vsd = np.max(vsd_all[i])
+        # min_width = np.min(width_all[i])
+        # max_width = np.max(width_all[i])
+
+        if i == 0:
+            min_vsd = 0.5
+            max_vsd = 1.5
+            min_width = 3.5
+            max_width = 4.5
+        elif i == 1:
+            min_vsd = 1.5
+            max_vsd = 2.5
+            min_width = 4.5
+            max_width = 5.5
+        elif i == 2:
+            min_vsd = 2.5
+            max_vsd = 3.5
+            min_width = 5.5
+            max_width = 6.5
 
         # get the idealised energies for the different metals
         energies_model = defaultdict(list)
@@ -136,7 +152,7 @@ if __name__ == '__main__':
         min_energies_o, max_energies_o = np.array(energies_model['O']).T
 
         ax.plot(min_energies_c, min_energies_o, color=color, linestyle='--')
-        # ax.plot(max_energies_c, max_energies_o, color=color, linestyle='--')
+        ax.plot(max_energies_c, max_energies_o, color=color, linestyle='--')
 
     for i, text in texts.items():
         adjust_text(text, ax=ax)

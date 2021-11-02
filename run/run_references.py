@@ -40,7 +40,7 @@ def calculator(ecutwf, ecutrho):
 def runner(structure):
     RelaxWorkflow = WorkflowFactory('quantumespresso.pw.relax')
 
-    family = load_group('SSSP/1.1/PBE/efficiency')
+    family = load_group('SSSP/1.1/PBE/precision')
     pseudos = family.get_pseudos(structure=structure)
     cutoffs = family.get_recommended_cutoffs(structure=structure)  
 
@@ -73,12 +73,12 @@ def runner(structure):
 
     calculation = submit(builder)
     path = GroupPath()
-    path["references"].get_group().add_nodes(calculation)
+    path["references/PBE/SSSP_precision"].get_group().add_nodes(calculation)
 
 
 if __name__ == '__main__':
     
-    system = Atoms('O') 
+    system = Atoms('H') 
     system.set_cell([10, 10, 10])
     StructureData = DataFactory('structure')
     runner(StructureData(ase=system))

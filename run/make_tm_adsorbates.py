@@ -10,11 +10,17 @@ PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
 
 if __name__ == '__main__':
 
-    STRUCTURES_FULL_GROUP_LABEL = 'support_bulk'
-    ADSORBATE  = 'C'
+    STRUCTURES_FULL_GROUP_LABEL = 'bulk_structures/PBE/SSSP_precision'
+    ADSORBATE  = 'F'
     MOL_INDEX = 0
-    STRUCTURES_GROUP_LABEL = f'transition_metals/constant_height_initial_structures/{ADSORBATE}'
+
+    if ADSORBATE:
+        STRUCTURES_GROUP_LABEL = f'surface_structures/initial/{ADSORBATE}'
+    else:
+        STRUCTURES_GROUP_LABEL = f'surface_structures/initial/slab'
+
     subgroup, _ = orm.Group.objects.get_or_create(label=STRUCTURES_GROUP_LABEL)
+
     DRY_RUN = False
     all_metal_list = []
 
@@ -29,6 +35,7 @@ if __name__ == '__main__':
     query = orm.QueryBuilder()
     query.append(orm.Group, tag='group', filters={'label': STRUCTURES_FULL_GROUP_LABEL})
     query.append(PwRelaxWorkChain, tag='pwrelax', with_group='group')
+
     results = query.all(flat=True)
 
     for res in results:
@@ -60,11 +67,12 @@ if __name__ == '__main__':
         surface.set_tags(None)
 
         # create adsorbate
-        height = 1.8 # covalent_radii[atomic_numbers[metal]] + covalent_radii[atomic_numbers[list(ADSORBATE)[MOL_INDEX]]]
-        adsorbate = build.molecule(ADSORBATE)
-        surface_index = np.argmax(surface.positions[:, 2])
-        # adsorbate.rotate(180, 'x')
-        build.add_adsorbate(surface, adsorbate, height, position=surface[surface_index].position[:2], mol_index=MOL_INDEX) 
+        if ADSORBATE:
+            height = covalent_radii[atomic_numbers[metal]] + covalent_radii[atomic_numbers[list(ADSORBATE)[MOL_INDEX]]]
+            adsorbate = build.molecule(ADSORBATE)
+            surface_index = np.argmax(surface.positions[:, 2])
+            # adsorbate.rotate(180, 'x')
+            build.add_adsorbate(surface, adsorbate, height, position=surface[surface_index].position[:2], mol_index=MOL_INDEX) 
 
         if DRY_RUN:
             print(f'Dry run: {surface}')

@@ -31,6 +31,7 @@ class NewnsAndersonNumerical:
     eps_d: float
     eps: float
     k: float
+    NOISE_TOLERANCE = 1e-1
 
     def __post_init__(self):
         """Perform numerical calculations of the Newns-Anderson model to get 
@@ -58,10 +59,73 @@ class NewnsAndersonNumerical:
     def _create_Lambda(self):
         """Create Lambda by performing the Hilbert transform of Delta."""
         self.Lambda = np.imag(signal.hilbert(self.Delta))
-    
+
+    def calculate_dos(self):
+        """Calculate the DOS from the Delta and Lambda."""
+        dos_ = self.Delta / ( (self.eps - self.eps_a - self.Lambda)**2 + self.Delta**2 )
+        dos_ /= np.pi
+        self.dos = dos_
+        # Determine the first part of the occupancy by integrating up the dos between 
+        # eps_d +- width/2
+        between_d_energies = np.where((self.eps >= self.eps_d - self.width/2) & (self.eps <= self.eps_d + self.width/2))[0]
+        integrated_rho = integrate.simps(dos_[between_d_energies], self.eps[between_d_energies])
+        # Now look for the localised states
+        # Find the numerical derivative of Lambda
+        self.dLambda = np.diff(self.Lambda) / np.diff(self.eps)
+        # Get the index of Delta closest to the d-band center
+        self.delta_index = np.argsort(np.abs(self.eps - self.eps_d))[0]
+
+        # Find cases where eps - eps_a - Lambda is close to 0
+        self.dLambda_index = np.where(np.abs(self.eps - self.eps_a - self.Lambda) < self.NOISE_TOLERANCE)[0]
+        assert len(self.dLambda_index) > 0, "There must be at least one root"
+        # Sort all these cases to find which ones are roots 
+        self.dLambda_index = np.sort(self.dLambda_index)
+        # There are only three possible roots possible
+        # If the d-band center index is between the first and the third root index
+        # Then there are three roots
+        self.lower_index_root = None
+        self.upper_index_root = None
+        if np.min(self.dLambda_index) < self.delta_index < np.max(self.dLambda_index):
+            # There are three possible roots is the two indices enclose that of delta
+            print(f"There are three roots for {self.eps_d} eV")
+            na_ = 0
+            if self.eps[np.min(self.dLambda_index)] <= 0:
+                # Check if the index isnt in the d-band
+                if self.Delta[np.min(self.dLambda_index)] == self.sp_contributions:
+                    print('Lower one occupied')
+                    na_ += 1 / ( 1 - self.dLambda[np.min(self.dLambda_index)] )
+                    self.lower_index_root = np.min(self.dLambda_index)
+            if self.eps[np.max(self.dLambda_index)] <= 0:
+                # Check if the index isnt in the d-band
+                if self.Delta[np.max(self.dLambda_index)] == self.sp_contributions:
+                    print('Upper one occupied')
+                    na_ += 1 / ( 1 - self.dLambda[np.max(self.dLambda_index)] )
+                    self.upper_index_root = np.max(self.dLambda_index)
+            na_ += integrated_rho
+        else:
+            # There is only one root here, find the one which has the 
+            # lowest energy when the energies are negative
+            filled_index = np.where(self.eps <= 0)[0]
+            self.dLambda_index = np.argmin(np.abs(self.eps[filled_index] - self.eps_a - self.Lambda[filled_index]))
+            # Check if the value of Delta is zero at this index
+            if self.Delta[self.dLambda_index] == self.sp_contributions and self.eps[self.dLambda_index] <= 0:
+                print(f'Only one root at {self.eps_d}')
+                na_ = 1 / ( 1 - self.dLambda[self.dLambda_index] )
+                na_ += integrated_rho
+                self.lower_index_root = self.dLambda_index
+                self.upper_index_root = self.dLambda_index
+            else:
+                # Root inside the d-band
+                print(f'Root inside d-band at {self.eps_d}')
+                na_ = integrated_rho 
+
+        # Remove any numerical noise by setting na_ to be at most 1
+        self.na = np.min([1, na_])
+
     def calculate_energy(self):
         self._create_Delta()
         self._create_Lambda()
+        self.calculate_dos()
 
         # Create the arctan integrand
         numerator = self.Delta

@@ -13,7 +13,7 @@ def move_failed_group(groupname, type_of_calc):
     subgroup_fail, _ = orm.Group.objects.get_or_create(label=groupname + '/failed')
 
     for node in qb.all(flat=True):
-        if node.is_failed:
+        if node.is_failed or node.is_killed:
             subgroup_fail.add_nodes(node)
             subgroup.remove_nodes(node)
 
@@ -23,22 +23,22 @@ if __name__ == '__main__':
     DosWorkflow = WorkflowFactory('quantumespresso.pdos')
 
     qb = QueryBuilder()
-    qb.append(Group, tag='Group', filters={'label':{'ilike':'transition_metals/scf/density_of_states%'}})
+    qb.append(Group, tag='Group', filters={'label':{'ilike':'PBE/SSSP_precision/surface_structures/dos_scf%'}})
 
 
     results = {}
     for group in qb.all(flat=True):
 
-        if 'transition' not in group.label:
-           continue
+        # if 'transition' not in group.label:
+        #    continue
             
         if 'failed' in group.label:
             continue
 
-        if 'initial_structures' in group.label:
-            continue
+        # if 'initial_structures' in group.label:
+        #     continue
 
-        if 'density' in group.label:
+        if 'dos' in group.label:
             calculation = DosWorkflow
         else:
             calculation = PwBaseWorkChain 

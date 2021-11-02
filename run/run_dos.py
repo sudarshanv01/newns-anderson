@@ -1,4 +1,4 @@
-import time
+"""Run the dos workchain to get the single point energies and the dos."""
 import sys
 from aiida.plugins import CalculationFactory, WorkflowFactory, DataFactory
 from aiida import orm
@@ -9,6 +9,39 @@ from aiida_submission_controller import FromGroupSubmissionController
 from aiida.plugins import DataFactory, WorkflowFactory
 
 PpDosChain = WorkflowFactory('quantumespresso.pdos')
+
+def calculator(ecutwf, ecutrho):
+    param_dict =  {
+    "CONTROL":{
+        'calculation':'scf',
+        'tprnfor':True,
+        'tstress':True,
+        'tefield':True,
+        'dipfield':True,
+                },
+    "SYSTEM": {
+        "ecutwfc": ecutwf,
+        "ecutrho": ecutrho,
+        "occupations":'smearing',
+        "smearing":'cold',
+        "degauss":0.01,
+        "nspin": 1,
+        "edir": 3,
+        "emaxpos": 0.05,
+        "eopreg": 0.025,
+        "eamp": 0.0,
+                },
+    "ELECTRONS": {
+        "conv_thr": 1e-8,
+        'electron_maxstep': 200,
+        'mixing_beta': 0.2,
+        'mixing_ndim': 15,
+        'diagonalization': 'david',
+        'mixing_mode': 'local-TF',
+                },
+    }
+
+    return param_dict
 
 class DOSSubmissionController(FromGroupSubmissionController):
     """A SubmissionController for submitting DOS calculations for Adsorbates with Quantum ESPRESSO base workflows."""
@@ -26,64 +59,65 @@ class DOSSubmissionController(FromGroupSubmissionController):
     def get_inputs_and_processclass_from_extras(self, extras_values):
         """Return inputs and process class for the submission of this specific process.
         """
-
+        # Create the pdos chain builder
         builder = PpDosChain.get_builder()
+        
+        # Only the structure is passed
+        structure = self.get_parent_node_from_extras(extras_values)
 
-        relax_workchain = self.get_parent_node_from_extras(extras_values)
-        structure = relax_workchain.outputs.output_structure
-        parameters_scf = relax_workchain.inputs.pw.parameters.get_dict()
-        parameters_scf['CONTROL']['calculation'] = 'scf'
-        # Choose at least a ecutwfc of 60
-        parameters_scf['SYSTEM']['ecutwfc'] = max(60, parameters_scf['SYSTEM']['ecutwfc'])
-        # Choose an ecutrho of at least 480
-        parameters_scf['SYSTEM']['ecutrho'] = max(480, parameters_scf['SYSTEM']['ecutrho'])
-        # Remove spin
-        parameters_scf['SYSTEM'].pop('nspin')
-        parameters_scf['SYSTEM'].pop('starting_magnetization')
+        # Get cutoff information
+        family = load_group('SSSP/1.1/PBE/precision')
+        cutoffs = family.get_recommended_cutoffs(structure=structure)  
+        ecutwf = max(90, cutoffs[0])
+        ecutrho = max(600, cutoffs[1])
 
+        # get the scf information
+        parameters_scf = calculator(ecutwf, ecutrho)
+
+        # Get the nscf information
         parameters_nscf = deepcopy(parameters_scf)
         parameters_nscf['CONTROL']['calculation'] = 'nscf'
-        # parameters_nscf['SYSTEM']['occupations'] = 'tetrahedra'
+        parameters_nscf['SYSTEM']['occupations'] = 'tetrahedra'
 
-        pseudos = relax_workchain.inputs.pw.pseudos
+        # Code related information
+        code_pw = load_code(f'pw_6-7{COMPUTER}')
+        code_dos = load_code(f'dos_6-7{COMPUTER}')
+        code_projwfc = load_code(f'projwfc_6-7{COMPUTER}')
 
-        code_pw = load_code(f'pw_6-7@{COMPUTER}')
-        code_dos = load_code(f'dos_6-7@{COMPUTER}')
-        code_projwfc = load_code(f'projwfc_6-7@{COMPUTER}')
+        settings = {'cmdline': ['-nk', '2']}
 
+        # k-points related information
+        kpt_mesh_scf = [4, 4, 1]
+        kpt_mesh_nscf = [int(2*kpt_mesh_scf[0]), int(2*kpt_mesh_scf[1]), 1]
         KpointsData = DataFactory('array.kpoints')
-        family = load_group('SSSP/1.1/PBE/efficiency')
 
-        ## First level of inputs to the Pp workchain 
+        kpoints_scf = KpointsData()
+        kpoints_nscf = KpointsData()
+        kpoints_scf.set_kpoints_mesh(kpt_mesh_scf)
+        kpoints_nscf.set_kpoints_mesh(kpt_mesh_nscf)
+
+        # First level of inputs to the Pp workchain 
         builder.structure = structure
 
         builder.serial_clean = orm.Bool(True)
         builder.clean_workdir = orm.Bool(True)
         builder.align_to_fermi = orm.Bool(True)
 
-        kpoints_old = relax_workchain.inputs.kpoints.attributes['mesh']
-        kpts_new = [int(2*kpoints_old[0]), int(2*kpoints_old[1]), 1]
-        KpointsData = DataFactory('array.kpoints')
-        kpoints_scf = KpointsData()
-        kpoints_scf.set_kpoints_mesh(kpoints_old)
-
-        kpoints_nscf = KpointsData()
-        kpoints_nscf.set_kpoints_mesh(kpts_new)
-
         builder.scf.kpoints = kpoints_scf
         builder.scf.pw.pseudos = family.get_pseudos(structure=structure)
         builder.scf.pw.parameters = orm.Dict(dict=parameters_scf)
         builder.scf.pw.code = code_pw
-        builder.scf.pw.metadata.options.resources = {'num_machines': 2}
-        builder.scf.pw.metadata.options.max_wallclock_seconds =  5 * 60 * 60
+        builder.scf.pw.metadata.options.resources = {'num_machines': 4}
+        builder.scf.pw.metadata.options.max_wallclock_seconds =  10 * 60 * 60
+        builder.scf.pw.settings = orm.Dict(dict=settings)
 
         ## NSCF inputs to the Pp workchain
         builder.nscf.kpoints = kpoints_nscf
         builder.nscf.pw.pseudos = family.get_pseudos(structure=structure) 
         builder.nscf.pw.parameters = orm.Dict(dict=parameters_nscf)
         builder.nscf.pw.code = code_pw
-        builder.nscf.pw.metadata.options.resources = {'num_machines': 1}
-        builder.nscf.pw.metadata.options.max_wallclock_seconds = 4 * 60 * 60
+        builder.nscf.pw.metadata.options.resources = {'num_machines': 2}
+        builder.nscf.pw.metadata.options.max_wallclock_seconds = 10 * 60 * 60
 
         ## dos inputs to Pp workchain
         dos_parameters = {'DOS':
@@ -113,15 +147,15 @@ class DOSSubmissionController(FromGroupSubmissionController):
 
 if __name__ == '__main__':
     # For the calculation
-    COMPUTER = 'juwels_scr' 
     SYSTEM = sys.argv[1]
+    COMPUTER = sys.argv[2] #'@juwels_scr' 
 
     # For the submission controller
     DRY_RUN = False
-    MAX_CONCURRENT = 1
-    CODE_LABEL = f'pw_6-7@{COMPUTER}'
-    STRUCTURES_GROUP_LABEL = f'transition_metals/relaxed/{SYSTEM}'
-    WORKFLOWS_GROUP_LABEL = f'transition_metals/relaxed/density_of_states/cold_smearing/{SYSTEM}'
+    MAX_CONCURRENT = 4
+    CODE_LABEL = f'pw_6-7{COMPUTER}'
+    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/surface_structures/initial/{SYSTEM}'
+    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_precision/surface_structures/dos_scf/{SYSTEM}'
 
     controller = DOSSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,

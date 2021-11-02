@@ -112,8 +112,8 @@ if __name__ == '__main__':
     DRY_RUN = False
     MAX_CONCURRENT = 25
     CODE_LABEL = f'pw_6-7@{COMPUTER}'
-    STRUCTURES_GROUP_LABEL = f'transition_metals/constant_height_initial_structures/{ADSORBATE}'
-    WORKFLOWS_GROUP_LABEL = f'transition_metals/constant_height_scf/{ADSORBATE}'
+    STRUCTURES_GROUP_LABEL = f'transition_metals/initial_structures/{ADSORBATE}'
+    WORKFLOWS_GROUP_LABEL = f'transition_metals/scf/{ADSORBATE}'
 
     controller = AdsorbateSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,
