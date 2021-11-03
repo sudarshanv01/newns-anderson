@@ -41,17 +41,19 @@ class NewnsAndersonNumerical:
     
     def _create_Delta(self):
         """Create Delta from Vak and eps_d."""
+        
         self.Delta =  ( 1  - ( self.eps_wrt_d )**2 / ( self.width / 2 )**2  )**0.5
         self.Delta = np.nan_to_num(self.Delta, nan=0)
-        # Add a constant Delta0 to the Delta
+
+        # The area under the curve must be set to pi^2
         area_under_Delta = integrate.simps(self.Delta, self.eps)
         self.Delta /= area_under_Delta 
-        # This pi**2 must come from the change in beta to Vak
         self.Delta *= np.pi**2
-        # The area that it should be for a certain Vak
-        area_should_be = np.pi * self.Vak
-        self.Delta *= area_should_be
 
+        # For a given Vak the 
+        self.Delta *= np.pi * self.Vak 
+
+        # Adding sp contributions
         self.sp_contributions = self.k
         self.Delta += self.sp_contributions
 
@@ -146,6 +148,7 @@ class NewnsAndersonNumerical:
         # Subtract the energy of the adsorbate
         delta_E_ -= 2 * self.eps_a
 
+        # Remove any numerical noise by setting slightly positive Delta_E to 0
         if delta_E_ > 0:
             delta_E_ = 0
 

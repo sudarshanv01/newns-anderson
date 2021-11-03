@@ -39,7 +39,7 @@ def moment_generator(energies, all_dos, moment):
 
 if __name__ == "__main__":
     """Plot the pdos for the metal and of the adsorbates from a DFT calculation."""
-    FUNCTIONAL = 'PBE_fixed'
+    FUNCTIONAL = 'PBE_scf'
     with open(f'output/pdos_{FUNCTIONAL}.json', 'r') as handle:
         pdos_data = json.load(handle)
     METALS = [FIRST_ROW, SECOND_ROW, THIRD_ROW]
@@ -91,6 +91,7 @@ if __name__ == "__main__":
 
         ax[i,j].axhline(y=center + 2 * np.sqrt(second_moment), color='g', linestyle='--')
         ax[i,j].axhline(y=center - 2 * np.sqrt(second_moment), color='g', linestyle='--')
+        ax[i,j].axhline(y=0, color='k', linestyle='--')
     
     for i in range(len(METALS)):
         for j in range(len(METALS[i])):
