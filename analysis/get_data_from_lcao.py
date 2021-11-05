@@ -12,8 +12,7 @@ BaseGPAW = WorkflowFactory('ase.gpaw.base')
 
 if __name__ == '__main__':
 
-    # Query for the data of the group
-    GROUP_NAME = 'scf_calculations/NH'
+    GROUP_NAME = 'GPAW/LCAO/surface_structures/scf/C'
     ADSORBATE = GROUP_NAME.split('/')[1]
     TYPE_OF_CALC = BaseGPAW 
     POSSIBLE_ADSORBATE_INDEX = list(ADSORBATE) 
@@ -73,6 +72,7 @@ if __name__ == '__main__':
         data_to_pickle['fermi_energy'] = fermi_energy
         data_to_pickle['metal'] = metal_name
         data_to_pickle['adsorbate'] = ADSORBATE
+        data_to_pickle['Vak'] = newns.Vak.tolist()
         with open('output/delta/{a}_{b}_lcao_data.pkl'.format(a=metal_name, b=ADSORBATE), 'wb') as f:
             pickle.dump(data_to_pickle, f)
 

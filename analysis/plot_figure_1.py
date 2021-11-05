@@ -13,7 +13,7 @@ THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl']
 if __name__ == '__main__':
     """Plot the scaling relations from the energy file."""
     FUNCTIONAL = 'PBE_scf'
-    REMOVE_LIST = []
+    REMOVE_LIST = [  'Y', 'Sc', 'Nb', 'Hf', 'Ti', 'W', 'Re' ]
     # Read the energy file.
     with open(f'output/adsorption_energies_{FUNCTIONAL}.json', 'r') as f:
         ads_energy = json.load(f)

@@ -9,6 +9,77 @@ from pprint import pprint
 warnings.filterwarnings("ignore", category=RuntimeWarning) 
 
 @dataclass
+class JensNewnsAnderson:
+    """Class for fitting parameters for the Newns-Anderson and the
+    d-band model with calculations performed with DFT. The class 
+    expects all metal quantities for a particular eps_a (adsorbate) value."""
+    Vsd: list
+    filling: list
+    width: list
+    eps_a: float
+
+    def __post_init__(self):
+        """Extra variables that are needed for the model."""
+        self.eps = np.linspace(-25, 20, 100000)
+
+        # convert all lists to numpy arrays
+        self.Vsd = np.array(self.Vsd)
+        self.filling = np.array(self.filling)
+        self.width = np.array(self.width)
+
+    def fit_parameters(self, eps_ds, alpha, beta, constant):
+        """Fit the parameters alpha, beta, delta0."""
+        # All the parameters here will have positive values
+        # Vak assumed to be proportional to Vsd
+        Vak = np.sqrt(beta) * self.Vsd
+
+        # Store the hybridisation energy for all metals to compare later
+        spd_hybridisation_energy = np.zeros(len(eps_ds))
+
+        # We will need the occupancy of the single particle state
+        na = np.zeros(len(eps_ds))
+        # Loop over all the metals
+        for i, eps_d in enumerate(eps_ds):
+            hybridisation = NewnsAndersonNumerical(
+                Vak = Vak[i],
+                eps_a = self.eps_a,
+                eps_d = eps_d,
+                width = self.width[i],
+                eps = self.eps,
+                k = constant,
+            )
+            # The first component of the hybridisation energy
+            # is the hybdridisation coming from the sp and d bands
+            hybridisation.calculate_energy()
+            spd_hybridisation_energy[i] = hybridisation.DeltaE
+            # Store the occupancies of each state
+            na[i] = hybridisation.na
+
+        # Ensure that the hybridisation energy is negative always
+        assert all(spd_hybridisation_energy <= 0), "Hybridisation energy is negative"
+        # Store the spd hybridisation energy
+        self.spd_hybridisation_energy = spd_hybridisation_energy
+
+        # orthonogonalisation energy
+        ortho_energy = 2 * ( na +  self.filling ) * alpha * np.sqrt(beta) * self.Vsd**2
+        ortho_energy = np.array(ortho_energy)
+
+        # Ensure that the orthonogonalisation energy is positive always
+        assert all(ortho_energy >= 0), "Orthogonalisation energy is positive"
+
+        # Add the orthogonalisation energy to the hybridisation energy
+        hybridisation_energy = spd_hybridisation_energy + ortho_energy
+
+        # Store the hybridisation energy for all metals
+        self.hybridisation_energy = hybridisation_energy
+        # Store the occupancies as well
+        self.na = na
+        # Store the orthogonalisation energy for all metals
+        self.ortho_energy = ortho_energy
+        
+        return hybridisation_energy
+
+@dataclass
 class NewnsAndersonNumerical:
     """Perform numerical calculations of the Newns-Anderson model to get 
     the chemisorption energy.
@@ -45,13 +116,13 @@ class NewnsAndersonNumerical:
         self.Delta =  ( 1  - ( self.eps_wrt_d )**2 / ( self.width / 2 )**2  )**0.5
         self.Delta = np.nan_to_num(self.Delta, nan=0)
 
-        # The area under the curve must be set to pi^2
+        # The area under the curve must be set to pi
         area_under_Delta = integrate.simps(self.Delta, self.eps)
         self.Delta /= area_under_Delta 
-        self.Delta *= np.pi**2
+        self.Delta *= np.pi
 
         # For a given Vak the 
-        self.Delta *= np.pi * self.Vak 
+        self.Delta *= np.pi**2 * self.Vak
 
         # Adding sp contributions
         self.sp_contributions = self.k

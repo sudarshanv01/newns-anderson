@@ -3,7 +3,7 @@ import json
 import yaml
 import numpy as np
 from dataclasses import dataclass
-from NewnsAnderson import NewnsAndersonNumerical
+from NewnsAnderson import NewnsAndersonNumerical, JensNewnsAnderson
 from collections import defaultdict
 from scipy.optimize import minimize, least_squares, leastsq, curve_fit
 from pprint import pprint
@@ -16,78 +16,10 @@ FIRST_ROW   = [ 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn']
 SECOND_ROW  = [ 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd']
 THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl'] 
 
-@dataclass
-class JensNewnsAnderson:
-    """Class for fitting parameters for the Newns-Anderson and the
-    d-band model with calculations performed with DFT. The class 
-    expects all metal quantities for a particular eps_a (adsorbate) value."""
-    Vsd: list
-    filling: list
-    width: list
-    eps_a: float
-
-    def __post_init__(self):
-        """Extra variables that are needed for the model."""
-        self.eps = np.linspace(-25, 20, 100000)
-
-        # convert all lists to numpy arrays
-        self.Vsd = np.array(self.Vsd)
-        self.filling = np.array(self.filling)
-        self.width = np.array(self.width)
-
-    def fit_parameters(self, eps_ds, alpha, beta, constant):
-        """Fit the parameters alpha, beta, delta0."""
-        # All the parameters here will have positive values
-        # Vak assumed to be proportional to Vsd
-        Vak = np.sqrt(beta) * self.Vsd
-
-        # Store the hybridisation energy for all metals to compare later
-        hybridisation_energy = np.zeros(len(eps_ds))
-
-        # We will need the occupancy of the single particle state
-        na = np.zeros(len(eps_ds))
-        # Loop over all the metals
-        for i, eps_d in enumerate(eps_ds):
-            hybridisation = NewnsAndersonNumerical(
-                Vak = Vak[i],
-                eps_a = self.eps_a,
-                eps_d = eps_d,
-                width = self.width[i],
-                eps = self.eps,
-                k = constant,
-            )
-            # The first component of the hybridisation energy
-            # is the hybdridisation coming from the sp and d bands
-            hybridisation.calculate_energy()
-            hybridisation_energy[i] = hybridisation.DeltaE
-            # Store the occupancies of each state
-            na[i] = hybridisation.na
-
-        # Ensure that the hybridisation energy is negative always
-        assert all(hybridisation_energy <= 0), "Hybridisation energy is negative"
-
-        # orthonogonalisation energy
-        ortho_energy = 2 * ( na +  self.filling ) * alpha * np.sqrt(beta) * self.Vsd**2
-        ortho_energy = np.array(ortho_energy)
-
-        # Ensure that the orthonogonalisation energy is positive always
-        assert all(ortho_energy >= 0), "Orthogonalisation energy is positive"
-
-        # Add the orthogonalisation energy to the hybridisation energy
-        hybridisation_energy += ortho_energy
-
-        # Store the hybridisation energy for all metals
-        self.hybridisation_energy = hybridisation_energy
-        # Store the occupancies as well
-        self.na = na
-        
-        return hybridisation_energy
-
-
 if __name__ == '__main__':
     """Determine the fitting parameters for a particular adsorbate."""
 
-    REMOVE_LIST = []
+    REMOVE_LIST = [ 'Y', 'Sc', 'Nb', 'Hf', 'Ti', 'Os', 'Co' ] 
     KEEP_LIST = []
 
     # Choose a sequence of adsorbates
@@ -110,12 +42,11 @@ if __name__ == '__main__':
 
 
     # Plot the Fitted and the real adsorption energies
-    fig, ax = plt.subplots(1, 2, figsize=(14, 6), constrained_layout=True)
+    fig, ax = plt.subplots(1, 2, figsize=(10, 4.5), constrained_layout=True)
     for i in range(len(ax)):
         ax[i].set_xlabel('DFT energy (eV)')
         ax[i].set_ylabel('Hybridisation energy (eV)')
         ax[i].set_title(f'{ADSORBATES[i]}* with $\epsilon_a=$ {EPS_A_VALUES[i]} eV')
-
 
     # simulatenously iterate over ADSORBATES and EPS_A_VALUES
     for i, (adsorbate, eps_a) in enumerate(zip(ADSORBATES, EPS_A_VALUES)):
@@ -166,7 +97,7 @@ if __name__ == '__main__':
         # Make the constrains for curve_fit such that all the 
         # terms are positive
         constraints = [ [0, 0, 0], [np.inf, np.inf, np.inf] ]
-        initial_guess = [0.05, 0.15, 2]
+        initial_guess = [0.2, 1, 2]
         popt, pcov = curve_fit(f=fitting_function.fit_parameters,
                             xdata=parameters['d_band_centre'],
                             ydata=dft_energies,
@@ -205,8 +136,8 @@ if __name__ == '__main__':
                 colour = 'green'
             ax[i].plot(dft_energies[j], optimised_hyb[j], 'o', color=colour)
             # Plot the error bars
-            ax[i].plot([dft_energies[j], dft_energies[j]], [negative_optimised_hyb_error[j], \
-                        positive_optimised_hyb_error[j]], '-', color=colour, alpha=0.25)
+            # ax[i].plot([dft_energies[j], dft_energies[j]], [negative_optimised_hyb_error[j], \
+            #             positive_optimised_hyb_error[j]], '-', color=colour, alpha=0.25)
 
             texts.append(ax[i].text(dft_energies[j], optimised_hyb[j], metal, color=colour))
 
@@ -216,7 +147,8 @@ if __name__ == '__main__':
         json.dump({
             'alpha': popt[0],
             'beta': popt[1],
-            'constant': popt[2],
+            'delta0': popt[2],
+            'eps_a': eps_a,
         }, open(f'output/{adsorbate}_parameters_{FUNCTIONAL}.json', 'w'))
 
     fig.savefig(f'output/figure_3.png', dpi=300)
