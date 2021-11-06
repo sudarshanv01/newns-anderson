@@ -122,8 +122,8 @@ if __name__ == '__main__':
         x = np.linspace(np.min(dft_energies)-0.25, np.max(dft_energies)+0.25, 2)
         ax[i].plot(x, x, '--', color='black')
         # Fix the axes to the same scale 
-        ax[i].set_xlim(np.min(x), np.max(x))
-        ax[i].set_ylim(np.min(x), np.max(x))
+        # ax[i].set_xlim(np.min(x), np.max(x))
+        # ax[i].set_ylim(np.min(x), np.max(x))
 
         texts = []
         for j, metal in enumerate(metals):

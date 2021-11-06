@@ -95,8 +95,8 @@ if __name__ == "__main__":
     colors =  plt.cm.viridis(np.linspace(0, 1, 10))
 
     # Plot the Newns-Anderson DOS for a few d-band centres
-    newns_epsds = [ -4, -2, -1, 0 ]
-    newns_epsas = [-5, -1]
+    newns_epsds = [ -4,] # -2, -1, 0 ]
+    newns_epsas = [-5,] # -1]
     for i, newns_epsd in enumerate(newns_epsds):
         for j, newns_epsa in enumerate(newns_epsas):
 
@@ -105,8 +105,8 @@ if __name__ == "__main__":
                 eps_a = newns_epsa, 
                 eps_d = newns_epsd,
                 width = 3,
-                eps = np.linspace(-10, 6, 100000),
-                k = 0,
+                eps = np.linspace(-10, 6, 1000),
+                k = 2,
             )
             hybridisation.calculate_energy()
             
@@ -119,28 +119,28 @@ if __name__ == "__main__":
             
             # Get the metal projected density of states
             Delta = hybridisation.Delta
-            Delta /= np.pi**2
-            Delta += x_pos
+            # Delta /= np.pi**2
+            # Delta += x_pos
             # Get the hilbert transform
             Lambda = hybridisation.Lambda
-            Lambda /= np.pi**2
-            Lambda += x_pos
+            # Lambda /= np.pi**2
+            # Lambda += x_pos
             # Get the line representing the eps - eps_a state
             eps_a_line = hybridisation.eps - hybridisation.eps_a
-            eps_a_line /= np.pi**2
-            eps_a_line += x_pos
+            # eps_a_line /= np.pi**2
+            # eps_a_line += x_pos
             # Get the adsorbate density of states
-            na = hybridisation.dos + x_pos 
-            na_localised_states = np.zeros_like(na)
+            na = hybridisation.dos #+ x_pos 
+            # na_localised_states = np.zeros_like(na)
             # Check for the existance of any roots and add them
-            if hybridisation.lower_index_root is not None:
-                # Plot a Delta function at this index of eps
-                na_localised_states[hybridisation.lower_index_root] = 1
-            if hybridisation.upper_index_root is not None:
-                # Plot a Delta function at this index of eps
-                na_localised_states[hybridisation.upper_index_root] = 1
+            # if hybridisation.lower_index_root is not None:
+            #     # Plot a Delta function at this index of eps
+            #     na_localised_states[hybridisation.lower_index_root] = 1
+            # if hybridisation.upper_index_root is not None:
+            #     # Plot a Delta function at this index of eps
+            #     na_localised_states[hybridisation.upper_index_root] = 1
 
-            na += na_localised_states
+            # na += na_localised_states
             
             ax1.plot(Delta, hybridisation.eps, color='tab:blue', lw=3)
             ax1.plot(na, hybridisation.eps, color=color)

@@ -2,18 +2,21 @@
 import yaml
 import numpy as np
 import matplotlib.pyplot as plt
+from pprint import pprint
 from NewnsAnderson import NewnsAndersonNumerical, NewnsAndersonAnalytical
 
 if __name__ == '__main__':
 
     eps_a = -5 # eV 
-    EPS_RANGE = np.linspace(-20, 20, 200000)
+    EPS_RANGE = np.linspace(-20, 20, 10000)
     k = 0
 
     # Load data from vojvodic_parameters.yaml
     with open('vojvodic_parameters.yaml', 'r') as f:
         vojvodic_parameters = yaml.safe_load(f)
 
+    metals = []
+    energies = []
     for metal in vojvodic_parameters['epsd']:
         eps_d = vojvodic_parameters['epsd'][metal]
         second_moment = vojvodic_parameters['mc'][metal]
@@ -33,7 +36,8 @@ if __name__ == '__main__':
         )
         newns.calculate_energy()
 
-        energy = newns.DeltaE
+        energies.append(newns.DeltaE)
+        metals.append(metal)
 
-        print(f"Energy of {metal}: {energy:1.2f} eV")
-
+    data = np.array([metals, energies]).T
+    pprint(data)

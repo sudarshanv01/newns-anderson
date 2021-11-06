@@ -4,8 +4,10 @@ from dataclasses import dataclass
 import numpy as np
 from scipy import signal
 from scipy import integrate
+from scipy import optimize
 import warnings
 from pprint import pprint
+import mpmath as mp
 warnings.filterwarnings("ignore", category=RuntimeWarning) 
 
 @dataclass
@@ -20,7 +22,7 @@ class JensNewnsAnderson:
 
     def __post_init__(self):
         """Extra variables that are needed for the model."""
-        self.eps = np.linspace(-25, 20, 100000)
+        self.eps = np.linspace(-25, 20, 1000)
 
         # convert all lists to numpy arrays
         self.Vsd = np.array(self.Vsd)
@@ -100,132 +102,171 @@ class NewnsAndersonNumerical:
     eps_a: float
     width: float
     eps_d: float
-    eps: float
+    eps: list 
     k: float
-    NOISE_TOLERANCE = 1e-1
 
     def __post_init__(self):
         """Perform numerical calculations of the Newns-Anderson model to get 
         the chemisorption energy."""
-        # Store some useful variables
-        self.eps_wrt_d = self.eps - self.eps_d
+        self.eps_min = np.min(self.eps)
+        self.eps_max = np.max(self.eps) 
+        self.wd = self.width / 2
+        # make eps an array
+        self.eps = np.array(self.eps)
+        print(f'Solving the Newns-Anderson model for eps_a = {self.eps_a} eV and eps_d = {self.eps_d}')
+
+    def create_Delta(self, eps):
+        """Create a function for Delta."""
+        if isinstance(eps, float):
+            eps = np.array([ eps ])
+            was_float = True
+        else:
+            was_float = False
+        Delta = []
+        for eps_ in eps:
+            eps_ref = ( eps_ - self.eps_d ) / self.wd 
+            if np.abs(eps_ - self.eps_d) < self.wd: 
+                Delta_ =  ( 1  - ( eps_ref )**2  )**0.5
+                Delta_ = np.nan_to_num(Delta_)
+                # Make the area of the Delta_ in its current
+                # form to be pi, by dividing by wd/2
+                # as the area of a semi-ellipse is pi * a * b
+                Delta_ /= self.wd
+                Delta_ *= 2
+                # Multiply by the prefactor
+                Delta_ *= np.pi * self.Vak**2
+                Delta_ += self.k
+            else:
+                Delta_ = 0.0
+            Delta.append(Delta_)
+
+        if was_float:
+            return Delta[0]
+        else:
+            return np.array(Delta)
     
-    def _create_Delta(self):
-        """Create Delta from Vak and eps_d."""
-        
-        self.Delta =  ( 1  - ( self.eps_wrt_d )**2 / ( self.width / 2 )**2  )**0.5
-        self.Delta = np.nan_to_num(self.Delta, nan=0)
+    def create_Lambda(self, eps):
+        """Create the hilbert transform of Delta."""
+        if isinstance(eps, float):
+            eps = np.array([ eps ])
+            was_float = True
+        else:
+            was_float = False
 
-        # The area under the curve must be set to pi
-        area_under_Delta = integrate.simps(self.Delta, self.eps)
-        self.Delta /= area_under_Delta 
-        self.Delta *= np.pi
+        # check if eps is a list of a single value
+        Lambda = []
+        for eps_ in eps:
+            eps_ref = ( eps_ - self.eps_d ) / self.wd 
+            if eps_ < self.eps_d - self.wd:
+                # Below the lower edge of the d-band
+                Lambda_ = np.pi * self.Vak**2
+                Lambda_ *= ( eps_ref + ( eps_ref**2 - 1 )**0.5 )
+            elif eps_ > self.eps_d + self.wd:
+                # Above the upper edge of the d-band
+                Lambda_ = np.pi * self.Vak**2
+                Lambda_ *= ( eps_ref - ( eps_ref**2 - 1)**0.5 )
+            else:
+                # Inside Lambda
+                Lambda_ = np.pi * self.Vak**2
+                Lambda_ *= eps_ref
+            # Same normalisation for Lambda as for Delta
+            Lambda_ *= 2
+            Lambda_ /= self.wd
+            Lambda.append(Lambda_)
 
-        # For a given Vak the 
-        self.Delta *= np.pi**2 * self.Vak
+        if was_float:
+            return Lambda[0]
+        else:
+            return np.array(Lambda)
 
-        # Adding sp contributions
-        self.sp_contributions = self.k
-        self.Delta += self.sp_contributions
+    def create_adsorbate_list(self, eps):
+        """Create the line that the adsorbate passes through."""
+        return eps - self.eps_a
 
-    
-    def _create_Lambda(self):
-        """Create Lambda by performing the Hilbert transform of Delta."""
-        self.Lambda = np.imag(signal.hilbert(self.Delta))
+    def find_poles_green_function(self, eps):
+        """Find the poles of the green function."""
+        eps_function = self.create_adsorbate_list
+        Delta = self.create_Delta
+        Lambda = self.create_Lambda
+        # Find the epsilon value as which the Lambda and eps_function are equal
+        # These poles will have to be explicitly mentioned during the integration
+
+        poles_root = optimize.root(lambda x: Lambda(x) - eps_function(x), self.eps_a, method='lm')
+        assert poles_root.success, 'Must find at least one pole of the green function'
+        # Poles are be poles only if Delta = 0 at the points
+        # determine if Delta is 0 at the poles
+        Delta_poles = Delta(poles_root.x)
+        # Finally determine what the poles are
+        self.poles = poles_root.x[ Delta_poles == self.k ] 
+        print(f'Poles of the green function:{self.poles}')
+
+    def create_dos(self, eps):
+        """Create the density of states."""
+        eps_function = self.create_adsorbate_list
+        Delta = self.create_Delta
+        Lambda = self.create_Lambda
+        # Create the density of states
+        numerator = Delta(eps)
+        denominator = ( eps_function(eps) - Lambda(eps) )**2 + Delta(eps)**2
+        return numerator / denominator / np.pi
 
     def calculate_dos(self):
-        """Calculate the DOS from the Delta and Lambda."""
-        dos_ = self.Delta / ( (self.eps - self.eps_a - self.Lambda)**2 + self.Delta**2 )
-        dos_ /= np.pi
-        self.dos = dos_
-        # Determine the first part of the occupancy by integrating up the dos between 
-        # eps_d +- width/2
-        between_d_energies = np.where((self.eps >= self.eps_d - self.width/2) & (self.eps <= self.eps_d + self.width/2))[0]
-        integrated_rho = integrate.simps(dos_[between_d_energies], self.eps[between_d_energies])
-        # Now look for the localised states
-        # Find the numerical derivative of Lambda
-        self.dLambda = np.diff(self.Lambda) / np.diff(self.eps)
-        # Get the index of Delta closest to the d-band center
-        self.delta_index = np.argsort(np.abs(self.eps - self.eps_d))[0]
+        """Calculate the density of states from the Newns-Anderson model."""
+        self.find_poles_green_function(self.eps)
+        # Store the numerical parameters to be plotted with the dos
+        self.Delta = self.create_Delta(self.eps)
+        self.Lambda = self.create_Lambda(self.eps)
+        self.dos = self.create_dos(self.eps)
+        # make sure that the poles are within the energy range
+        assert np.all(self.poles >= self.eps_min), 'Poles must be within the energy range'
+        assert np.all(self.poles <= self.eps_max), 'Poles must be within the energy range'
+        # Numerically integrate the dos to find the occupancy
+        self.na = integrate.quad(self.create_dos, 
+                                 self.eps_min, 0, 
+                                 points = (self.poles))[0]
+        # Remove any noise in na
+        if self.na > 1:
+            self.na = 1
+        if self.na < 0:
+            self.na = 0
+        print(f'Single particle occupancy: {self.na}')
 
-        # Find cases where eps - eps_a - Lambda is close to 0
-        self.dLambda_index = np.where(np.abs(self.eps - self.eps_a - self.Lambda) < self.NOISE_TOLERANCE)[0]
-        assert len(self.dLambda_index) > 0, "There must be at least one root"
-        # Sort all these cases to find which ones are roots 
-        self.dLambda_index = np.sort(self.dLambda_index)
-        # There are only three possible roots possible
-        # If the d-band center index is between the first and the third root index
-        # Then there are three roots
-        self.lower_index_root = None
-        self.upper_index_root = None
-        if np.min(self.dLambda_index) < self.delta_index < np.max(self.dLambda_index):
-            # There are three possible roots is the two indices enclose that of delta
-            print(f"There are three roots for {self.eps_d} eV")
-            na_ = 0
-            if self.eps[np.min(self.dLambda_index)] <= 0:
-                # Check if the index isnt in the d-band
-                if self.Delta[np.min(self.dLambda_index)] == self.sp_contributions:
-                    print('Lower one occupied')
-                    na_ += 1 / ( 1 - self.dLambda[np.min(self.dLambda_index)] )
-                    self.lower_index_root = np.min(self.dLambda_index)
-            if self.eps[np.max(self.dLambda_index)] <= 0:
-                # Check if the index isnt in the d-band
-                if self.Delta[np.max(self.dLambda_index)] == self.sp_contributions:
-                    print('Upper one occupied')
-                    na_ += 1 / ( 1 - self.dLambda[np.max(self.dLambda_index)] )
-                    self.upper_index_root = np.max(self.dLambda_index)
-            na_ += integrated_rho
+    def create_energy_integrand(self, eps):
+        """Create the energy integrand of the system."""
+        eps_function = self.create_adsorbate_list
+        Delta = self.create_Delta
+        Lambda = self.create_Lambda
+        # Determine the energy of the system
+        numerator = Delta(eps)
+        denominator = eps - self.eps_a - Lambda(eps)
+        assert  numerator >= 0, "Numerator must be positive"
+        # find where self.eps is lower than 0
+        if eps > 0:
+            # If we are about the Fermi level there is no need
+            # to perform the integration
+            return 0.0 
         else:
-            # There is only one root here, find the one which has the 
-            # lowest energy when the energies are negative
-            filled_index = np.where(self.eps <= 0)[0]
-            self.dLambda_index = np.argmin(np.abs(self.eps[filled_index] - self.eps_a - self.Lambda[filled_index]))
-            # Check if the value of Delta is zero at this index
-            if self.Delta[self.dLambda_index] == self.sp_contributions and self.eps[self.dLambda_index] <= 0:
-                print(f'Only one root at {self.eps_d}')
-                na_ = 1 / ( 1 - self.dLambda[self.dLambda_index] )
-                na_ += integrated_rho
-                self.lower_index_root = self.dLambda_index
-                self.upper_index_root = self.dLambda_index
-            else:
-                # Root inside the d-band
-                print(f'Root inside d-band at {self.eps_d}')
-                na_ = integrated_rho 
-
-        # Remove any numerical noise by setting na_ to be at most 1
-        self.na = np.min([1, na_])
+            arctan_integrand = np.arctan2(numerator, denominator)
+            arctan_integrand -= np.pi
+            assert arctan_integrand <= 0, "Arctan integrand must be negative"
+            assert arctan_integrand >= -np.pi, "Arctan integrand must be greater than -pi"
+            return arctan_integrand
 
     def calculate_energy(self):
-        self._create_Delta()
-        self._create_Lambda()
+        """Calculate the energy from the Newns-Anderson model."""
         self.calculate_dos()
+        delta_E_ = integrate.quad(self.create_energy_integrand, 
+                                  self.eps_min, 0,
+                                  points = (self.poles),
+                                  limit=100)[0]
+        self.DeltaE = delta_E_ * 2 / np.pi - 2 * self.eps_a
+        # sometimes DeltaE can be very slightly positive
+        # because of integration errors, set it to zero 
+        # is positive
+        if self.DeltaE > 0:
+            self.DeltaE = 0
+        print(f'Energy is {self.DeltaE} eV')
 
-        # Create the arctan integrand
-        numerator = self.Delta
-        denominator = self.eps  - self.eps_a - self.Lambda
-        assert all( numerator >= 0), "Numerator must be positive"
-
-        # find where self.eps is lower than 0
-        filled_eps_index = [i for i in range(len(self.eps)) if self.eps[i] <= 0]
-        arctan_integrand = np.arctan2(numerator[filled_eps_index], denominator[filled_eps_index])
-        arctan_integrand -= np.pi
-
-        assert all(arctan_integrand <= 0), "Arctan integrand must be negative"
-        assert all(arctan_integrand >= -np.pi), "Arctan integrand must be greater than -pi"
-
-        # Integrate to get the energies
-        delta_E_ = 2 / np.pi * integrate.simps( arctan_integrand , self.eps[filled_eps_index] )
-
-        # Subtract the energy of the adsorbate
-        delta_E_ -= 2 * self.eps_a
-
-        # Remove any numerical noise by setting slightly positive Delta_E to 0
-        if delta_E_ > 0:
-            delta_E_ = 0
-
-        # Store the energy 
-        self.DeltaE = delta_E_
-    
 @dataclass
 class NewnsAndersonAnalytical:
     """ Perform the Newns-Anderson model analytically for a semi-elliplical delta.
