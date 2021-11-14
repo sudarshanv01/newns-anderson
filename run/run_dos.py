@@ -66,10 +66,10 @@ class DOSSubmissionController(FromGroupSubmissionController):
         structure = self.get_parent_node_from_extras(extras_values)
 
         # Get cutoff information
-        family = load_group('SSSP/1.1/PBE/precision')
+        family = load_group('SSSP/1.1/PBE/efficiency')
         cutoffs = family.get_recommended_cutoffs(structure=structure)  
-        ecutwf = max(90, cutoffs[0])
-        ecutrho = max(600, cutoffs[1])
+        ecutwf = max(60, cutoffs[0])
+        ecutrho = max(480, cutoffs[1])
 
         # get the scf information
         parameters_scf = calculator(ecutwf, ecutrho)
@@ -139,7 +139,7 @@ class DOSSubmissionController(FromGroupSubmissionController):
                                     }
         builder.projwfc.parameters = orm.Dict(dict=projwfc_parameters) 
         builder.projwfc.code = code_projwfc
-        builder.projwfc.metadata.options.resources = {'num_machines': 1, 'num_mpiprocs_per_machine':12}
+        builder.projwfc.metadata.options.resources = {'num_machines': 1}
         builder.projwfc.metadata.options.max_wallclock_seconds = 10 * 60
 
         return builder, self._process_class
@@ -152,10 +152,10 @@ if __name__ == '__main__':
 
     # For the submission controller
     DRY_RUN = False
-    MAX_CONCURRENT = 4
+    MAX_CONCURRENT = 11
     CODE_LABEL = f'pw_6-7{COMPUTER}'
-    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/surface_structures/initial/{SYSTEM}'
-    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_precision/surface_structures/dos_scf/{SYSTEM}'
+    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_efficiency/initial/{SYSTEM}'
+    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_efficiency/dos_scf/{SYSTEM}'
 
     controller = DOSSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,

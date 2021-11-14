@@ -13,8 +13,8 @@ THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl']
 
 def func_a_by_r(x, a):
     return a / x
-def func_a_r2(x, a, b, c):
-    return c - a * (x - b)**2 
+def func_a_r2(x, a, c):
+    return c - a * (x - 0.7)**2 
 
 def get_1_by_r_fit(x, y):
     """Get the fit of x, y with 1/r."""
@@ -23,7 +23,7 @@ def get_1_by_r_fit(x, y):
 
 def get_r2_fit(x, y):
     """Get the fit of x, y with r^2."""
-    guessed = [1, np.mean(x), 1]
+    guessed = [1, np.mean(x)]
     popt, pcov = curve_fit(func_a_r2, x, y, p0=guessed)
     return list(popt), list(pcov)
 
@@ -69,19 +69,19 @@ if __name__ == '__main__':
     colors = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
     for i in range(3):
         fit_Vsdsq = get_1_by_r_fit(parameters['filling'][i], parameters['Vsdsq'][i])
-        # fit_width = get_r2_fit(parameters['filling'][i], parameters['width'][i])
-        fit_width = np.mean(parameters['width'][i])
+        fit_width = get_r2_fit(parameters['filling'][i], parameters['width'][i])
+        # fit_width = np.mean(parameters['width'][i])
 
         fitting_parameters['Vsdsq'][i] = fit_Vsdsq[0]
-        # fitting_parameters['width'][i] = fit_width[0]
-        fitting_parameters['width'][i] = fit_width
+        fitting_parameters['width'][i] = fit_width[0]
+        # fitting_parameters['width'][i] = fit_width
 
         ax[0].plot(parameters['filling'][i], parameters['Vsdsq'][i], 'o', label=f'{i+1}-row', color=colors[i])
         ax[0].plot(filling_range, func_a_by_r(filling_range, *fit_Vsdsq[0]), '--', color=colors[i])
 
         ax[1].plot(parameters['filling'][i], parameters['width'][i], 'o', label=f'{i+1}-row', color=colors[i])
-        # ax[1].plot(filling_range, func_a_r2(filling_range, *fit_width[0]), '--', color=colors[i])
-        ax[1].axhline(fit_width, color=colors[i], linestyle='--')
+        ax[1].plot(filling_range, func_a_r2(filling_range, *fit_width[0]), '--', color=colors[i])
+        # ax[1].axhline(fit_width, color=colors[i], linestyle='--')
 
         # get the eps_d range and the filling range
         eps_d_minmax = [ np.min(parameters['eps_d'][i]), np.max(parameters['eps_d'][i]) ]

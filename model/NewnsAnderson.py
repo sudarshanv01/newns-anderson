@@ -8,7 +8,7 @@ from scipy import optimize
 import warnings
 from pprint import pprint
 import mpmath as mp
-warnings.filterwarnings("ignore", category=RuntimeWarning) 
+# warnings.filterwarnings("ignore", category=RuntimeWarning) 
 
 @dataclass
 class JensNewnsAnderson:
@@ -22,7 +22,7 @@ class JensNewnsAnderson:
 
     def __post_init__(self):
         """Extra variables that are needed for the model."""
-        self.eps = np.linspace(-25, 20, 1000)
+        self.eps = np.linspace(-15, 15, 1000)
 
         # convert all lists to numpy arrays
         self.Vsd = np.array(self.Vsd)
@@ -125,19 +125,23 @@ class NewnsAndersonNumerical:
         Delta = []
         for eps_ in eps:
             eps_ref = ( eps_ - self.eps_d ) / self.wd 
-            if np.abs(eps_ - self.eps_d) < self.wd: 
+            if np.abs(eps_ - self.eps_d) <= self.wd: 
                 Delta_ =  ( 1  - ( eps_ref )**2  )**0.5
                 Delta_ = np.nan_to_num(Delta_)
-                # Make the area of the Delta_ in its current
-                # form to be pi, by dividing by wd/2
-                # as the area of a semi-ellipse is pi * a * b
+                # Normalise the area of Delta such that the 
+                # integral of Delta is 1. The area of a
+                # semi-ellipse is pi * a * b / 2
                 Delta_ /= self.wd
+                Delta_ /= np.pi
                 Delta_ *= 2
                 # Multiply by the prefactor
                 Delta_ *= np.pi * self.Vak**2
+                # Add the constant sp term
                 Delta_ += self.k
             else:
-                Delta_ = 0.0
+                # No d-states consider just the 
+                # sp term
+                Delta_ = self.k
             Delta.append(Delta_)
 
         if was_float:
@@ -152,26 +156,29 @@ class NewnsAndersonNumerical:
             was_float = True
         else:
             was_float = False
-
-        # check if eps is a list of a single value
         Lambda = []
         for eps_ in eps:
             eps_ref = ( eps_ - self.eps_d ) / self.wd 
-            if eps_ < self.eps_d - self.wd:
+            if eps_ref < -1: 
                 # Below the lower edge of the d-band
                 Lambda_ = np.pi * self.Vak**2
                 Lambda_ *= ( eps_ref + ( eps_ref**2 - 1 )**0.5 )
-            elif eps_ > self.eps_d + self.wd:
+            elif eps_ref > 1: 
                 # Above the upper edge of the d-band
                 Lambda_ = np.pi * self.Vak**2
                 Lambda_ *= ( eps_ref - ( eps_ref**2 - 1)**0.5 )
-            else:
-                # Inside Lambda
+            elif np.abs(eps_ref) <= 1:
+                # Inside the d-band
                 Lambda_ = np.pi * self.Vak**2
                 Lambda_ *= eps_ref
+            else:
+                raise ValueError(f'eps_ = {eps_} cannot be considered in Lambda')
             # Same normalisation for Lambda as for Delta
+            # These are prefactors of Delta that have been multiplied
+            # with Delta to ensure that the area is set to Vak^2
             Lambda_ *= 2
             Lambda_ /= self.wd
+            Lambda_ /= np.pi
             Lambda.append(Lambda_)
 
         if was_float:
@@ -184,20 +191,32 @@ class NewnsAndersonNumerical:
         return eps - self.eps_a
 
     def find_poles_green_function(self, eps):
-        """Find the poles of the green function."""
+        """Find the poles of the green function. In the case that Delta=0
+        these points will not be the poles, but are important to pass 
+        on to the integrator anyhow."""
         eps_function = self.create_adsorbate_list
-        Delta = self.create_Delta
         Lambda = self.create_Lambda
         # Find the epsilon value as which the Lambda and eps_function are equal
         # These poles will have to be explicitly mentioned during the integration
+        # There are three possible regions where there might be a root
+        # 1. Region above eps_d + wd
+        # 2. Region between eps_d - wd and eps_d + wd
+        # 3. Region below eps_d - wd
+        self.poles = []
+        # Find the root in the lower region
+        try:
+            pole_lower = optimize.brentq(lambda x: eps_function(x) - Lambda(x), self.eps_min, self.eps_d - self.wd)
+            self.poles.append(pole_lower)
+        except ValueError:
+            # No root in this region
+            pass
+        try:
+            pole_higher = optimize.brentq(lambda x: eps_function(x) - Lambda(x), self.eps_d + self.wd, self.eps_max)
+            self.poles.append(pole_higher)
+        except ValueError:
+            # No root in this region
+            pass
 
-        poles_root = optimize.root(lambda x: Lambda(x) - eps_function(x), self.eps_a, method='lm')
-        assert poles_root.success, 'Must find at least one pole of the green function'
-        # Poles are be poles only if Delta = 0 at the points
-        # determine if Delta is 0 at the poles
-        Delta_poles = Delta(poles_root.x)
-        # Finally determine what the poles are
-        self.poles = poles_root.x[ Delta_poles == self.k ] 
         print(f'Poles of the green function:{self.poles}')
 
     def create_dos(self, eps):
@@ -215,6 +234,7 @@ class NewnsAndersonNumerical:
         self.find_poles_green_function(self.eps)
         # Store the numerical parameters to be plotted with the dos
         self.Delta = self.create_Delta(self.eps)
+        # self.Lambda_numerical = np.imag(signal.hilbert(self.Delta))
         self.Lambda = self.create_Lambda(self.eps)
         self.dos = self.create_dos(self.eps)
         # make sure that the poles are within the energy range
@@ -248,7 +268,10 @@ class NewnsAndersonNumerical:
         else:
             arctan_integrand = np.arctan2(numerator, denominator)
             arctan_integrand -= np.pi
-            assert arctan_integrand <= 0, "Arctan integrand must be negative"
+            try:
+                assert arctan_integrand <= 0, "Arctan integrand must be negative"
+            except AssertionError:
+                raise AssertionError
             assert arctan_integrand >= -np.pi, "Arctan integrand must be greater than -pi"
             return arctan_integrand
 

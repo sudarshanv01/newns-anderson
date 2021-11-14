@@ -13,7 +13,7 @@ THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl']
 if __name__ == '__main__':
     """Plot the scaling relations from the energy file."""
     FUNCTIONAL = 'PBE_scf'
-    REMOVE_LIST = [  'Y', 'Sc', 'Nb', 'Hf', 'Ti', 'W', 'Re' ]
+    REMOVE_LIST = [] # [  'Y', 'Sc', 'Nb', 'Hf', 'Ti', 'W', 'Re' ]
     # Read the energy file.
     with open(f'output/adsorption_energies_{FUNCTIONAL}.json', 'r') as f:
         ads_energy = json.load(f)
@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     # Plot the variation of energies with the d-band center and 
     # scaling with themselves.
-    fig, ax = plt.subplots(1, 3, figsize=(16, 6), constrained_layout=True)
+    fig, ax = plt.subplots(1, 3, figsize=(14, 4.5), constrained_layout=True)
     texts = defaultdict(list)
     for metal in ads_energy['C']:
         if metal in REMOVE_LIST:

@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 import numpy as np
 from scipy.integrate import simps
+from scipy.linalg.misc import norm
 from plot_params import get_plot_params
 import matplotlib.ticker as ticker
 from NewnsAnderson import NewnsAndersonNumerical
@@ -39,9 +40,9 @@ def moment_generator(energies, all_dos, moment):
         eps_d.append(epsilon_d)
     return moments, eps_d
 
-def normalise_pdos(pdos):
-    """Normalise the PDOS to 1 for plotting purposes."""
-    return np.array(pdos) / np.max(pdos)
+def normalise_na_quantities(quantity, x_add):
+    """Utility function to align the density of states for Newns-Anderson plots."""
+    return quantity / np.max(np.abs(quantity)) + x_add
 
 if __name__ == "__main__":
     """Generate all plots for Figure 1 of the manuscript."""
@@ -68,8 +69,8 @@ if __name__ == "__main__":
         axp[0,i].set_yticks([])
         if i == 0:
             # Show adsorbate information
-            axp[0,i].plot([], [], '-', color='k', label='O*')
-            axp[0,i].plot([], [], '-', color='tab:red', label='C*')
+            axp[0,i].plot([], [], '-', color='tab:red', label='O*')
+            axp[0,i].plot([], [], '-', color='k', label='C*')
             axp[0,i].legend(loc='best')
     ax2 = fig.add_subplot(gs[3:6,-1])
     ax2.set_ylabel(r'$\epsilon_{d}$ (eV)')
@@ -95,60 +96,47 @@ if __name__ == "__main__":
     colors =  plt.cm.viridis(np.linspace(0, 1, 10))
 
     # Plot the Newns-Anderson DOS for a few d-band centres
-    newns_epsds = [ -4,] # -2, -1, 0 ]
-    newns_epsas = [-5,] # -1]
+    newns_epsds = [ -4, -2, -1, 0 ]
+    newns_epsas = [-5, -1]
     for i, newns_epsd in enumerate(newns_epsds):
         for j, newns_epsa in enumerate(newns_epsas):
 
             hybridisation = NewnsAndersonNumerical(
-                Vak = 1, 
+                Vak = 3, 
                 eps_a = newns_epsa, 
                 eps_d = newns_epsd,
                 width = 3,
-                eps = np.linspace(-10, 6, 1000),
+                eps = np.linspace(-15, 15, 10000),
                 k = 2,
             )
             hybridisation.calculate_energy()
             
             # Decide on the x-position based on the d-band centre
-            x_pos = 3 * i 
             if j == 0:
                 color='tab:red'
             elif j == 1:
                 color='k'
             
             # Get the metal projected density of states
-            Delta = hybridisation.Delta
-            # Delta /= np.pi**2
-            # Delta += x_pos
-            # Get the hilbert transform
-            Lambda = hybridisation.Lambda
-            # Lambda /= np.pi**2
-            # Lambda += x_pos
+            x_add = 3 * i
+            Delta = normalise_na_quantities( hybridisation.Delta, x_add )
+            Lambda = normalise_na_quantities( hybridisation.Lambda, x_add )
             # Get the line representing the eps - eps_a state
-            eps_a_line = hybridisation.eps - hybridisation.eps_a
-            # eps_a_line /= np.pi**2
-            # eps_a_line += x_pos
+            eps_a_line = normalise_na_quantities( hybridisation.eps - hybridisation.eps_a, x_add )
             # Get the adsorbate density of states
-            na = hybridisation.dos #+ x_pos 
-            # na_localised_states = np.zeros_like(na)
-            # Check for the existance of any roots and add them
-            # if hybridisation.lower_index_root is not None:
-            #     # Plot a Delta function at this index of eps
-            #     na_localised_states[hybridisation.lower_index_root] = 1
-            # if hybridisation.upper_index_root is not None:
-            #     # Plot a Delta function at this index of eps
-            #     na_localised_states[hybridisation.upper_index_root] = 1
-
-            # na += na_localised_states
+            na = normalise_na_quantities( hybridisation.dos, x_add) 
             
             ax1.plot(Delta, hybridisation.eps, color='tab:blue', lw=3)
-            ax1.plot(na, hybridisation.eps, color=color)
+            ax1.plot(na, hybridisation.eps, color=color, alpha=0.25)
             ax1.plot(Lambda, hybridisation.eps, color='tab:orange', lw=3, alpha=0.25)
-            ax1.plot(eps_a_line, hybridisation.eps, color=color, lw=3, alpha=0.25)
+            # ax1.plot(hybridisation.Lambda_numerical, hybridisation.eps, color='tab:orange', ls='--', lw=3, alpha=0.25)
+            # ax1.plot(eps_a_line, hybridisation.eps, color=color, lw=3, alpha=0.25)
+            # Plot the poles
+            for pole in hybridisation.poles:
+                ax1.plot(x_add, pole, '*', color=color)
 
             if j == 0:
-                ax1.annotate(r'$\epsilon_{d} = %.1f$ eV' % newns_epsd, xy=(x_pos+0.1, newns_epsd + 1.5), xytext=(x_pos+0.1, 5),
+                ax1.annotate(r'$\epsilon_{d} = %.1f$ eV' % newns_epsd, xy=(x_add+0.1, newns_epsd + 1.5), xytext=(x_add+0.5, 5),
                             xycoords='data', textcoords='data',
                             color='tab:blue',
                             arrowprops=dict(arrowstyle="->",
@@ -179,18 +167,13 @@ if __name__ == "__main__":
                 continue
             
             # Normalise the pdos just that it has a max of 1
-            pdos_metal = normalise_pdos(pdos_metal_unnorm)
-            pdos_C = normalise_pdos(pdos_C_unnorm)
-            pdos_O = normalise_pdos(pdos_O_unnorm)
-
-            # Add a constant to make the dos look shifted
-            # dependending on the element
-            pdos_metal += i
-            pdos_C += i
-            pdos_O += i
+            x_add = i
+            pdos_metal = normalise_na_quantities(pdos_metal_unnorm, x_add)
+            pdos_C = normalise_na_quantities(pdos_C_unnorm, x_add)
+            pdos_O = normalise_na_quantities(pdos_O_unnorm, x_add)
 
             # Plot the pdos onto the metal states
-            axp[0,row_index].fill_between(energies, i, pdos_metal, color=colors[i], alpha=0.5) 
+            axp[0,row_index].fill_between(energies, x_add, pdos_metal, color=colors[i], alpha=0.5) 
             axp[0,row_index].annotate(element, xy=(-8.5, pdos_metal[-1]+0.5), color=colors[i])
             # Plot the C (sp) pdos
             axp[0,row_index].plot(energies_C, pdos_C, color='k', alpha=0.75)

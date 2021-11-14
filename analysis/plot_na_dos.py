@@ -101,7 +101,7 @@ if __name__ == '__main__':
                     eps_a = eps_a,
                     eps_d = eps_d,
                     width = width,
-                    eps = np.linspace(-10, 6, 100000),
+                    eps = np.linspace(-15, 15, 1000),
                     k = delta0,
                 )
                 hybridisation.calculate_energy()
@@ -119,21 +119,11 @@ if __name__ == '__main__':
 
                 # Get the adsorbate density of states
                 na = hybridisation.dos + x_pos 
-                na_localised_states = np.zeros_like(na)
-                # Check for the existance of any roots and add them
-                if hybridisation.lower_index_root is not None:
-                    # Plot a Delta function at this index of eps
-                    na_localised_states[hybridisation.lower_index_root] = 1
-                if hybridisation.upper_index_root is not None:
-                    # Plot a Delta function at this index of eps
-                    na_localised_states[hybridisation.upper_index_root] = 1
 
-                na += na_localised_states
-
-                ax[1,j].plot(hybridisation.eps, Delta, color='tab:red', lw=3)
+                # ax[1,j].plot(hybridisation.eps, Delta, color='tab:red', lw=3)
                 ax[1,j].plot(hybridisation.eps, na, color='tab:blue')
-                ax[1,j].plot(hybridisation.eps, Lambda, color='tab:orange', lw=3, alpha=0.25)
-                ax[1,j].plot(hybridisation.eps, eps_a_line, color='tab:green', lw=3, alpha=0.25)
+                # ax[1,j].plot(hybridisation.eps, Lambda, color='tab:orange', lw=3, alpha=0.25)
+                # ax[1,j].plot(hybridisation.eps, eps_a_line, color='tab:green', lw=3, alpha=0.25)
 
                 # Get the different components of the energy by creating
                 # an instance of the JensNewnsAnderson class.

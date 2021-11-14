@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from plot_params import get_plot_params
 from plot_fitting_metal_parameters import func_a_by_r, func_a_r2
 from scipy.optimize import curve_fit
+from scipy import special
 get_plot_params()
 
 FIRST_ROW   = [ 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn']
@@ -18,39 +19,35 @@ def create_plot_layout():
     """Create a plot layout for plotting the Newns-Anderson
     dos and the energies of orthogonalisation, spd hybridisation
     energy for each specific adsorbate."""
-    fig = plt.figure(figsize=(14,14), constrained_layout=True)
+    fig = plt.figure(figsize=(14,10), constrained_layout=True)
     gs = fig.add_gridspec(nrows=14, ncols=3,)
     # The first 2 rows will be the orthogonalisation energies, spd
     # hybridisation energy and the total energy as a function of the
     # d-band centre.
-    ax1 = fig.add_subplot(gs[0:3, 0])
-    ax2 = fig.add_subplot(gs[0:3, 1])
-    ax3 = fig.add_subplot(gs[0:3, 2])
-    # Get the na graph
-    ax1o = fig.add_subplot(gs[3:5, 0])
-    ax2o = fig.add_subplot(gs[3:5, 1])
-    ax3o = fig.add_subplot(gs[3:5, 2])
-    ax1o.set_ylabel('$n_a$ (e)')
+    ax1 = fig.add_subplot(gs[0:4, 0])
+    ax2 = fig.add_subplot(gs[0:4, 1])
+    ax3 = fig.add_subplot(gs[0:4, 2])
+    # # Get the na graph
+    # ax1o = fig.add_subplot(gs[3:5, 0])
+    # ax2o = fig.add_subplot(gs[3:5, 1])
+    # ax3o = fig.add_subplot(gs[3:5, 2])
+    # ax1o.set_ylabel('$n_a$ (e)')
     
     # Set the axes labels
     ax1.set_title('3d')
     ax2.set_title('4d')
     ax3.set_title('5d')
-    ax1o.set_xlabel('$\epsilon_{d} - \epsilon_{F}$')
-    ax2o.set_xlabel('$\epsilon_{d} - \epsilon_{F}$')
-    ax3o.set_xlabel('$\epsilon_{d} - \epsilon_{F}$')
+    ax1.set_xlabel('$\epsilon_{d} - \epsilon_{F}$')
+    ax2.set_xlabel('$\epsilon_{d} - \epsilon_{F}$')
+    ax3.set_xlabel('$\epsilon_{d} - \epsilon_{F}$')
     # Each of ax1, ax2 and ax3 have a twinx() axis, which is used to
     # plot the derivative
-    ax12 = ax1.twinx()
-    ax22 = ax2.twinx()
-    ax32 = ax3.twinx()
     ax1.set_ylabel('$\Delta E_{\mathregular{hyb}}$ / eV (--)')
-    ax32.set_ylabel('$d\Delta E_{\mathregular{hyb}} / d\epsilon_{d}$ (-)')
     # Then make three plots with the density of states coming from
     # the different solutions of the Newns-Anderson equation.
-    ax4 = fig.add_subplot(gs[5:, 0])
-    ax5 = fig.add_subplot(gs[5:, 1])
-    ax6 = fig.add_subplot(gs[5:, 2])
+    ax4 = fig.add_subplot(gs[4:, 0])
+    ax5 = fig.add_subplot(gs[4:, 1])
+    ax6 = fig.add_subplot(gs[4:, 2])
     # Set the axes labels
     ax4.set_xlabel(r'$\epsilon - \epsilon_{F}$ (eV)')
     ax5.set_xlabel(r'$\epsilon - \epsilon_{F}$ (eV)')
@@ -61,14 +58,14 @@ def create_plot_layout():
     ax5.set_yticks([])
     ax6.set_yticks([])
 
-    return fig, np.array([ [ax1, ax2, ax3], [ax4, ax5, ax6] ]), [ax12, ax22, ax32], [ax1o, ax2o, ax3o]
+    return fig, np.array([ [ax1, ax2, ax3], [ax4, ax5, ax6] ]) # [ax1o, ax2o, ax3o]
 
 def create_aux_plot_layout():
     """Create the plot layout for the descriptor as a 
     function of the eps_a."""
     fig, ax = plt.subplots(1, 1, figsize=(6,5), constrained_layout=True)
     ax.set_xlabel(r'$\epsilon_{a}$ (eV)')
-    ax.set_ylabel(r'$\epsilon_{d}^\prime$ (eV)')
+    ax.set_ylabel(r'$a$ (eV$^{-1}$)')
     return fig, ax
 
 def set_same_limits(axes, y_set=True, x_set=False):
@@ -106,7 +103,7 @@ def normalise_na_quantities(quantity, x_add):
 def functional_form_energy(eps_d, a, b, c):
     """Fitting function for the functional form of the energy."""
     eps_d = np.array(eps_d)
-    cutoff_function = lambda x: np.exp(np.abs(b) * eps_d) 
+    cutoff_function = lambda x:  ( special.erfc(eps_d - b) + 1 ) / 2 # np.exp(np.abs(b) * eps_d) 
     return a * eps_d * cutoff_function(eps_d) + c 
 
 if __name__ == '__main__':
@@ -126,7 +123,7 @@ if __name__ == '__main__':
         metal_parameters = json.load(f)
 
     # Create range of parameters 
-    NUMBER_OF_ADSORBATES = 3
+    NUMBER_OF_ADSORBATES = 10
     NUMBER_OF_METALS = 30
     PLOT_METAL_DOS = 6
 
@@ -141,7 +138,7 @@ if __name__ == '__main__':
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
 
     # Each column is for a different row of transition metals
-    fig, ax, ax2, axo = create_plot_layout() 
+    fig, ax = create_plot_layout() 
     fige, axe = create_aux_plot_layout()
 
     # get a color cycle for the different adsorbates based on viridis
@@ -172,9 +169,9 @@ if __name__ == '__main__':
             parameters_metal = defaultdict(list)
             for i, filling in enumerate(filling_range):
 
-                Vsd = 1 # np.sqrt(func_a_by_r( filling, *Vsdsq_fit ) )
+                Vsd = np.sqrt(func_a_by_r( filling, *Vsdsq_fit ) )
                 eps_d = eps_d_range[i]                
-                width = wd_fit # func_a_r2( filling, *wd_fit )
+                width = func_a_r2( filling, *wd_fit )
                 # Iterate over each metal to get the metal specific parameters
                 parameters_metal['Vsd'].append(Vsd)
                 parameters_metal['eps_d'].append(eps_d)
@@ -188,7 +185,7 @@ if __name__ == '__main__':
                     eps_a = eps_a,
                     eps_d = eps_d,
                     width = width,
-                    eps = np.linspace(-10, 6, 100000),
+                    eps = np.linspace(-15, 10, 1000),
                     k = delta0,
                 )
                 hybridisation.calculate_energy()
@@ -203,33 +200,22 @@ if __name__ == '__main__':
                     Delta = normalise_na_quantities( hybridisation.Delta, x_pos )
                     # Get the hilbert transform
                     Lambda = normalise_na_quantities( hybridisation.Lambda, x_pos )
-                    dLambda = normalise_na_quantities( hybridisation.dLambda, x_pos )
                     # Get the line representing the eps - eps_a state
                     eps_a_line = hybridisation.eps - hybridisation.eps_a
                     eps_a_line = normalise_na_quantities( eps_a_line, x_pos )
                     if a == 0:
                         ax[1,j].plot(hybridisation.eps, Delta, color='tab:red', lw=3)
-                        # ax[1,j].plot(hybridisation.eps, Lambda, color='tab:blue', lw=3, alpha=0.25)
-                        ax[1,j].plot(hybridisation.eps, dLambda, color='tab:blue', lw=3, alpha=0.25)
-                    ax[1,j].plot(hybridisation.eps[hybridisation.dLambda_index], 
-                                    dLambda[hybridisation.dLambda_index],
-                                    '*', color=color[a])
+                        ax[1,j].fill_between(hybridisation.eps, x_pos*np.ones(len(Delta)), Delta, color='tab:red', alpha=0.10)
+                        ax[1,j].plot(hybridisation.eps, Lambda, color='tab:blue', lw=3, alpha=0.5)
 
                     # Get the adsorbate density of states
-                    na = hybridisation.dos + x_pos 
-                    na_localised_states = np.zeros_like(na)
-                    # Check for the existance of any roots and add them
-                    if hybridisation.lower_index_root is not None:
-                        # Plot a Delta function at this index of eps
-                        na_localised_states[hybridisation.lower_index_root] = 1
-                    if hybridisation.upper_index_root is not None:
-                        # Plot a Delta function at this index of eps
-                        na_localised_states[hybridisation.upper_index_root] = 1
+                    na = hybridisation.dos 
+                    na = normalise_na_quantities( na, x_pos )
 
-                    na += na_localised_states
-                    if a in [0, int(NUMBER_OF_ADSORBATES/2), NUMBER_OF_ADSORBATES-1]: 
-                        # ax[1,j].plot(hybridisation.eps, na, color=color[a])
-                        axo[j].plot(eps_d, hybridisation.na, '.', color=color[a])
+                    if a in [0, NUMBER_OF_ADSORBATES-1]: 
+                        ax[1,j].plot(hybridisation.eps, na, color=color[a], lw=3)
+                        ax[1,j].fill_between(hybridisation.eps, x_pos*np.ones(len(na)), na, color=color[a], alpha=0.10)
+                        # axo[j].plot(eps_d, hybridisation.na, 'o', color=color[a])
 
             # Now plot the energies for each row
             jna = JensNewnsAnderson(
@@ -241,35 +227,32 @@ if __name__ == '__main__':
 
             total_energy = jna.fit_parameters(eps_ds = eps_d_range, alpha=alpha, beta=beta, constant=delta0)
             spd_hyb_energy = jna.spd_hybridisation_energy
-            energy_to_plot =  spd_hyb_energy 
+            energy_to_plot =  total_energy 
             energy_to_plot = np.array(energy_to_plot)
 
             # Plot the hybridisation energy as a function of the d-band centre.
             total_energy_adsorbate.append(energy_to_plot)
-            # get a polynomial fit of the total energy with eps_d
-            p = np.poly1d(np.polyfit(parameters_metal['eps_d'], energy_to_plot, 5))
             # Fit the points with the functional form of the hybridisation energy
-            # eps_d_all = np.array(parameters_metal['eps_d'])
-            # eps_d_fit = eps_d_all[ np.where(eps_d_all < -1)]
-            # energy_fit = energy_to_plot[np.where( eps_d_all < -1)]
-            popt, pcov = curve_fit(functional_form_energy, parameters_metal['eps_d'], energy_to_plot)
-            # Find the maximum of the derivative
-            # max_derivative = np.max(np.polyder(p)(parameters_metal['eps_d']))
-            # Find the energy corresponding to the right derivative value
-            # max_arg_derivative = np.argmax(np.polyder(p)(parameters_metal['eps_d']))
-            # Store this value to plot later
-            # argmax_derivative.append(parameters_metal['eps_d'][max_arg_derivative])
-            argmax_derivative.append(popt[1])
-            if a in [0, int(NUMBER_OF_ADSORBATES/2), NUMBER_OF_ADSORBATES-1]: 
-                ax[0, j].plot(parameters_metal['eps_d'], energy_to_plot, '.', color=color[a])
-                # ax[0, j].plot(parameters_metal['eps_d'], p(parameters_metal['eps_d']), '--', color=color[a], label=f'$\epsilon_a$ = {eps_a:.1f} eV')
-                # Get the points that have eps_d < -1
-                
+            # popt, pcov = curve_fit(functional_form_energy, parameters_metal['eps_d'], energy_to_plot)
+            # Get the polynomial coefficients
+            coeffs = np.polyfit(parameters_metal['eps_d'], energy_to_plot, 3)
+            # get the derivative coefficients
+            # coeffs_derivative = np.polyder(coeffs, 1)
+            # Find the parameter to plot as a sign of the decay of the energy
+            # argmax_derivative.append(popt[1])
+            # Get the argmax of the coeff derivaitive
+            # max_derivative = np.argmax(np.polyval(coeffs_derivative, parameters_metal['eps_d']))
+            # argmax_derivative.append(parameters_metal['eps_d'][max_derivative])
+            argmax_derivative.append(coeffs[0])
+            if a in [0, NUMBER_OF_ADSORBATES-1]: 
+                ax[0, j].plot(parameters_metal['eps_d'], energy_to_plot, 'o', color=color[a])
                 # ax[0, j].plot(parameters_metal['eps_d'], functional_form_energy(parameters_metal['eps_d'], *popt), '--', color=color[a], label=f'$\epsilon_a$ = {eps_a:.1f} eV')
-                # Take the derivative of the polynial fit and plot it
-                # ax2[j].plot(parameters_metal['eps_d'], np.polyder(p)(parameters_metal['eps_d']), '-', color=color[a])
-                # Plot the maximum derivative as a point
-                # ax2[j].plot(parameters_metal['eps_d'][np.argmax(np.polyder(p)(parameters_metal['eps_d']))], max_derivative, 'o', color=color[a])
+                # plot the polynomial fit
+                ax[0, j].plot(parameters_metal['eps_d'], np.polyval(coeffs, parameters_metal['eps_d']), '-', color=color[a], label=f'$\epsilon_a$ = {eps_a:.1f} eV')
+                # plot the derivative fit
+                # ax2[j].plot(parameters_metal['eps_d'], np.polyval(coeffs_derivative, parameters_metal['eps_d']), '--', color=color[a], label=f'$\epsilon_a$ = {eps_a:.1f} eV')
+                # Plot the maximum of the derivative
+                # ax2[j].plot(parameters_metal['eps_d'][max_derivative], np.polyval(coeffs_derivative, parameters_metal['eps_d'][max_derivative]), 'o', color=color[a])
 
         # Plot a fill_between between the highest and lowest total energy
         ax[0, j].fill_between(eps_d_range, 
@@ -278,6 +261,13 @@ if __name__ == '__main__':
                               color='tab:gray', alpha=0.25)
         # Plot the maximum derivative as a function of eps_a for the different metal rows
         axe.plot(eps_a_range, argmax_derivative, 'o-', color=color_row[j], label=f'Row: {j+1}')
+        # Add a axhline for Pt eps_d
+    # ax[0, 2].axvline(-2.24, color='k', linestyle='--',)
+    # Annotate that the line is Pt
+    # ax[0, 2].text(-2.24, -4, 'Pt', fontsize=12)
+
+    # ax[0,1].axvline(-1.75, color='k', linestyle='--',)
+    # ax[0,1].text(-1.75, -4, 'Pd', fontsize=12)
 
     set_same_limits(ax[0,:])
     ax[0,0].legend(loc='best', fontsize=14)

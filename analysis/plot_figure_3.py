@@ -19,7 +19,7 @@ THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl']
 if __name__ == '__main__':
     """Determine the fitting parameters for a particular adsorbate."""
 
-    REMOVE_LIST = [ 'Y', 'Sc', 'Nb', 'Hf', 'Ti', 'Os', 'Co' ] 
+    REMOVE_LIST = [] # [ 'Y', 'Sc', 'Nb', 'Hf', 'Ti', 'Os', 'Co' ] 
     KEEP_LIST = []
 
     # Choose a sequence of adsorbates

@@ -13,9 +13,9 @@ if __name__ == '__main__':
     plot the bond length of C and O from the metal centers."""
 
     # Group name for the adsorbate on the transition metal
-    GROUPNAME = 'transition_metals/relaxed_slab_fixed/O'
-    type_of_calc = PwBaseWorkChain 
-    ADSORBATE = 'O'
+    GROUPNAME = 'PBE/SSSP_efficiency/dos_scf/C'
+    type_of_calc = DosWorkflow
+    ADSORBATE = 'C'
 
     # Get the nodes from the calculation
     qb = QueryBuilder()
@@ -28,10 +28,7 @@ if __name__ == '__main__':
         # get the output structure
         if not node.is_finished_ok:
             continue
-        try:
-            output_structure = node.outputs.output_structure
-        except AttributeError:
-            output_structure = node
+        output_structure = node.inputs.structure
         ase_structure = output_structure.get_ase()
 
         # get the distance between the metal and the adsorbate
