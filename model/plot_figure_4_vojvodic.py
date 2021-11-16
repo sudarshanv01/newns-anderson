@@ -1,19 +1,23 @@
 """Recreate Figure 4 of Vojvodic et al. (2014)."""
 import numpy as np
 import matplotlib.pyplot as plt
-from NewnsAnderson import NewnsAndersonNumerical, NewnsAndersonAnalytical
+from norskov_newns_anderson.NewnsAnderson import NewnsAndersonNumerical
 from plot_params import get_plot_params
 get_plot_params()
+
 if __name__ == '__main__':
-    """Recreate Figure 4 of Vojvodic et al. (2014)."""
+    """Recreate Figure 4 of Vojvodic et al. (2014), including the 
+    additional plot of na changing along the same dimensions."""
+
     # Create a contour plot of the energy matrix
     fig, ax = plt.subplots(1, 2, figsize=(16, 6), constrained_layout=True)
 
-    widths = np.linspace(0.2, 12, 20)
+    # Parameters to change delta
+    widths = np.linspace(1, 12, 20)
     eps_ds = np.linspace(-6, 5.5, 20)
     EPS_A = -5
     EPS_RANGE = np.linspace(-20, 20, 1000,) 
-    k = 0
+    delta0 = 0
     Vak = 1
 
     energy_matrix = np.zeros((len(widths), len(eps_ds)))
@@ -28,12 +32,12 @@ if __name__ == '__main__':
                 eps_a = EPS_A,
                 eps_d = eps_d,
                 eps = EPS_RANGE,
-                k = k, 
+                delta0 = delta0, 
             )
             newns.calculate_energy()
 
-            energy_matrix[i, j] = newns.DeltaE
-            na_matrix[i, j] = newns.na
+            energy_matrix[i, j] = newns.DeltaE_float
+            na_matrix[i, j] = newns.na_float
 
     # Plot the contour
     energy_matrix = energy_matrix.T
