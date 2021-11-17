@@ -8,7 +8,7 @@ from scipy.integrate import simps
 from scipy.linalg.misc import norm
 from plot_params import get_plot_params
 import matplotlib.ticker as ticker
-from NewnsAnderson import NewnsAndersonNumerical
+from norskov_newns_anderson.NewnsAnderson import NewnsAndersonNumerical
 get_plot_params()
 
 # Define periodic table of elements
@@ -44,8 +44,7 @@ def normalise_na_quantities(quantity, x_add):
     """Utility function to align the density of states for Newns-Anderson plots."""
     return quantity / np.max(np.abs(quantity)) + x_add
 
-if __name__ == "__main__":
-    """Generate all plots for Figure 1 of the manuscript."""
+def get_plot_layout():
     #-------- Plot parameters --------#
     fig = plt.figure(figsize=(14,12), constrained_layout=True)
     gs = fig.add_gridspec(nrows=12, ncols=4,)
@@ -92,24 +91,35 @@ if __name__ == "__main__":
     ax4.plot([], [], 'o', color='tab:green', label=r'$5d$')
     ax4.legend(loc='best')
 
+    return fig, ax1, axp, ax2, ax3, ax4 
+
+if __name__ == "__main__":
+    """Generate figures with all the parameters for the
+    Newns-Anderson model."""
+
     # Get a cycle of with colormap
     colors =  plt.cm.viridis(np.linspace(0, 1, 10))
+
+    # Get the plot parameters
+    fig, ax1, axp, ax2, ax3, ax4 = get_plot_layout()
 
     # Plot the Newns-Anderson DOS for a few d-band centres
     newns_epsds = [ -4, -2, -1, 0 ]
     newns_epsas = [-5, -1]
+
     for i, newns_epsd in enumerate(newns_epsds):
         for j, newns_epsa in enumerate(newns_epsas):
 
             hybridisation = NewnsAndersonNumerical(
-                Vak = 3, 
+                Vak = 2, 
                 eps_a = newns_epsa, 
                 eps_d = newns_epsd,
                 width = 3,
-                eps = np.linspace(-15, 15, 10000),
-                k = 2,
+                eps = np.linspace(-15, 15, 1000),
+                Delta0 = 2,
             )
             hybridisation.calculate_energy()
+            hybridisation.calculate_occupancy()
             
             # Decide on the x-position based on the d-band centre
             if j == 0:
@@ -119,21 +129,16 @@ if __name__ == "__main__":
             
             # Get the metal projected density of states
             x_add = 3 * i
-            Delta = normalise_na_quantities( hybridisation.Delta, x_add )
-            Lambda = normalise_na_quantities( hybridisation.Lambda, x_add )
+            Delta = normalise_na_quantities( hybridisation.get_Delta_on_grid(), x_add )
+            Lambda = normalise_na_quantities( hybridisation.get_Lambda_on_grid(), x_add )
             # Get the line representing the eps - eps_a state
-            eps_a_line = normalise_na_quantities( hybridisation.eps - hybridisation.eps_a, x_add )
+            eps_a_line = normalise_na_quantities( hybridisation.get_energy_diff_on_grid(), x_add )
             # Get the adsorbate density of states
-            na = normalise_na_quantities( hybridisation.dos, x_add) 
-            
+            na = normalise_na_quantities( hybridisation.get_dos_on_grid(), x_add) 
+            # Plot the dos and the quantities that make the dos            
             ax1.plot(Delta, hybridisation.eps, color='tab:blue', lw=3)
             ax1.plot(na, hybridisation.eps, color=color, alpha=0.25)
             ax1.plot(Lambda, hybridisation.eps, color='tab:orange', lw=3, alpha=0.25)
-            # ax1.plot(hybridisation.Lambda_numerical, hybridisation.eps, color='tab:orange', ls='--', lw=3, alpha=0.25)
-            # ax1.plot(eps_a_line, hybridisation.eps, color=color, lw=3, alpha=0.25)
-            # Plot the poles
-            for pole in hybridisation.poles:
-                ax1.plot(x_add, pole, '*', color=color)
 
             if j == 0:
                 ax1.annotate(r'$\epsilon_{d} = %.1f$ eV' % newns_epsd, xy=(x_add+0.1, newns_epsd + 1.5), xytext=(x_add+0.5, 5),

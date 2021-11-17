@@ -51,7 +51,7 @@ def runner(structure):
     code = load_code('pw_6-7@localhost')
     builder = RelaxWorkflow.get_builder()
     builder.metadata.label = 'Reference Calculation'
-    builder.metadata.description = 'Relaxing for generating vacancies'
+    builder.metadata.description = 'Calculation of single atom for reference to newns-anderson model'
     builder.structure = structure 
 
     builder.meta_convergence = orm.Bool(False)
@@ -73,12 +73,12 @@ def runner(structure):
 
     calculation = submit(builder)
     path = GroupPath()
-    path["references/PBE/SSSP_precision"].get_group().add_nodes(calculation)
+    path["PBE/SSSP_efficiency/references"].get_group().add_nodes(calculation)
 
 
 if __name__ == '__main__':
     
-    system = Atoms('H') 
+    system = Atoms('N') 
     system.set_cell([10, 10, 10])
     StructureData = DataFactory('structure')
     runner(StructureData(ase=system))

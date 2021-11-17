@@ -1,7 +1,7 @@
 """Plot the Newns-Anderson dos with the parameters from the fitting procedure."""
 import numpy as np
 import json
-from NewnsAnderson import NewnsAndersonNumerical, JensNewnsAnderson
+from norskov_newns_anderson.NewnsAnderson import NewnsAndersonNumerical, NorskovNewnsAnderson
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from plot_params import get_plot_params
@@ -102,23 +102,23 @@ if __name__ == '__main__':
                     eps_d = eps_d,
                     width = width,
                     eps = np.linspace(-15, 15, 1000),
-                    k = delta0,
+                    Delta0 = delta0,
                 )
                 hybridisation.calculate_energy()
             
                 # Decide on the x-position based on the d-band centre
-                x_pos += 2 * np.max(hybridisation.Delta) / np.pi**2
+                x_pos += 2 * np.max(hybridisation.get_Delta_on_grid() ) / np.pi**2
 
                 # Get the metal projected density of states
-                Delta = normalise_na_quantities( hybridisation.Delta, x_pos )
+                Delta = normalise_na_quantities( hybridisation.get_Delta_on_grid(), x_pos )
                 # Get the hilbert transform
-                Lambda = normalise_na_quantities( hybridisation.Lambda, x_pos )
+                Lambda = normalise_na_quantities( hybridisation.get_Lambda_on_grid(), x_pos )
                 # Get the line representing the eps - eps_a state
-                eps_a_line = hybridisation.eps - hybridisation.eps_a
+                eps_a_line = hybridisation.get_energy_diff_on_grid() 
                 eps_a_line = normalise_na_quantities( eps_a_line, x_pos )
 
                 # Get the adsorbate density of states
-                na = hybridisation.dos + x_pos 
+                na = hybridisation.get_dos_on_grid() + x_pos 
 
                 # ax[1,j].plot(hybridisation.eps, Delta, color='tab:red', lw=3)
                 ax[1,j].plot(hybridisation.eps, na, color='tab:blue')
@@ -127,13 +127,13 @@ if __name__ == '__main__':
 
                 # Get the different components of the energy by creating
                 # an instance of the JensNewnsAnderson class.
-                jna = JensNewnsAnderson(
+                jna = NorskovNewnsAnderson(
                     Vsd = [ np.sqrt( data_from_LMTO['Vsdsq'][metal] ) ],
                     eps_a = eps_a,
                     width = [ width ],
                     filling = [ data_from_LMTO['filling'][metal] ],
                 )
-                total_energy = jna.fit_parameters(eps_ds = [ eps_d ], alpha=alpha, beta=beta, constant=delta0)
+                total_energy = jna.fit_parameters(eps_ds = [ eps_d ], alpha=alpha, beta=beta, Delta0=delta0)
                 spd_hyb_energy = jna.spd_hybridisation_energy
                 ortho_energy = jna.ortho_energy
 

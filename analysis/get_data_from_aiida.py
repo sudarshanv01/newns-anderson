@@ -131,9 +131,10 @@ if __name__ == '__main__':
     GROUPNAMES = [ 
         'PBE/SSSP_efficiency/dos_scf/C',
         'PBE/SSSP_efficiency/dos_scf/O',
+        'PBE/SSSP_efficiency/dos_scf/N',
         'PBE/SSSP_efficiency/dos_scf/slab',
     ]
-    ADSORBATES = ['C', 'O', 'slab']
+    ADSORBATES = ['C', 'O', 'N', 'slab']
 
     with open('references.json', 'r') as handle:
         reference_nodes = json.load(handle)

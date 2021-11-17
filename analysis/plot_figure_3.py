@@ -3,7 +3,7 @@ import json
 import yaml
 import numpy as np
 from dataclasses import dataclass
-from NewnsAnderson import NewnsAndersonNumerical, JensNewnsAnderson
+from norskov_newns_anderson.NewnsAnderson import NewnsAndersonNumerical, NorskovNewnsAnderson 
 from collections import defaultdict
 from scipy.optimize import minimize, least_squares, leastsq, curve_fit
 from pprint import pprint
@@ -19,7 +19,7 @@ THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl']
 if __name__ == '__main__':
     """Determine the fitting parameters for a particular adsorbate."""
 
-    REMOVE_LIST = [] # [ 'Y', 'Sc', 'Nb', 'Hf', 'Ti', 'Os', 'Co' ] 
+    REMOVE_LIST = [] # [ 'Y', 'Sc', 'Nb', 'Hf', 'Ti', 'V', 'Cr', 'Mo'] 
     KEEP_LIST = []
 
     # Choose a sequence of adsorbates
@@ -87,7 +87,7 @@ if __name__ == '__main__':
             metals.append(metal)
 
         # Fit the parameters
-        fitting_function = JensNewnsAnderson(
+        fitting_function =  NorskovNewnsAnderson(
             Vsd = parameters['Vsd'],
             filling = parameters['filling'],
             width = parameters['width'],
@@ -97,7 +97,7 @@ if __name__ == '__main__':
         # Make the constrains for curve_fit such that all the 
         # terms are positive
         constraints = [ [0, 0, 0], [np.inf, np.inf, np.inf] ]
-        initial_guess = [0.2, 1, 2]
+        initial_guess = [0.2, 2, 0.1]
         popt, pcov = curve_fit(f=fitting_function.fit_parameters,
                             xdata=parameters['d_band_centre'],
                             ydata=dft_energies,
@@ -105,8 +105,8 @@ if __name__ == '__main__':
                             bounds=constraints)  
 
         error_fit = np.sqrt(np.diag(pcov))
-        print(f'Fit: alpha: {popt[0]}, beta: {popt[1]}, constant:{popt[2]} ')
-        print(f'Error: alpha:{error_fit[0]}, beta: {error_fit[1]}, constant:{error_fit[2]} ')
+        print(f'Fit: alpha: {popt[0]}, beta: {popt[1]}, Delta0:{popt[2]} ')
+        print(f'Error: alpha:{error_fit[0]}, beta: {error_fit[1]}, Delta0:{error_fit[2]} ')
 
         # Get the final hybridisation energy
         optimised_hyb = fitting_function.fit_parameters(parameters['d_band_centre'], *popt)
@@ -122,8 +122,8 @@ if __name__ == '__main__':
         x = np.linspace(np.min(dft_energies)-0.25, np.max(dft_energies)+0.25, 2)
         ax[i].plot(x, x, '--', color='black')
         # Fix the axes to the same scale 
-        # ax[i].set_xlim(np.min(x), np.max(x))
-        # ax[i].set_ylim(np.min(x), np.max(x))
+        ax[i].set_xlim(np.min(x), np.max(x))
+        ax[i].set_ylim(np.min(x), np.max(x))
 
         texts = []
         for j, metal in enumerate(metals):
@@ -136,8 +136,8 @@ if __name__ == '__main__':
                 colour = 'green'
             ax[i].plot(dft_energies[j], optimised_hyb[j], 'o', color=colour)
             # Plot the error bars
-            # ax[i].plot([dft_energies[j], dft_energies[j]], [negative_optimised_hyb_error[j], \
-            #             positive_optimised_hyb_error[j]], '-', color=colour, alpha=0.25)
+            ax[i].plot([dft_energies[j], dft_energies[j]], [negative_optimised_hyb_error[j], \
+                        positive_optimised_hyb_error[j]], '-', color=colour, alpha=0.25)
 
             texts.append(ax[i].text(dft_energies[j], optimised_hyb[j], metal, color=colour))
 

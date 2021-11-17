@@ -17,8 +17,8 @@ if __name__ == '__main__':
     eps_ds = np.linspace(-6, 5.5, 20)
     EPS_A = -5
     EPS_RANGE = np.linspace(-20, 20, 1000,) 
-    delta0 = 0
-    Vak = 1
+    delta0 = 3.
+    Vak = 2
 
     energy_matrix = np.zeros((len(widths), len(eps_ds)))
     na_matrix = np.zeros((len(widths), len(eps_ds)))
@@ -32,12 +32,13 @@ if __name__ == '__main__':
                 eps_a = EPS_A,
                 eps_d = eps_d,
                 eps = EPS_RANGE,
-                delta0 = delta0, 
+                Delta0 = delta0, 
             )
             newns.calculate_energy()
+            newns.calculate_occupancy()
 
-            energy_matrix[i, j] = newns.DeltaE_float
-            na_matrix[i, j] = newns.na_float
+            energy_matrix[i, j] = newns.get_energy()
+            na_matrix[i, j] = newns.get_occupancy()
 
     # Plot the contour
     energy_matrix = energy_matrix.T
