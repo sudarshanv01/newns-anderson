@@ -3,7 +3,7 @@ import yaml
 import numpy as np
 import matplotlib.pyplot as plt
 from pprint import pprint
-from NewnsAnderson import NewnsAndersonNumerical, NewnsAndersonAnalytical
+from norskov_newns_anderson.NewnsAnderson import NewnsAndersonNumerical, NewnsAndersonAnalytical
 
 if __name__ == '__main__':
 
@@ -32,7 +32,7 @@ if __name__ == '__main__':
             eps_a = eps_a,
             eps_d = eps_d,
             eps = EPS_RANGE,
-            k = k, 
+            Delta0 = k, 
         )
         newns.calculate_energy()
 

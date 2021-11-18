@@ -24,7 +24,8 @@ def calculator(ecutwf, ecutrho):
         "ecutrho": ecutrho,
         "occupations":'smearing',
         "smearing":'cold',
-        "degauss":0.01,
+        # "degauss":0.01,
+        "degauss":0.0075,
         "nspin": 1,
         "edir": 3,
         "emaxpos": 0.05,
@@ -32,7 +33,7 @@ def calculator(ecutwf, ecutrho):
         "eamp": 0.0,
                 },
     "ELECTRONS": {
-        "conv_thr": 1e-8,
+        "conv_thr": 1e-10,
         'electron_maxstep': 200,
         'mixing_beta': 0.2,
         'mixing_ndim': 15,

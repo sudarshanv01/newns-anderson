@@ -6,10 +6,12 @@ from dataclasses import dataclass
 from norskov_newns_anderson.NewnsAnderson import NewnsAndersonNumerical, NorskovNewnsAnderson 
 from collections import defaultdict
 from scipy.optimize import minimize, least_squares, leastsq, curve_fit
+from scipy import odr
 from pprint import pprint
 import matplotlib.pyplot as plt
 from plot_params import get_plot_params
 from adjustText import adjust_text
+from yaml import safe_load
 get_plot_params()
 
 FIRST_ROW   = [ 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn']
@@ -18,13 +20,12 @@ THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl']
 
 if __name__ == '__main__':
     """Determine the fitting parameters for a particular adsorbate."""
-
-    REMOVE_LIST = [] # [ 'Y', 'Sc', 'Nb', 'Hf', 'Ti', 'V', 'Cr', 'Mo'] 
+    REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
     KEEP_LIST = []
 
     # Choose a sequence of adsorbates
-    ADSORBATES = ['C', 'O']
-    EPS_A_VALUES = [ -1, -5 ] # eV
+    ADSORBATES = ['O', 'C']
+    EPS_A_VALUES = [ -5, -1.5 ] # eV
     print(f"Fitting parameters for adsorbate {ADSORBATES} with eps_a {EPS_A_VALUES}")
 
     # The functional and type of calculation we will use
@@ -96,34 +97,26 @@ if __name__ == '__main__':
 
         # Make the constrains for curve_fit such that all the 
         # terms are positive
-        constraints = [ [0, 0, 0], [np.inf, np.inf, np.inf] ]
-        initial_guess = [0.2, 2, 0.1]
-        popt, pcov = curve_fit(f=fitting_function.fit_parameters,
-                            xdata=parameters['d_band_centre'],
-                            ydata=dft_energies,
-                            p0=initial_guess,
-                            bounds=constraints)  
-
-        error_fit = np.sqrt(np.diag(pcov))
-        print(f'Fit: alpha: {popt[0]}, beta: {popt[1]}, Delta0:{popt[2]} ')
-        print(f'Error: alpha:{error_fit[0]}, beta: {error_fit[1]}, Delta0:{error_fit[2]} ')
+        initial_guess = [0.2, 0.5]
+        # Finding the fitting parameters
+        data = odr.RealData(parameters['d_band_centre'], dft_energies, sx=0.5)
+        fitting_model = odr.Model(fitting_function.fit_parameters)
+        fitting_odr = odr.ODR(data, fitting_model, initial_guess)
+        fitting_odr.set_job(fit_type=2)
+        output = fitting_odr.run()
 
         # Get the final hybridisation energy
-        optimised_hyb = fitting_function.fit_parameters(parameters['d_band_centre'], *popt)
+        optimised_hyb = fitting_function.fit_parameters(output.beta, parameters['d_band_centre']) #*popt)
         occupancies_final = np.array(fitting_function.na)[np.argsort(parameters['d_band_centre'])]
         print(f'Occupancies: {occupancies_final}', file=open(f'output/{adsorbate}_occupancies.txt', 'w'))
         print(f"d-band center: {np.sort(parameters['d_band_centre'])}", file=open(f'output/{adsorbate}_occupancies.txt', 'a'))
 
-        # get the error in the hybridisation energy
-        positive_optimised_hyb_error = fitting_function.fit_parameters(parameters['d_band_centre'], *(popt + error_fit/2))
-        negative_error = optimised_hyb - positive_optimised_hyb_error
-        negative_optimised_hyb_error = optimised_hyb + negative_error
         # plot the parity line
-        x = np.linspace(np.min(dft_energies)-0.25, np.max(dft_energies)+0.25, 2)
+        x = np.linspace(np.min(dft_energies)-0.6, np.max(dft_energies)+0.6, 2)
         ax[i].plot(x, x, '--', color='black')
         # Fix the axes to the same scale 
-        ax[i].set_xlim(np.min(x), np.max(x))
-        ax[i].set_ylim(np.min(x), np.max(x))
+        # ax[i].set_xlim(np.min(x), np.max(x))
+        # ax[i].set_ylim(np.min(x), np.max(x))
 
         texts = []
         for j, metal in enumerate(metals):
@@ -135,19 +128,15 @@ if __name__ == '__main__':
             elif metal in THIRD_ROW:
                 colour = 'green'
             ax[i].plot(dft_energies[j], optimised_hyb[j], 'o', color=colour)
-            # Plot the error bars
-            ax[i].plot([dft_energies[j], dft_energies[j]], [negative_optimised_hyb_error[j], \
-                        positive_optimised_hyb_error[j]], '-', color=colour, alpha=0.25)
-
             texts.append(ax[i].text(dft_energies[j], optimised_hyb[j], metal, color=colour))
 
         adjust_text(texts, ax=ax[i]) 
 
         # Write out the fitted parameters as a json file
         json.dump({
-            'alpha': popt[0],
-            'beta': popt[1],
-            'delta0': popt[2],
+            'alpha': abs(output.beta[0]),
+            'beta': abs(output.beta[1]),
+            'delta0': 3,
             'eps_a': eps_a,
         }, open(f'output/{adsorbate}_parameters_{FUNCTIONAL}.json', 'w'))
 

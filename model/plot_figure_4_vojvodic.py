@@ -16,9 +16,9 @@ if __name__ == '__main__':
     widths = np.linspace(1, 12, 20)
     eps_ds = np.linspace(-6, 5.5, 20)
     EPS_A = -5
-    EPS_RANGE = np.linspace(-20, 20, 1000,) 
-    delta0 = 3.
-    Vak = 2
+    EPS_RANGE = np.linspace(-15, 15, 1000,) 
+    delta0 = 0
+    Vak = 1
 
     energy_matrix = np.zeros((len(widths), len(eps_ds)))
     na_matrix = np.zeros((len(widths), len(eps_ds)))

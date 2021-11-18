@@ -13,29 +13,24 @@ SECOND_ROW  = [ 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd']
 THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl'] 
 
 def create_plot_layout(adsorbate):
-    """Create a plot layout for plotting the Newns-Anderson
-    dos and the energies of orthogonalisation, spd hybridisation
-    energy for each specific adsorbate."""
+    """Create the layout for the Newns-Anderson plot."""
     fig = plt.figure(figsize=(14,12), constrained_layout=True)
     gs = fig.add_gridspec(nrows=12, ncols=3,)
     # The first 2 rows will be the orthogonalisation energies, spd
     # hybridisation energy and the total energy as a function of the
     # d-band centre.
-    ax1 = fig.add_subplot(gs[0:3, 0])
-    ax2 = fig.add_subplot(gs[0:3, 1])
-    ax3 = fig.add_subplot(gs[0:3, 2])
+    ax1 = fig.add_subplot(gs[0:6, 0])
+    ax2 = fig.add_subplot(gs[0:6, 1])
+    ax3 = fig.add_subplot(gs[0:6, 2])
     # Set the axes labels
-    ax1.set_xlabel('d-band centre (eV)')
-    ax1.set_ylabel('NA energy (eV)')
-    ax2.set_xlabel('d-band centre (eV)')
-    ax2.set_ylabel('Ortho energy (eV)')
-    ax3.set_xlabel('d-band centre (eV)')
-    ax3.set_ylabel('Total energy (eV)')
+    ax1.set_xlabel(r'$\epsilon_{d} - \epsilon_{F}$ (eV)')
+    ax2.set_xlabel(r'$\epsilon_{d} - \epsilon_{F}$ (eV)')
+    # The other labels will be set iteratively...
     # Then make three plots with the density of states coming from
     # the different solutions of the Newns-Anderson equation.
-    ax4 = fig.add_subplot(gs[3:, 0])
-    ax5 = fig.add_subplot(gs[3:, 1])
-    ax6 = fig.add_subplot(gs[3:, 2])
+    ax4 = fig.add_subplot(gs[6:, 0])
+    ax5 = fig.add_subplot(gs[6:, 1])
+    ax6 = fig.add_subplot(gs[6:, 2])
     # Set the axes labels
     ax4.set_xlabel(r'$\epsilon - \epsilon_{F}$ (eV)')
     ax5.set_xlabel(r'$\epsilon - \epsilon_{F}$ (eV)')
@@ -54,8 +49,10 @@ def normalise_na_quantities(quantity, x_add):
 if __name__ == '__main__':
     """Get the Newns-Anderson dos and occupancy from the fitting procedure."""
 
+    REMOVE_LIST = [ 'Sc', 'Ti', 'V', 'Cr', 'Mn',
+                    'Y', 'Zr', 'Nb', 'Mo', 'Tc',
+                    'Hf', 'Ta' , 'W', 'Re', ]
     FUNCTIONAL = 'PBE_scf'
-    REMOVE_LIST = [ 'Y', 'Sc', 'Nb', 'Hf', 'Ti', 'Os', 'Co' ] 
     KEEP_LIST = []
 
     # Read in scaling parameters from the model.
@@ -68,6 +65,8 @@ if __name__ == '__main__':
     data_from_dos_calculation = json.load(open(f'output/pdos_moments_{FUNCTIONAL}.json')) 
     data_from_energy_calculation = json.load(open(f'output/adsorption_energies_{FUNCTIONAL}.json'))
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
+    # Colors for adsorbates
+    colors = {'O': '#ff7f0e', 'C': '#1f77b4'}
 
     # Create a separate graph for each parameter.
     for adsorbate in adsorbate_parameters:
@@ -120,13 +119,15 @@ if __name__ == '__main__':
                 # Get the adsorbate density of states
                 na = hybridisation.get_dos_on_grid() + x_pos 
 
-                # ax[1,j].plot(hybridisation.eps, Delta, color='tab:red', lw=3)
-                ax[1,j].plot(hybridisation.eps, na, color='tab:blue')
-                # ax[1,j].plot(hybridisation.eps, Lambda, color='tab:orange', lw=3, alpha=0.25)
-                # ax[1,j].plot(hybridisation.eps, eps_a_line, color='tab:green', lw=3, alpha=0.25)
+                if adsorbate == 'C':
+                    ax[1,j].plot(hybridisation.eps, Delta, color='tab:red', lw=3)
+                    ax[1,j].plot(hybridisation.eps, Lambda, color='tab:orange', lw=3, alpha=0.25)
+                    ax[1,j].plot(hybridisation.eps, eps_a_line, color='tab:green', lw=3, alpha=0.25)
+
+                ax[1,j].plot(hybridisation.eps, na, color=colors[adsorbate], lw=3)
 
                 # Get the different components of the energy by creating
-                # an instance of the JensNewnsAnderson class.
+                # an instance of the NorskovNewnsAnderson class.
                 jna = NorskovNewnsAnderson(
                     Vsd = [ np.sqrt( data_from_LMTO['Vsdsq'][metal] ) ],
                     eps_a = eps_a,
@@ -134,8 +135,6 @@ if __name__ == '__main__':
                     filling = [ data_from_LMTO['filling'][metal] ],
                 )
                 total_energy = jna.fit_parameters(eps_ds = [ eps_d ], alpha=alpha, beta=beta, Delta0=delta0)
-                spd_hyb_energy = jna.spd_hybridisation_energy
-                ortho_energy = jna.ortho_energy
 
                 # Plot the energies in the different graphs against the d-band centre                
                 if metal in FIRST_ROW:

@@ -95,9 +95,9 @@ class DataFromDFT:
                 if adsorbate == 'slab':
                     pdos_to_store = get_density_of_states_for_node(node, metal, angular_momentum=2, fermi_energy=fermi_energy)
                 else:
-                    energies, pdos_s = get_density_of_states_for_node(node, adsorbate, angular_momentum=0, fermi_energy=fermi_energy)
+                    # energies, pdos_s = get_density_of_states_for_node(node, adsorbate, angular_momentum=0, fermi_energy=fermi_energy)
                     energies, pdos_p = get_density_of_states_for_node(node, adsorbate, angular_momentum=1, fermi_energy=fermi_energy)
-                    sum_dos = np.array(pdos_s) + np.array(pdos_p)
+                    sum_dos = np.array(pdos_p)
                     pdos_to_store = [ energies, list(sum_dos) ]
 
                 self.pdos[adsorbate][metal[0]] = pdos_to_store
@@ -131,10 +131,9 @@ if __name__ == '__main__':
     GROUPNAMES = [ 
         'PBE/SSSP_efficiency/dos_scf/C',
         'PBE/SSSP_efficiency/dos_scf/O',
-        'PBE/SSSP_efficiency/dos_scf/N',
         'PBE/SSSP_efficiency/dos_scf/slab',
     ]
-    ADSORBATES = ['C', 'O', 'N', 'slab']
+    ADSORBATES = ['C', 'O', 'slab']
 
     with open('references.json', 'r') as handle:
         reference_nodes = json.load(handle)
