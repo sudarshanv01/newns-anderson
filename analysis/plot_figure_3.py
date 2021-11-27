@@ -25,7 +25,8 @@ if __name__ == '__main__':
 
     # Choose a sequence of adsorbates
     ADSORBATES = ['O', 'C']
-    EPS_A_VALUES = [ -5, -1.5 ] # eV
+    EPS_A_VALUES = [ -5, -1 ] # eV
+    CONSTANT_DELTA0 = 0. # eV
     print(f"Fitting parameters for adsorbate {ADSORBATES} with eps_a {EPS_A_VALUES}")
 
     # The functional and type of calculation we will use
@@ -90,33 +91,35 @@ if __name__ == '__main__':
         # Fit the parameters
         fitting_function =  NorskovNewnsAnderson(
             Vsd = parameters['Vsd'],
-            filling = parameters['filling'],
+            # filling = parameters['filling'],
             width = parameters['width'],
             eps_a = eps_a,
+            Delta0=CONSTANT_DELTA0,
         )
 
         # Make the constrains for curve_fit such that all the 
         # terms are positive
-        initial_guess = [0.2, 0.5]
+        initial_guess = [0.2, 0.1, -eps_a]
         # Finding the fitting parameters
-        data = odr.RealData(parameters['d_band_centre'], dft_energies, sx=0.5)
+        # data = odr.RealData(parameters['d_band_centre'], dft_energies)
+        data = odr.Data(parameters['d_band_centre'], dft_energies, we=filling)
         fitting_model = odr.Model(fitting_function.fit_parameters)
         fitting_odr = odr.ODR(data, fitting_model, initial_guess)
         fitting_odr.set_job(fit_type=2)
         output = fitting_odr.run()
 
         # Get the final hybridisation energy
-        optimised_hyb = fitting_function.fit_parameters(output.beta, parameters['d_band_centre']) #*popt)
+        optimised_hyb = fitting_function.fit_parameters(output.beta, parameters['d_band_centre'])
         occupancies_final = np.array(fitting_function.na)[np.argsort(parameters['d_band_centre'])]
         print(f'Occupancies: {occupancies_final}', file=open(f'output/{adsorbate}_occupancies.txt', 'w'))
         print(f"d-band center: {np.sort(parameters['d_band_centre'])}", file=open(f'output/{adsorbate}_occupancies.txt', 'a'))
 
         # plot the parity line
-        x = np.linspace(np.min(dft_energies)-0.6, np.max(dft_energies)+0.6, 2)
-        ax[i].plot(x, x, '--', color='black')
+        x = np.linspace(np.min(dft_energies)-0.3, np.max(dft_energies)+0.3, 2)
+        ax[i].plot(x, x-output.beta[2], '--', color='black')
         # Fix the axes to the same scale 
         # ax[i].set_xlim(np.min(x), np.max(x))
-        # ax[i].set_ylim(np.min(x), np.max(x))
+        # ax[i].set_ylim(np.min(x-output.beta[2]), np.max(x-output.beta[2]))
 
         texts = []
         for j, metal in enumerate(metals):
@@ -127,8 +130,8 @@ if __name__ == '__main__':
                 colour = 'orange'
             elif metal in THIRD_ROW:
                 colour = 'green'
-            ax[i].plot(dft_energies[j], optimised_hyb[j], 'o', color=colour)
-            texts.append(ax[i].text(dft_energies[j], optimised_hyb[j], metal, color=colour))
+            ax[i].plot(dft_energies[j], optimised_hyb[j]-output.beta[2], 'o', color=colour)
+            texts.append(ax[i].text(dft_energies[j], optimised_hyb[j]-output.beta[2], metal, color=colour))
 
         adjust_text(texts, ax=ax[i]) 
 
@@ -136,8 +139,9 @@ if __name__ == '__main__':
         json.dump({
             'alpha': abs(output.beta[0]),
             'beta': abs(output.beta[1]),
-            'delta0': 3,
+            'delta0': CONSTANT_DELTA0,
+            'constant_offset': output.beta[2],
             'eps_a': eps_a,
         }, open(f'output/{adsorbate}_parameters_{FUNCTIONAL}.json', 'w'))
 
-    fig.savefig(f'output/figure_3.png', dpi=300)
+    fig.savefig(f'output/figure_3_{FUNCTIONAL}.png', dpi=300)

@@ -78,7 +78,7 @@ def runner(structure):
 
 if __name__ == '__main__':
     
-    system = Atoms('N') 
+    system = molecule('OH') 
     system.set_cell([10, 10, 10])
     StructureData = DataFactory('structure')
     runner(StructureData(ase=system))

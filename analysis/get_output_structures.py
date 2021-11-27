@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from aiida import orm
 from ase import io
+from collections import defaultdict
+import json
 # --- AiiDA imports
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
 DosWorkflow = WorkflowFactory('quantumespresso.pdos')
@@ -13,9 +15,10 @@ if __name__ == '__main__':
     plot the bond length of C and O from the metal centers."""
 
     # Group name for the adsorbate on the transition metal
-    GROUPNAME = 'PBE/SSSP_efficiency/dos_scf/N'
-    type_of_calc = DosWorkflow
-    ADSORBATE = 'N'
+    GROUPNAME = 'PBE/SSSP_efficiency/dos_scf/C'
+    ADSORBATE = 'C'
+    FUNCTIONAL = 'PBE_scf'
+    type_of_calc = DosWorkflow # PwBaseWorkChain 
 
     # Get the nodes from the calculation
     qb = QueryBuilder()
@@ -23,12 +26,18 @@ if __name__ == '__main__':
     qb.append(type_of_calc, with_group='Group', tag='calctype')
 
     all_structures = []
+    bond_lengths = defaultdict(float)
 
     for node in qb.all(flat=True):
         # get the output structure
         if not node.is_finished_ok:
             continue
-        output_structure = node.inputs.structure
+
+        if type_of_calc == DosWorkflow:
+            output_structure = node.inputs.structure
+        elif type_of_calc == PwBaseWorkChain:
+            output_structure = node.outputs.output_structure
+
         ase_structure = output_structure.get_ase()
 
         # get the distance between the metal and the adsorbate
@@ -48,8 +57,15 @@ if __name__ == '__main__':
         print(f'Bond length for {ADSORBATE} on {metal_name} is {bond_length:1.2f} AA')
 
         all_structures.append(ase_structure)
+        # Store the bond lengths for later plotting
+        bond_lengths[metal_name] = bond_length
 
     io.write(f'output/all_structures_{ADSORBATE}.xyz', all_structures)  
+
+    # Store the bond lengths
+    with open(f'output/bond_lengths_{FUNCTIONAL}_{ADSORBATE}.json', 'w') as f:
+        json.dump(bond_lengths, f, indent=4)
+
 
         
 

@@ -15,7 +15,7 @@ get_plot_params()
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
 DosWorkflow = WorkflowFactory('quantumespresso.pdos')
 
-def get_density_of_states_for_node(node, element, angular_momentum=2, fermi_energy = 0.0):
+def get_density_of_states_for_node(node, element, angular_momentum=2, fermi_energy=0.0, position=None):
     """Get the projected density of states for all the atoms."""
     # get the projection data
     projwfc_data = node.outputs.projwfc
@@ -28,7 +28,14 @@ def get_density_of_states_for_node(node, element, angular_momentum=2, fermi_ener
     # Sum up the pdos into one list
     pdos = np.zeros(len(energy))
     for index, values in enumerate(pdos_data):
-        pdos += np.array(pdos_data[index][1]) 
+        # check if the pdos data is for the atom we are looking for
+        if position is not None:
+            orb_dict = pdos_data[index][0].get_orbital_dict()
+            if all(orb_dict['position'] == position):
+                print(orb_dict['position'])
+                pdos += np.array(pdos_data[index][1])
+        else:
+            pdos += np.array(pdos_data[index][1])
     
     return list(energy), list(pdos) 
 
@@ -50,29 +57,46 @@ class DataFromDFT:
         self.get_raw_energies()
         self.get_DFT_chemisorption_energy()
     
-    def get_scf_energies(self, adsorbate):
+    def get_scf_energies(self, adsorbate, type_calc='dos'):
         """From the dos node get the scf calculation and return the energy."""
-        scf_node = self.node.get_outgoing(PwBaseWorkChain).get_node_by_label('scf')
-        nscf_node = self.node.get_outgoing(PwBaseWorkChain).get_node_by_label('nscf')
-        # Return the self-consistent energy
-        energy = scf_node.outputs.output_parameters.get_attribute('energy')
-        # Return also the Fermi energy
-        fermi_energy = nscf_node.outputs.output_parameters.get_attribute('fermi_energy')
+        if type_calc == 'dos':
+            scf_node = self.node.get_outgoing(PwBaseWorkChain).get_node_by_label('scf')
+            nscf_node = self.node.get_outgoing(PwBaseWorkChain).get_node_by_label('nscf')
+            # Return the self-consistent energy
+            energy = scf_node.outputs.output_parameters.get_attribute('energy')
+            # Return also the Fermi energy
+            fermi_energy = nscf_node.outputs.output_parameters.get_attribute('fermi_energy')
 
-        # Get information about the structure
-        structure = scf_node.inputs.pw.structure
-        ase_structure = structure.get_ase()
-        metal = np.unique(ase_structure.get_chemical_symbols())
-        metal = metal[~np.isin(metal, self.adsorbates)]
+            # Get information about the structure
+            structure = scf_node.inputs.pw.structure
+            ase_structure = structure.get_ase()
+            metal = np.unique(ase_structure.get_chemical_symbols())
+            metal = metal[~np.isin(metal, self.adsorbates)]
 
-        return metal, energy, fermi_energy 
+            return metal, energy, fermi_energy, ase_structure 
+        
+        elif type_calc == 'relax':
+            energy = self.node.outputs.output_parameters.get_attribute('energy')
+
+            # Get information about structure
+            structure = self.node.outputs.output_structure
+            ase_structure = structure.get_ase()
+            metal = np.unique(ase_structure.get_chemical_symbols())
+            metal = metal[~np.isin(metal, self.adsorbates)]
+
+            return metal, energy, None, ase_structure 
 
     def get_raw_energies(self):
         """Get the raw energy from the SCF calculation."""
         for i, adsorbate in enumerate(self.adsorbates):
             print(f'Getting energies for {adsorbate}')
             groupname = self.base_group_name[i]
-            type_of_calc = DosWorkflow 
+            if 'dos' in groupname:
+                type_of_calc = DosWorkflow 
+                type_calc = 'dos'
+            else:
+                type_of_calc = PwBaseWorkChain
+                type_calc = 'relax'
 
             # Create the query for this adsorbate
             qb = QueryBuilder()
@@ -86,19 +110,33 @@ class DataFromDFT:
 
                 # Get the energy
                 self.node = node
-                metal, energy, fermi_energy = self.get_scf_energies(adsorbate)
+                metal, energy, fermi_energy, ase_structure = self.get_scf_energies(adsorbate, type_calc=type_calc)
 
                 print(f"{adsorbate} {metal} ")
                 assert len(metal) == 1
                 self.raw_energies[adsorbate][metal[0]] = energy 
 
                 if adsorbate == 'slab':
-                    pdos_to_store = get_density_of_states_for_node(node, metal, angular_momentum=2, fermi_energy=fermi_energy)
-                else:
-                    # energies, pdos_s = get_density_of_states_for_node(node, adsorbate, angular_momentum=0, fermi_energy=fermi_energy)
+                    # get the index of the metal atom on the surface
+                    # So pick an index with the highest z value
+                    index = np.argmax(ase_structure.get_positions()[:,2])
+                    # get the positions of that index
+                    position = ase_structure.get_positions()[index]
+                    pdos_to_store = get_density_of_states_for_node(node, metal, 
+                                                angular_momentum=2, 
+                                                fermi_energy=fermi_energy, 
+                                                position=position)
+                elif adsorbate != 'slab' and 'dos' in groupname:
+                    # There are density of states in this node 
+                    # but the calculation is for the adsorbate on the slab
+                    energies, pdos_s = get_density_of_states_for_node(node, adsorbate, angular_momentum=0, fermi_energy=fermi_energy)
                     energies, pdos_p = get_density_of_states_for_node(node, adsorbate, angular_momentum=1, fermi_energy=fermi_energy)
                     sum_dos = np.array(pdos_p)
                     pdos_to_store = [ energies, list(sum_dos) ]
+                elif adsorbate != 'slab' and 'dos' not in groupname:
+                    # We just need the energies here, so we will just ignore
+                    # the pdos option here
+                    continue
 
                 self.pdos[adsorbate][metal[0]] = pdos_to_store
                 
@@ -133,18 +171,21 @@ if __name__ == '__main__':
         'PBE/SSSP_efficiency/dos_scf/O',
         'PBE/SSSP_efficiency/dos_scf/slab',
     ]
-    ADSORBATES = ['C', 'O', 'slab']
+    ADSORBATES = [ 'C', 'O', 'slab']
+    FUNCTIONAL = 'PBE_scf'
 
+    # References are just the atoms in vacuum
     with open('references.json', 'r') as handle:
         reference_nodes = json.load(handle)
-    
     references = get_references(reference_nodes)
 
+    # Get the data from the DFT calculations done with AiiDA
     data = DataFromDFT(GROUPNAMES, ADSORBATES, references)
 
     # Save the adsorption energies and pdos to json
-    with open('output/adsorption_energies_PBE_scf.json', 'w') as handle:
+    with open(f'output/adsorption_energies_{FUNCTIONAL}.json', 'w') as handle:
         json.dump(data.adsorption_energies, handle, indent=4)
+
     # Save the pdos
-    with open('output/pdos_PBE_scf.json', 'w') as handle:
+    with open(f'output/pdos_{FUNCTIONAL}.json', 'w') as handle:
         json.dump(data.pdos, handle, indent=4)

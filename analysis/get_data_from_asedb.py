@@ -22,6 +22,8 @@ class DataFromASE:
         self.pdos = defaultdict(lambda: defaultdict(dict))
         self.adsorption_energy = defaultdict(lambda: defaultdict(dict)) 
 
+        self.REMOVE_LIST = ['Co']
+
         self.references = yaml.safe_load(open(self.referencesname))
 
         self.get_raw_energies_from_database()
@@ -33,7 +35,8 @@ class DataFromASE:
         for row in self.db.select():
             adsorbate = row.states.replace('state_','')
             metal = row.sampling.replace('sampling_','')
-            self.raw_energies[adsorbate][metal] = row.energy
+            if metal not in self.REMOVE_LIST:
+                self.raw_energies[adsorbate][metal] = row.energy
         
     def get_pdos_from_database(self):
         """Extract the pdos from only slab calculations and put them in a dictionary."""
