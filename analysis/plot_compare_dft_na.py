@@ -47,7 +47,7 @@ if __name__ == "__main__":
     # Plot the projected density of states
     for i, metal in enumerate(METAL):
         # Normalize the density of states quantities
-        energies, pdos_metal_unnorm = pdos_data['slab'][metal]
+        energies, pdos_metal_unnorm, _ = pdos_data['slab'][metal]
         energies_C, pdos_C_unnorm = pdos_data['C'][metal]
         energies_O, pdos_O_unnorm = pdos_data['O'][metal]
         x_pos += np.max(pdos_metal_unnorm)
@@ -90,7 +90,7 @@ if __name__ == "__main__":
                 eps_d = eps_d,
                 width = width,
                 eps = np.linspace(-15, 15, 1000),
-                Delta0 = delta0,
+                Delta0_mag = delta0,
             )
             hybridisation.calculate_energy()
 

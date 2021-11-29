@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     for metal in pdos_data['slab']:
         # Get all the pdos
-        energies, pdos = pdos_data['slab'][metal]
+        energies, pdos, _ = pdos_data['slab'][metal]
         energies_c, pdos_c = pdos_data['C'][metal]
         energies_o, pdos_o = pdos_data['O'][metal]
 
@@ -124,8 +124,8 @@ if __name__ == "__main__":
             eps_a = -1, 
             eps_d = center,
             width = width,
-            eps = np.linspace(-15, 15, 1000),
-            Delta0 = 0.0,
+            eps = np.linspace(-20, 20, 1000),
+            Delta0_mag = 0.0,
         )
         hybridisation.calculate_energy()
         hybridisation.calculate_occupancy()

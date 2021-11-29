@@ -122,16 +122,30 @@ class DataFromDFT:
                     index = np.argmax(ase_structure.get_positions()[:,2])
                     # get the positions of that index
                     position = ase_structure.get_positions()[index]
-                    pdos_to_store = get_density_of_states_for_node(node, metal, 
+                    # Get the d states of the metal atom
+                    energies, pdos_d = get_density_of_states_for_node(node, metal, 
                                                 angular_momentum=2, 
                                                 fermi_energy=fermi_energy, 
                                                 position=position)
+                    energies, pdos_p = get_density_of_states_for_node(node, metal, 
+                                                angular_momentum=1, 
+                                                fermi_energy=fermi_energy, 
+                                                position=position)
+                    energies, pdos_s = get_density_of_states_for_node(node, metal, 
+                                                angular_momentum=0, 
+                                                fermi_energy=fermi_energy, 
+                                                position=position)
+                    # Sum up sp states
+                    pdos_sp = np.array(pdos_p) + np.array(pdos_s)
+                    # Store the pdos
+                    pdos_to_store = [ energies, list(pdos_d), list(pdos_sp) ]
+                    
                 elif adsorbate != 'slab' and 'dos' in groupname:
                     # There are density of states in this node 
                     # but the calculation is for the adsorbate on the slab
                     energies, pdos_s = get_density_of_states_for_node(node, adsorbate, angular_momentum=0, fermi_energy=fermi_energy)
                     energies, pdos_p = get_density_of_states_for_node(node, adsorbate, angular_momentum=1, fermi_energy=fermi_energy)
-                    sum_dos = np.array(pdos_p)
+                    sum_dos = np.array(pdos_p) + np.array(pdos_s)
                     pdos_to_store = [ energies, list(sum_dos) ]
                 elif adsorbate != 'slab' and 'dos' not in groupname:
                     # We just need the energies here, so we will just ignore
@@ -167,11 +181,11 @@ def get_references(reference_nodes):
 if __name__ == '__main__':
     """Get the d-band center, band width, chemisorption energy from a DFT calculation."""
     GROUPNAMES = [ 
+        'PBE/SSSP_efficiency/dos_scf/slab',
         'PBE/SSSP_efficiency/dos_scf/C',
         'PBE/SSSP_efficiency/dos_scf/O',
-        'PBE/SSSP_efficiency/dos_scf/slab',
     ]
-    ADSORBATES = [ 'C', 'O', 'slab']
+    ADSORBATES = ['slab', 'C', 'O']
     FUNCTIONAL = 'PBE_scf'
 
     # References are just the atoms in vacuum

@@ -26,7 +26,10 @@ if __name__ == '__main__':
     # Choose a sequence of adsorbates
     ADSORBATES = ['O', 'C']
     EPS_A_VALUES = [ -5, -1 ] # eV
-    CONSTANT_DELTA0 = 0. # eV
+    EPS_VALUES = np.linspace(-20, 20, 1000)
+    EPS_SP_MIN = -15
+    EPS_SP_MAX = 15
+    CONSTANT_DELTA0 = 0.0
     print(f"Fitting parameters for adsorbate {ADSORBATES} with eps_a {EPS_A_VALUES}")
 
     # The functional and type of calculation we will use
@@ -91,18 +94,20 @@ if __name__ == '__main__':
         # Fit the parameters
         fitting_function =  NorskovNewnsAnderson(
             Vsd = parameters['Vsd'],
-            # filling = parameters['filling'],
             width = parameters['width'],
             eps_a = eps_a,
-            Delta0=CONSTANT_DELTA0,
+            eps_sp_min = EPS_SP_MIN,
+            eps_sp_max = EPS_SP_MAX,
+            eps = EPS_VALUES,
+            Delta0_mag = CONSTANT_DELTA0,
         )
 
         # Make the constrains for curve_fit such that all the 
         # terms are positive
-        initial_guess = [0.2, 0.1, -eps_a]
+        initial_guess = [1, 0.1, -eps_a]
         # Finding the fitting parameters
-        # data = odr.RealData(parameters['d_band_centre'], dft_energies)
-        data = odr.Data(parameters['d_band_centre'], dft_energies, we=filling)
+        data = odr.RealData(parameters['d_band_centre'], dft_energies)
+        # data = odr.Data(parameters['d_band_centre'], dft_energies)
         fitting_model = odr.Model(fitting_function.fit_parameters)
         fitting_odr = odr.ODR(data, fitting_model, initial_guess)
         fitting_odr.set_job(fit_type=2)
@@ -139,7 +144,7 @@ if __name__ == '__main__':
         json.dump({
             'alpha': abs(output.beta[0]),
             'beta': abs(output.beta[1]),
-            'delta0': CONSTANT_DELTA0,
+            'delta0': CONSTANT_DELTA0, 
             'constant_offset': output.beta[2],
             'eps_a': eps_a,
         }, open(f'output/{adsorbate}_parameters_{FUNCTIONAL}.json', 'w'))

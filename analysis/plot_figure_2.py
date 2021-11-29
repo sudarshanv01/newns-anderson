@@ -43,7 +43,7 @@ def moment_generator(energies, all_dos, moment):
 
 def normalise_na_quantities(quantity, x_add):
     """Utility function to align the density of states for Newns-Anderson plots."""
-    return quantity  / np.max(np.abs(quantity)) + x_add
+    return quantity + x_add
 
 def get_plot_layout():
     #-------- Plot parameters --------#
@@ -71,11 +71,6 @@ def get_plot_layout():
     for i in range(3):
         axp[0,i].set_xlim([-10,5])
         axp[0,i].set_yticks([])
-    #     if i == 1:
-    #         # Show adsorbate information
-    #         axp[0,i].plot([], [], '-', color='tab:red', label='O*')
-    #         axp[0,i].plot([], [], '-', color='k', label='C*')
-    #         axp[0,i].legend(loc='best')
     ax1.plot([], [], '-', color='tab:red', label='O*')
     ax1.plot([], [], '-', color='k', label='C*')
     ax1.legend(loc='best')
@@ -96,7 +91,7 @@ if __name__ == "__main__":
     # Plot the Newns-Anderson DOS for a few d-band centres
     newns_epsds = [ -4, -3, -2, -1 ]
     newns_epsas = [-5, -1]
-
+    x_add = 0.0
     for i, newns_epsd in enumerate(newns_epsds):
         for j, newns_epsa in enumerate(newns_epsas):
 
@@ -120,8 +115,8 @@ if __name__ == "__main__":
                 color='k'
             
             # Get the metal projected density of states
-            x_add = 2. * i
             Delta = normalise_na_quantities( hybridisation.get_Delta_on_grid(), x_add )
+            x_add += 2. * np.max(Delta) 
             Lambda = normalise_na_quantities( hybridisation.get_Lambda_on_grid(), x_add )
             # Get the line representing the eps - eps_a state
             eps_a_line = normalise_na_quantities( hybridisation.get_energy_diff_on_grid(), x_add )
@@ -153,6 +148,7 @@ if __name__ == "__main__":
     # Load the pdos data
     pdos_data = json.load(open(f'output/pdos_{FUNCTIONAL}.json'))
 
+    x_add = 0
     #-------- Plot Figure 1 --------#
     for row_index, row_metals in enumerate([FIRST_ROW, SECOND_ROW, THIRD_ROW]):
         for i, element in enumerate(row_metals):
@@ -162,29 +158,31 @@ if __name__ == "__main__":
             if element in REMOVE_LIST:
                 continue
             try:
-                energies, pdos_metal_unnorm = pdos_data['slab'][element]
-                energies_C, pdos_C_unnorm = pdos_data['C'][element]
-                energies_O, pdos_O_unnorm = pdos_data['O'][element]
+                energies, pdos_metal_d, pdos_metal_sp = pdos_data['slab'][element]
+                energies_C, pdos_C = pdos_data['C'][element]
+                energies_O, pdos_O = pdos_data['O'][element]
             except KeyError:
                 continue
-            
-            # Normalise the pdos just that it has a max of 1
-            x_add = i
-            pdos_metal = normalise_na_quantities(pdos_metal_unnorm, x_add)
-            pdos_C = normalise_na_quantities(pdos_C_unnorm, x_add)
-            pdos_O = normalise_na_quantities(pdos_O_unnorm, x_add)
+            pdos_C = np.array(pdos_C)
+            pdos_O = np.array(pdos_O)
+
+            x_add += np.max(pdos_metal_d)
+            pdos_C *= np.max(pdos_metal_d) / np.max(pdos_C)
+            pdos_O *= np.max(pdos_metal_d) / np.max(pdos_O)
+            pdos_metal_d = normalise_na_quantities(pdos_metal_d, x_add)
+            pdos_metal_sp = normalise_na_quantities(pdos_metal_sp, x_add)
+            pdos_C = normalise_na_quantities(pdos_C, x_add)
+            pdos_O = normalise_na_quantities(pdos_O, x_add)
+            # Set the maximum of the C, O pdos to the maximum of the metal pdos
 
             # Plot the pdos onto the metal states
-            axp[0,row_index].fill_between(energies, x_add, pdos_metal, color=colors[i], alpha=0.5) 
-            axp[0,row_index].annotate(element, xy=(-8.5, pdos_metal[-1]+0.5), color=colors[i])
+            axp[0,row_index].fill_between(energies, x_add, pdos_metal_d, color=colors[i], alpha=0.5) 
+            # axp[0,row_index].plot(energies, pdos_metal_sp, color=colors[i], ls='--')
+            axp[0,row_index].annotate(element, xy=(-8.5, pdos_metal_d[-1]+0.5), color=colors[i])
             # Plot the C (sp) pdos
-            axp[0,row_index].plot(energies_C, pdos_C, color='k', alpha=0.75)
+            # axp[0,row_index].plot(energies_C, pdos_C, color='k', alpha=0.75)
             # Plot the O (sp) pdos
             axp[0,row_index].plot(energies_O, pdos_O, color='tab:red', alpha=0.75)
-
-            # Get the d-band centre and d-band width
-            second_moment, eps_d = moment_generator(energies, [pdos_metal_unnorm], 2)
-            width = 4 * np.sqrt(second_moment)
 
             # Plot all the quantities that will be useful in the model.
             if row_index == 0:
@@ -193,9 +191,6 @@ if __name__ == "__main__":
                 color_row ='tab:orange'
             elif row_index == 2:
                 color_row ='tab:green'
-            # ax2.plot(filling_data[element], eps_d, 'o', color=color_row)
-            # ax3.plot(filling_data[element], width, 'o', color=color_row)
-            # ax4.plot(filling_data[element], Vsd_data[element], 'o', color=color_row)
 
     # Add figure numbers
     alphabet = list(string.ascii_lowercase)
