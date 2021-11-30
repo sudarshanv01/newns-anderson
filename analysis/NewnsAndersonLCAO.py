@@ -68,7 +68,6 @@ class NewnsAndersonLCAO:
 
                 self.delta[i, j] = np.abs( eps_k * s_ak - v_ak )**2
         
-        print(self.Vak)
         self.delta *= np.pi
         self.eigenval_ads = np.real(eigenval_ads)
         self.eigenval_metal = np.real(eigenval_metal)
