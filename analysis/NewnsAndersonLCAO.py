@@ -57,9 +57,11 @@ class NewnsAndersonLCAO:
         self.delta = np.zeros((len(self.adsorbate_basis_index), len(self.metal_basis_index)))
         # Store the Vak for each adsorbate basis index
         self.Vak = np.zeros(len(self.adsorbate_basis_index))
+        self.Sak = np.zeros(len(self.adsorbate_basis_index))
 
         for i, a in enumerate(self.adsorbate_basis_index):
             self.Vak[i] = np.sqrt( np.sum([ vak**2 for vak in self.H_MM[a] ]) )
+            self.Sak[i] = np.sqrt( np.sum([ sak**2 for sak in self.S_MM[a] ]) )
             for j, k in enumerate(self.metal_basis_index):
 
                 eps_k = eigenval_metal[j]

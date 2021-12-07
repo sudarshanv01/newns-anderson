@@ -49,7 +49,7 @@ def interactive_newns_anderson_dos(Vak=1, eps_a=-1, eps_d=-5, width=4,
     # Plot the Newns-Anderson model
     ax[0].plot(eps, Delta, color='tab:red', lw=3) 
     ax[0].plot(eps, Lambda, color='tab:green', lw=3)
-    # ax[0].plot(eps, eps_diff, color='tab:red', lw=3, alpha=0.25)
+    ax[0].plot(eps, eps_diff, color='tab:red', lw=3, alpha=0.25)
     ax[1].plot(eps, pdos, color='tab:blue', lw=3)
 
     # Annotate the occupancy on the top right

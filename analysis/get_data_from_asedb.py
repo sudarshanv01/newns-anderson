@@ -36,7 +36,10 @@ class DataFromASE:
             adsorbate = row.states.replace('state_','')
             metal = row.sampling.replace('sampling_','')
             if metal not in self.REMOVE_LIST:
-                self.raw_energies[adsorbate][metal] = row.energy
+                try:
+                    self.raw_energies[adsorbate][metal] = row.energy
+                except AttributeError:
+                    pass
         
     def get_pdos_from_database(self):
         """Extract the pdos from only slab calculations and put them in a dictionary."""
@@ -44,7 +47,17 @@ class DataFromASE:
             adsorbate = row.states.replace('state_','')
             metal = row.sampling.replace('sampling_','')
             if adsorbate == 'slab':
-                self.pdos[adsorbate][metal] = [ row.data.pdos['energies'], row.data.pdos['metal'] ]
+                try:
+                    summed_dos = np.sum(row.data.pdos['metal'], axis=0)
+                    self.pdos[adsorbate][metal] = [ row.data.pdos['energies'], summed_dos.tolist() ]
+                except KeyError:
+                    pass
+            elif adsorbate in self.adsorbates:
+                try:
+                    summed_dos = np.sum(row.data.pdos['ads'], axis=0)
+                    self.pdos[adsorbate][metal] = [ row.data.pdos['energies'], summed_dos.tolist() ]
+                except KeyError:
+                    pass
 
     def get_adsorption_energy(self):
         """Get the adsorption energy from the ASE database."""

@@ -15,9 +15,9 @@ if __name__ == '__main__':
     plot the bond length of C and O from the metal centers."""
 
     # Group name for the adsorbate on the transition metal
-    GROUPNAME = 'PBE/SSSP_efficiency/dos_scf/C'
-    ADSORBATE = 'C'
-    FUNCTIONAL = 'PBE_scf'
+    GROUPNAME = 'PBE/SSSP_efficiency/cold_smearing_0.2eV/dos_scf/O'
+    ADSORBATE = 'O'
+    FUNCTIONAL = 'PBE_scf_cold_smearing_0.2eV'
     type_of_calc = DosWorkflow # PwBaseWorkChain 
 
     # Get the nodes from the calculation

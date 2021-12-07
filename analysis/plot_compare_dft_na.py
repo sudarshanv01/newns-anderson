@@ -17,7 +17,8 @@ def normalise_na_quantities(quantity, x_add):
 if __name__ == "__main__":
     # Use these metals only
     METALS = [FIRST_ROW, SECOND_ROW, THIRD_ROW] 
-    FUNCTIONAL = 'PBE_scf'
+    FUNCTIONAL = 'PBE_scf_cold_smearing_0.2eV'
+    # FUNCTIONAL = 'PBE_scf'
 
     # Get a cycle of with colormap
     colors =  plt.cm.viridis(np.linspace(0, 1, len(FIRST_ROW)))
@@ -25,7 +26,8 @@ if __name__ == "__main__":
     # Plot the sp projected density of states from DFT
     # and also the projected density of states from the Newns-Anderson model 
     # For each row separately
-    fig, ax = plt.subplots(1, 3, figsize=(14, 6), constrained_layout=True)
+    figc, axc = plt.subplots(1, 3, figsize=(14, 6), constrained_layout=True)
+    figo, axo = plt.subplots(1, 3, figsize=(14, 6), constrained_layout=True)
 
     # Load the projected density of states from 
     # a DFT calculation
@@ -49,10 +51,22 @@ if __name__ == "__main__":
             # Normalize the density of states quantities
             try:
                 energies, pdos_metal_unnorm, _ = pdos_data['slab'][metal]
+            except ValueError: 
+                energies, pdos_metal_unnorm = pdos_data['slab'][metal]
             except KeyError:
                 continue
-            energies_C, pdos_C_unnorm = pdos_data['C'][metal]
-            energies_O, pdos_O_unnorm = pdos_data['O'][metal]
+            try:
+                energies_C, pdos_C_unnorm = pdos_data['C'][metal]
+                energies_O, pdos_O_unnorm = pdos_data['O'][metal]
+            except KeyError:
+                continue
+            try:
+                # Plot the Newns-Anderson projected density of states
+                filling = metal_parameters['filling'][metal] 
+                eps_d = data_from_dos_calculation[metal]['d_band_centre'] 
+                width = data_from_dos_calculation[metal]['width']
+            except KeyError:
+                continue
 
             # Shift the graph up by this much
             x_pos = 2 * i
@@ -63,29 +77,30 @@ if __name__ == "__main__":
             # Plot the projected density of states
             # ax[row_index].plot(energies, pdos_metal, color=colors[i])
             # ax[row_index].fill_between(energies, x_pos, pdos_metal, color=colors[i], alpha=0.25)
-            ax[row_index].plot(energies_C, pdos_C, color='tab:grey', alpha=0.75)
-            ax[row_index].plot(energies_O, pdos_O, color='tab:red', alpha=0.75)
-            ax[row_index].annotate(metal, xy=(-8.5, pdos_metal[-1]+0.5), color=colors[i])
+            axc[row_index].plot(energies_C, pdos_C, color='tab:grey', alpha=0.75)
+            axc[row_index].fill_between(energies_C, x_pos, pdos_C, color='tab:grey', alpha=0.25)
+            axo[row_index].plot(energies_O, pdos_O, color='tab:red', alpha=0.75)
+            axo[row_index].fill_between(energies_O, x_pos, pdos_O, color='tab:red', alpha=0.25)
+            axo[row_index].annotate(metal, xy=(-12, pdos_metal[-1]+0.5), color=colors[i], fontsize=14)
+            axc[row_index].annotate(metal, xy=(-12, pdos_metal[-1]+0.5), color=colors[i], fontsize=14)
 
-            # Plot the Newns-Anderson projected density of states
-            filling = metal_parameters['filling'][metal] 
-            eps_d = data_from_dos_calculation[metal]['d_band_centre'] 
-            width = data_from_dos_calculation[metal]['width']
             for a, adsorbate in enumerate(['O', 'C']):
                 if adsorbate == 'C':
                     Vak = c_parameters['Vak'][metal]
                     print(f"C adsorbate: Vak: {Vak} for metal: {metal}")
                     eps_a = c_parameters['eps_a']
-                    delta0 = c_parameters['delta0']
+                    delta0 = c_parameters['delta0']# [metal]
                     alpha = c_parameters['alpha']
                     color = 'tab:grey'
+                    ax = axc
                 elif adsorbate == 'O':
-                    Vak = c_parameters['Vak'][metal]
+                    Vak = o_parameters['Vak'][metal]
                     print(f"O adsorbate: Vak: {Vak} for metal: {metal}")
-                    eps_a = c_parameters['eps_a']
-                    delta0 = c_parameters['delta0']
-                    alpha = c_parameters['alpha']
+                    eps_a = o_parameters['eps_a']
+                    delta0 = o_parameters['delta0']# [metal]
+                    alpha = o_parameters['alpha']
                     color = 'tab:red'
+                    ax = axo
                 else:
                     raise ValueError('adsorbate must be either C or O')
 
@@ -104,11 +119,13 @@ if __name__ == "__main__":
                 # dos *= max_height_Delta / np.max(dos) 
                 dos = normalise_na_quantities( dos, x_pos )
                 # Make the max value of dos the same as Delta
-                ax[row_index].plot(hybridisation.eps, dos, color=color)
+                ax[row_index].plot(hybridisation.eps, dos, color=color, ls='--')
 
-    for a in ax:
-        a.set_xlim(-10, 10)
+    for a in np.concatenate((axc, axo)):
+        # a.set_xlim(-15, 5)
         a.set_xlabel('$\epsilon - \epsilon_F$ (eV)')
         a.set_yticks([])
-    ax[0].set_ylabel('Projected density of states')
-    fig.savefig('output/compare_dft_na.png') 
+    axc[0].set_ylabel('Projected density of states')
+    axo[0].set_ylabel('Projected density of states')
+    figo.savefig('output/compare_dft_na_O.png') 
+    figc.savefig('output/compare_dft_na_C.png') 
