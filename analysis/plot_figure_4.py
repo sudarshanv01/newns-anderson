@@ -28,11 +28,6 @@ def create_plot_layout():
     ax11 = fig.add_subplot(gs[3:6, 0])
     ax2 = fig.add_subplot(gs[0:6, 1])
     ax3 = fig.add_subplot(gs[0:6, 2])
-    # # Get the dos graph
-    # ax1o = fig.add_subplot(gs[3:5, 0])
-    # ax2o = fig.add_subplot(gs[3:5, 1])
-    # ax3o = fig.add_subplot(gs[3:5, 2])
-    # ax1o.set_ylabel('$n_a$ (e)')
     
     # Set the axes labels
     ax11.set_xlabel('$\epsilon_{d} - \epsilon_{F}$')
@@ -58,7 +53,7 @@ def create_plot_layout():
     ax5.set_yticks([])
     ax6.set_yticks([])
 
-    return fig, np.array([ [np.array([ax10, ax11]), ax2, ax3], [ax4, ax5, ax6] ])
+    return fig, np.array([ [np.array([ax10, ax11]), ax2, ax3], [ax4, ax5, ax6] ], dtype=object)
 
 def create_aux_plot_layout():
     """Create the plot layout for the descriptor as a 
@@ -134,9 +129,12 @@ if __name__ == '__main__':
         metal_parameters = json.load(f)
 
     # Create range of parameters 
-    NUMBER_OF_ADSORBATES = 8
-    NUMBER_OF_METALS = 30
+    NUMBER_OF_ADSORBATES = 20
+    NUMBER_OF_METALS = 40
     PLOT_METAL_DOS = 6
+    EPS_RANGE = np.linspace(-15, 15, 1000)
+    EPS_SP_MIN = -15
+    EPS_SP_MAX = 15
 
     # Create an idealised range of parameters
     eps_a_range = create_range_parameters(o_parameters['eps_a'], c_parameters['eps_a'], n=NUMBER_OF_ADSORBATES)
@@ -156,7 +154,7 @@ if __name__ == '__main__':
     fig, ax = create_plot_layout() 
 
     # get a color cycle for the different adsorbates based on viridis
-    color = plt.cm.viridis(np.linspace(0, 1, NUMBER_OF_ADSORBATES))
+    color = plt.cm.coolwarm_r(np.linspace(0, 1, NUMBER_OF_ADSORBATES))
     color_row = ['tab:red', 'tab:blue', 'tab:green', 'tab:orange']
     marker_row = ['o', 's', '^']
 
@@ -173,10 +171,13 @@ if __name__ == '__main__':
         eps_d_min, eps_d_max = metal_parameters['eps_d_minmax'][str(j)]
         filling_range = np.linspace(filling_max, filling_min, NUMBER_OF_METALS)
         eps_d_range = np.linspace(eps_d_min, eps_d_max, NUMBER_OF_METALS)
+
         # Collect the total energies for each adsorbate
         total_energy_adsorbate = []
+
         # Collect the positions of the maximum of the derivative
         argmax_derivative = []
+
         for a, eps_a in enumerate(eps_a_range):
             # Each line for different rows of metals is for a different adsorbate
             # get the parameters for each adsorbate
@@ -184,13 +185,16 @@ if __name__ == '__main__':
             beta  = beta_range[a]
             delta0 = delta0_range[a]
             constant = constant_range[a]
+
             # Store the metal parameters to be used in the JNA model
             parameters_metal = defaultdict(list)
-            for i, filling in enumerate(filling_range):
 
+            for i, filling in enumerate(filling_range):
+                # Continuous setting of parameters
                 Vsd = np.sqrt(func_a_by_r( filling, *Vsdsq_fit ) )
                 eps_d = eps_d_range[i]                
-                width = func_a_r_sq(filling, *wd_fit) # wd_fit[0]
+                width = func_a_r_sq(filling, *wd_fit)
+
                 # Iterate over each metal to get the metal specific parameters
                 parameters_metal['Vsd'].append(Vsd)
                 parameters_metal['eps_d'].append(eps_d)
@@ -204,8 +208,10 @@ if __name__ == '__main__':
                     eps_a = eps_a,
                     eps_d = eps_d,
                     width = width,
-                    eps = np.linspace(-15, 15, 1000),
-                    Delta0 = delta0,
+                    eps = EPS_RANGE,     
+                    Delta0_mag = delta0,
+                    eps_sp_max=EPS_SP_MAX,
+                    eps_sp_min=EPS_SP_MIN,
                 )
                 hybridisation.calculate_energy()
             
@@ -228,17 +234,17 @@ if __name__ == '__main__':
                     # Get the line representing the eps - eps_a state
                     eps_a_line = hybridisation.get_energy_diff_on_grid() 
                     eps_a_line = normalise_na_quantities( eps_a_line, x_pos )
+
                     if a == 0:
-                        ax[1,j].plot(hybridisation.eps, Delta, color='tab:red', lw=3)
-                        # ax[1,j].fill_between(hybridisation.eps, x_pos*np.ones(len(Delta)), Delta, color='tab:red', alpha=0.10)
-                        # ax[1,j].plot(hybridisation.eps, Lambda, color='tab:blue', lw=3, alpha=0.5)
+                        ax[1,j].plot(hybridisation.eps, Delta, color='k')
+                        ax[1,j].fill_between(hybridisation.eps, x_pos, Delta, color='k', alpha=0.2)
 
                     # Get the adsorbate density of states
                     dos = hybridisation.get_dos_on_grid()
                     dos = normalise_na_quantities( dos, x_pos )
 
                     if a in [0, NUMBER_OF_ADSORBATES-1]: 
-                        ax[1,j].plot(hybridisation.eps, dos, color=color[a], lw=3)
+                        ax[1,j].plot(hybridisation.eps, dos, color=color[a], )
                         ax[1,j].fill_between(hybridisation.eps[occupied_energy_index],
                                              x_pos*np.ones(len(occupied_energy_index)), 
                                              dos[occupied_energy_index], color=color[a], alpha=0.25)
@@ -248,57 +254,63 @@ if __name__ == '__main__':
                 Vsd = parameters_metal['Vsd'],
                 eps_a = eps_a,
                 width = parameters_metal['width'],
-                filling = parameters_metal['filling'],
+                eps = EPS_RANGE, 
+                eps_sp_max=EPS_SP_MAX,
+                eps_sp_min=EPS_SP_MIN,
+                Delta0_mag=delta0,
             )
 
+            # Gather energies
             total_energy = jna.fit_parameters( [alpha, beta, constant], eps_d_range)
             hyb_spd_energy = jna.spd_hybridisation_energy
-            energy_to_plot =  total_energy 
+            # This energy will be used as a basis for comparison
+            energy_to_plot = hyb_spd_energy
             energy_to_plot = np.array(energy_to_plot)
 
-            # Plot the hybridisation energy as a function of the d-band centre.
-            total_energy_adsorbate.append(energy_to_plot)
-            # Choose values where eps_d less greater than -3
-            chosen_index = np.where(np.array(parameters_metal['eps_d']) > -3)[0]
-
+            # Plot the total energy as a function of the d-band centre.
+            total_energy_adsorbate.append(total_energy)
             # Fit the points with the functional form of the hybridisation energy
-            class_energy = FittingEnergyVariation(np.array(filling_range)[chosen_index], Vsdsq_fit, beta)
+            # class_energy = FittingEnergyVariation(np.array(filling_range),
+            #                                       Vsdsq_fit, beta)
 
-            popt, pcov = curve_fit(class_energy.functional_form_energy, 
-                                    np.array(parameters_metal['eps_d'])[chosen_index],
-                                    np.array(energy_to_plot)[chosen_index])
-            # Get the polynomial coefficients
-            # coeffs = np.polyfit(parameters_metal['eps_d'], energy_to_plot, 3)
-            # get the derivative coefficients
-            # coeffs_derivative = np.polyder(coeffs, 1)
-            # Find the parameter to plot as a sign of the decay of the energy
-            # argmax_derivative.append(popt[1])
-            # Get the argmax of the coeff derivaitive
-            # max_derivative = np.argmax(np.polyval(coeffs_derivative, parameters_metal['eps_d']))
-            # argmax_derivative.append(parameters_metal['eps_d'][max_derivative])
-            argmax_derivative.append(popt[0])
+            # popt, pcov = curve_fit(class_energy.functional_form_energy, 
+            #                         np.array(parameters_metal['eps_d']),
+            #                         np.array(energy_to_plot))
+
+            # The parameter to plot would be the largest eps_d at which 
+            # the energy_to_plot reaches Delta0.
+            # First find the index at which energy_to_plot becomes delta0
+            print(energy_to_plot, delta0)
+            index_delta0 = np.argwhere(energy_to_plot > -1*delta0).flatten()
+            # Find the maximum value of eps_d at which this occurs
+            if len(index_delta0) > 0:
+                eps_d_desc = np.max(np.array(parameters_metal['eps_d'])[index_delta0])
+            else:
+                eps_d_desc = None
+            
+            # Store the description of the fit
+            argmax_derivative.append(eps_d_desc)
+
             if a in [0, NUMBER_OF_ADSORBATES-1]: 
                 if a == 0:
                     index = 0
                 else:
                     index = 1
                     ax[0,0][index].set_xlabel('$\epsilon_d$ (eV)')
-                ax[0,0][index].plot(parameters_metal['eps_d'], energy_to_plot, marker_row[j], color=color_row[j])
-                ax[0,0][index].plot(np.array(parameters_metal['eps_d'])[chosen_index], 
-                                    class_energy.functional_form_energy(np.array(parameters_metal['eps_d'])[chosen_index], *popt), 
-                                    '--', color=color_row[j], label=f'$\epsilon_a$ = {eps_a:.1f} eV')
-                # plot the polynomial fit
-                # ax[0,0][index].plot(parameters_metal['eps_d'], np.polyval(coeffs, parameters_metal['eps_d']), '-', 
-                #             color=color_row[j])
-                ax[0,0][index].set_ylabel(f'$\Delta E (\epsilon_a = {eps_a})$  (eV)', fontsize=12)
 
-        # Plot a fill_between between the highest and lowest total energy
-        # ax[0,0].fill_between(eps_d_range, 
-        #                       np.min(total_energy_adsorbate, axis=0), 
-        #                       np.max(total_energy_adsorbate, axis=0),
-        #                       color='tab:gray', alpha=0.25)
+                ax[0,0][index].plot(parameters_metal['eps_d'], 
+                                    energy_to_plot, 
+                                    marker_row[j], 
+                                    color=color_row[j])
+                # ax[0,0][index].plot(parameters_metal['eps_d'], 
+                #                     class_energy.functional_form_energy(parameters_metal['eps_d'], *popt), 
+                #                     '--', color=color_row[j], 
+                #                     label=f'$\epsilon_a$ = {eps_a:.1f} eV')
+                ax[0,0][index].set_ylabel(f'$E ({eps_a})$')
+
         # Plot the maximum derivative as a function of eps_a for the different metal rows
         ax[0,2].plot(eps_a_range, argmax_derivative, marker_row[j]+'-', color=color_row[j], label=f'{j+3}d')
+
         # Store the energies to plot against each other in the form of scaling
         final_energy_scaling[j]['min_energy'].extend(np.min(total_energy_adsorbate, axis=0).tolist())
         final_energy_scaling[j]['max_energy'].extend(np.max(total_energy_adsorbate, axis=0).tolist())
@@ -308,8 +320,8 @@ if __name__ == '__main__':
         ax[0,1].plot(final_energy_scaling[metal_row]['max_energy'], 
                      final_energy_scaling[metal_row]['min_energy'], 
                      marker_row[row_index], color=color_row[metal_row], label=f'Row: {metal_row+3}')
-    ax[0,1].set_xlabel(r'$\Delta E_{C}$ (eV)')
-    ax[0,1].set_ylabel(r'$\Delta E_{O}$ (eV)')
+    ax[0,1].set_xlabel(r'$\Delta E_{\mathregular{C}}$ (eV)')
+    ax[0,1].set_ylabel(r'$\Delta E_{\mathregular{O}}$ (eV)')
 
     ax[0,2].legend(loc='best', fontsize=14)
     ax[0,2].set_xlabel(r'$\epsilon_{a}$ (eV)')
