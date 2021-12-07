@@ -14,7 +14,7 @@ THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl']
 if __name__ == '__main__':
     """Plot the scaling relations from the energy file."""
     FUNCTIONAL = 'PBE_scf'
-    REMOVE_LIST = [] # yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
+    REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
 
     # Read the energy file.
     with open(f'output/adsorption_energies_{FUNCTIONAL}.json', 'r') as f:

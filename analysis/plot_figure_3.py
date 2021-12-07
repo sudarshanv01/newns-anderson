@@ -1,4 +1,5 @@
 """Get parameters for the Newns-Anderson model and plot Figure 3 of the manuscript."""
+import sys
 import json
 import yaml
 import numpy as np
@@ -23,13 +24,19 @@ if __name__ == '__main__':
     REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
     KEEP_LIST = []
 
+    if len(sys.argv) > 1:
+        if sys.argv[1] == 'restart':
+            restart = True
+        else:
+            restart = False 
+
     # Choose a sequence of adsorbates
     ADSORBATES = ['O', 'C']
     EPS_A_VALUES = [ -5, -1 ] # eV
     EPS_VALUES = np.linspace(-20, 20, 1000)
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
-    CONSTANT_DELTA0 = 0.0
+    CONSTANT_DELTA0 = 0.1
     print(f"Fitting parameters for adsorbate {ADSORBATES} with eps_a {EPS_A_VALUES}")
 
     # The functional and type of calculation we will use
@@ -45,8 +52,7 @@ if __name__ == '__main__':
     data_from_energy_calculation = json.load(open(f'output/adsorption_energies_{FUNCTIONAL}.json'))
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
 
-
-    # Plot the Fitted and the real adsorption energies
+    # Plot the fitted and the real adsorption energies
     fig, ax = plt.subplots(1, 2, figsize=(10, 4.5), constrained_layout=True)
     for i in range(len(ax)):
         ax[i].set_xlabel('DFT energy (eV)')
@@ -91,7 +97,7 @@ if __name__ == '__main__':
             # Store the order of the metals
             metals.append(metal)
 
-        # Fit the parameters
+        # Prepare the class for fitting routine 
         fitting_function =  NorskovNewnsAnderson(
             Vsd = parameters['Vsd'],
             width = parameters['width'],
@@ -102,12 +108,20 @@ if __name__ == '__main__':
             Delta0_mag = CONSTANT_DELTA0,
         )
 
-        # Make the constrains for curve_fit such that all the 
-        # terms are positive
-        initial_guess = [1, 0.1, -eps_a]
+        # Is the calculation is a restart one, choose the parameters from the last calculation
+        if restart:
+            previous_calc = json.load(open(f'output/{adsorbate}_parameters_{FUNCTIONAL}.json'))
+            alpha = previous_calc['alpha']
+            beta = previous_calc['beta']
+            constant_offest = previous_calc['constant_offset']
+            initial_guess = [alpha, beta, constant_offest]
+        else:
+            initial_guess = [0.1, 0.6, 0.1]
+        
+        print('Initial guess: ', initial_guess)
+
         # Finding the fitting parameters
         data = odr.RealData(parameters['d_band_centre'], dft_energies)
-        # data = odr.Data(parameters['d_band_centre'], dft_energies)
         fitting_model = odr.Model(fitting_function.fit_parameters)
         fitting_odr = odr.ODR(data, fitting_model, initial_guess)
         fitting_odr.set_job(fit_type=2)
@@ -121,7 +135,7 @@ if __name__ == '__main__':
 
         # plot the parity line
         x = np.linspace(np.min(dft_energies)-0.3, np.max(dft_energies)+0.3, 2)
-        ax[i].plot(x, x-output.beta[2], '--', color='black')
+        ax[i].plot(x, x, '--', color='black')
         # Fix the axes to the same scale 
         # ax[i].set_xlim(np.min(x), np.max(x))
         # ax[i].set_ylim(np.min(x-output.beta[2]), np.max(x-output.beta[2]))
@@ -135,8 +149,8 @@ if __name__ == '__main__':
                 colour = 'orange'
             elif metal in THIRD_ROW:
                 colour = 'green'
-            ax[i].plot(dft_energies[j], optimised_hyb[j]-output.beta[2], 'o', color=colour)
-            texts.append(ax[i].text(dft_energies[j], optimised_hyb[j]-output.beta[2], metal, color=colour))
+            ax[i].plot(dft_energies[j], optimised_hyb[j], 'o', color=colour)
+            texts.append(ax[i].text(dft_energies[j], optimised_hyb[j], metal, color=colour))
 
         adjust_text(texts, ax=ax[i]) 
 
