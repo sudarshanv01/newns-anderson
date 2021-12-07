@@ -69,7 +69,7 @@ def get_plot_layout():
     axp[0,1].set_xlabel('$\epsilon - \epsilon_{F}$ (eV)')
     axp[0,2].set_xlabel('$\epsilon - \epsilon_{F}$ (eV)')
     for i in range(3):
-        axp[0,i].set_xlim([-10,5])
+        axp[0,i].set_xlim([-30,5])
         axp[0,i].set_yticks([])
     ax1.plot([], [], '-', color='tab:red', label='O*')
     ax1.plot([], [], '-', color='k', label='C*')
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     """Generate figures with all the parameters for the
     Newns-Anderson model."""
     REMOVE_LIST = [] # yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
-    FUNCTIONAL = 'PBE_scf'
+    FUNCTIONAL = 'PBE_scf_smeared'
 
     # Get a cycle of with colormap
     colors =  plt.cm.viridis(np.linspace(0, 1, 10))
@@ -180,7 +180,7 @@ if __name__ == "__main__":
             # axp[0,row_index].plot(energies, pdos_metal_sp, color=colors[i], ls='--')
             axp[0,row_index].annotate(element, xy=(-8.5, pdos_metal_d[-1]+0.5), color=colors[i])
             # Plot the C (sp) pdos
-            # axp[0,row_index].plot(energies_C, pdos_C, color='k', alpha=0.75)
+            axp[0,row_index].plot(energies_C, pdos_C, color='k', alpha=0.75)
             # Plot the O (sp) pdos
             axp[0,row_index].plot(energies_O, pdos_O, color='tab:red', alpha=0.75)
 

@@ -129,9 +129,9 @@ if __name__ == '__main__':
         metal_parameters = json.load(f)
 
     # Create range of parameters 
-    NUMBER_OF_ADSORBATES = 20
-    NUMBER_OF_METALS = 40
-    PLOT_METAL_DOS = 6
+    NUMBER_OF_ADSORBATES = 15
+    NUMBER_OF_METALS = 50
+    PLOT_METAL_DOS = 10
     EPS_RANGE = np.linspace(-15, 15, 1000)
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
@@ -337,5 +337,5 @@ if __name__ == '__main__':
             a[1].annotate(alphabet[i+1]+')', xy=(0.01, 0.6), xycoords='axes fraction')
             i += 2
 
-    fig.savefig('output/figure_4.png', dpi=300)
+    fig.savefig(f'output/figure_4_{FUNCTIONAL}.png', dpi=300)
     

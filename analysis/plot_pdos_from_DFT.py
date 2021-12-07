@@ -35,7 +35,7 @@ if __name__ == "__main__":
     from a DFT calculation and compare the result with 
     the fitted Newns-Anderson Delta."""
     # Choice of functional
-    FUNCTIONAL = sys.argv[1] 
+    FUNCTIONAL = 'PBE_scf_smeared' 
 
     with open(f'output/pdos_{FUNCTIONAL}.json', 'r') as handle:
         pdos_data = json.load(handle)
