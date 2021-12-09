@@ -42,7 +42,7 @@ if __name__ == '__main__':
     # The functional and type of calculation we will use
     # scf only calculations in order to avoid any noise and look only for 
     # the electronic structure contribution
-    FUNCTIONAL = 'PBE_scf'
+    FUNCTIONAL = 'PBE_scf_smeared'
 
     # get the width and d-band centre parameters
     # The moments of the density of states comes from a DFT calculation 
@@ -53,10 +53,10 @@ if __name__ == '__main__':
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
 
     # Plot the fitted and the real adsorption energies
-    fig, ax = plt.subplots(1, 2, figsize=(10, 4.5), constrained_layout=True)
+    fig, ax = plt.subplots(1, 2, figsize=(10, 4.6), constrained_layout=True)
     for i in range(len(ax)):
         ax[i].set_xlabel('DFT energy (eV)')
-        ax[i].set_ylabel('Hybridisation energy (eV)')
+        ax[i].set_ylabel('Chemisorption energy (eV)')
         ax[i].set_title(f'{ADSORBATES[i]}* with $\epsilon_a=$ {EPS_A_VALUES[i]} eV')
 
     # simulatenously iterate over ADSORBATES and EPS_A_VALUES
@@ -150,7 +150,7 @@ if __name__ == '__main__':
             elif metal in THIRD_ROW:
                 colour = 'green'
             ax[i].plot(dft_energies[j], optimised_hyb[j], 'o', color=colour)
-            texts.append(ax[i].text(dft_energies[j], optimised_hyb[j], metal, color=colour))
+            texts.append(ax[i].text(dft_energies[j], optimised_hyb[j], metal, color=colour, fontsize=14))
 
         adjust_text(texts, ax=ax[i]) 
 

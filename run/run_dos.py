@@ -24,13 +24,13 @@ def calculator(ecutwf, ecutrho):
         "ecutrho": ecutrho,
         "occupations":'smearing',
         "smearing":'cold',
-        # "degauss":0.01,
-        "degauss":0.0075,
+        "degauss":0.015,
         "nspin": 1,
         "edir": 3,
         "emaxpos": 0.05,
         "eopreg": 0.025,
         "eamp": 0.0,
+        # 'nbnd': 650,
                 },
     "ELECTRONS": {
         "conv_thr": 1e-10,
@@ -78,7 +78,7 @@ class DOSSubmissionController(FromGroupSubmissionController):
         # Get the nscf information
         parameters_nscf = deepcopy(parameters_scf)
         parameters_nscf['CONTROL']['calculation'] = 'nscf'
-        parameters_nscf['SYSTEM']['occupations'] = 'tetrahedra'
+        # parameters_nscf['SYSTEM']['occupations'] = 'tetrahedra'
 
         # Code related information
         code_pw = load_code(f'pw_6-7{COMPUTER}')
@@ -122,7 +122,7 @@ class DOSSubmissionController(FromGroupSubmissionController):
 
         ## dos inputs to Pp workchain
         dos_parameters = {'DOS':
-                                {'Emin':-20,
+                                {'Emin':-30,
                                 'Emax':20, 
                                 'DeltaE':0.01,
                                 }
@@ -134,7 +134,7 @@ class DOSSubmissionController(FromGroupSubmissionController):
 
         ## projwfc inputs to the Pp workchain
         projwfc_parameters = {'PROJWFC':
-                                    {'Emin':-20,
+                                    {'Emin':-30,
                                     'Emax':20, 
                                     'DeltaE':0.01},
                                     }
@@ -153,10 +153,10 @@ if __name__ == '__main__':
 
     # For the submission controller
     DRY_RUN = False
-    MAX_CONCURRENT = 11
+    MAX_CONCURRENT = 1
     CODE_LABEL = f'pw_6-7{COMPUTER}'
     STRUCTURES_GROUP_LABEL = f'PBE/SSSP_efficiency/initial/{SYSTEM}'
-    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_efficiency/dos_scf/{SYSTEM}'
+    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_efficiency/cold_smearing_0.2eV/dos_scf/{SYSTEM}'
 
     controller = DOSSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,

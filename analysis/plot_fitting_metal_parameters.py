@@ -15,17 +15,18 @@ THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl']
 def func_a_by_r(x, a):
     return a / x
 
-def func_a_r_sq(x, a, b):
-    return b - a * ( x - 0.7) **2
+def func_a_r_sq(x, a, b, c):
+    return b - a * ( x - c) **2
 
 def get_fit_for_Vsdsq(x, y):
     """Get fit and error for the square of the Vsd."""
-    popt, pcov = curve_fit(func_a_by_r, x, y)
+    popt, pcov = curve_fit(func_a_by_r, x, y) 
     return list(popt), list(pcov)
 
 def get_fit_for_wd(x, y):
     """Get the fit and error for the width.""" 
-    popt, pcov = curve_fit(func_a_r_sq, x, y)
+    initial_guess = [1, 1, 0.5]
+    popt, pcov = curve_fit(func_a_r_sq, x, y, p0=initial_guess)
     return list(popt), list(pcov)
     # return [ np.mean(y) ], [ np.std(x) ]
 
@@ -43,7 +44,7 @@ if __name__ == '__main__':
 
 
     # Input parameters to help with the dos from Newns-Anderson
-    FUNCTIONAL = 'PBE_scf'
+    FUNCTIONAL = 'PBE_scf_smeared'
     data_from_dos_calculation = json.load(open(f'output/pdos_moments_{FUNCTIONAL}.json')) 
     data_from_energy_calculation = json.load(open(f'output/adsorption_energies_{FUNCTIONAL}.json'))
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))

@@ -114,9 +114,14 @@ if __name__ == "__main__":
         center = popt[0]
         # Store the width as the 2*width from the fitting procedure
         width =  2 * popt[1] 
+        # Also store the upper edge of the d-band centre
+        # by determining the maximum of the Hilbert transform
+        Lambda = np.imag(signal.hilbert(pdos))
+        index_max = np.argmax(Lambda)
         # Store the moments
         moments[metal]['d_band_centre'] = center
         moments[metal]['width'] = width
+        moments[metal]['d_band_upper_edge'] = energies[index_max]
 
         # Plot the density of states from the Newns-Anderson model 
         hybridisation = NewnsAndersonNumerical(
@@ -150,9 +155,10 @@ if __name__ == "__main__":
         # Plot the Newns-Anderson Delta
         ax[i,j].plot(Delta_na, energy_na, color='tab:blue', ls='--')
 
-        ax[i,j].axhline(y=center, color='k', linestyle='-')
-        ax[i,j].axhline(y=center + width / 2, color='k', linestyle='--')
-        ax[i,j].axhline(y=center - width / 2, color='k', linestyle='--')
+        # ax[i,j].axhline(y=center, color='k', linestyle='-')
+        # ax[i,j].axhline(y=center + width / 2, color='k', linestyle='--')
+        # ax[i,j].axhline(y=center - width / 2, color='k', linestyle='--')
+        ax[i,j].axhline(y=energies[index_max], color='k', linestyle='--')
     
     for i in range(len(METALS)):
         for j in range(len(METALS[i])):

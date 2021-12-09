@@ -172,6 +172,7 @@ class DataFromDFT:
                             - self.raw_energies['slab'][metal] \
                             - self.references[adsorbate]
                 except TypeError:
+                    print(f"Error: {adsorbate} {metal}")
                     continue
                 self.adsorption_energies[adsorbate][metal] = DeltaE
                         
@@ -187,12 +188,12 @@ def get_references(reference_nodes):
 if __name__ == '__main__':
     """Get the d-band center, band width, chemisorption energy from a DFT calculation."""
     GROUPNAMES = [ 
-        'PBE/SSSP_efficiency/tetrahedron_smearing/dos_scf/slab',
-        'PBE/SSSP_efficiency/tetrahedron_smearing/dos_scf/C',
-        'PBE/SSSP_efficiency/tetrahedron_smearing/dos_scf/O',
+        'PBE/SSSP_efficiency/cold_smearing_0.2eV/dos_scf/slab',
+        'PBE/SSSP_efficiency/cold_smearing_0.2eV/dos_scf/C',
+        'PBE/SSSP_efficiency/cold_smearing_0.2eV/dos_scf/O',
     ]
     ADSORBATES = ['slab', 'C', 'O']
-    FUNCTIONAL = 'PBE_scf'
+    FUNCTIONAL = 'PBE_scf_smeared'
 
     # References are just the atoms in vacuum
     with open('references.json', 'r') as handle:
