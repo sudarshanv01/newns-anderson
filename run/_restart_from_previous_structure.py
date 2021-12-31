@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
             try:
                 print('Starting from old structure...')
-                new_structure = node.called_descendants[0].outputs.output_structure
+                new_structure = node.called_descendants[-1].outputs.output_structure
             except Exception:
                 print('Starting from input structure...')
                 new_structure = node.inputs.structure
@@ -50,7 +50,7 @@ if __name__ == '__main__':
             builder.base.pw.setdefault('metadata',{}).setdefault('options',{})['resources'] = {'num_machines': num_machines}
             builder.base.pw.setdefault('metadata',{}).setdefault('options',{})['max_wallclock_seconds'] = 2 * 60 * 60
 
-            # calculation = submit(builder)
+            calculation = submit(builder)
 
             # add new calculation to group
             path = GroupPath()

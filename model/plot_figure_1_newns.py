@@ -2,7 +2,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from NewnsAnderson import NewnsAndersonAnalytical
+from norskov_newns_anderson.NewnsAnderson import NewnsAndersonNumerical, NewnsAndersonAnalytical
 from plot_params import get_plot_params
 get_plot_params()
 
@@ -71,7 +71,7 @@ if __name__ == '__main__':
             axe[i].legend(loc='best', labelcolor='linecolor', fontsize=15)
 
         for a in axe:
-            a.set_ylabel(r'$\rho_{aa}^{\sigma}$ ($2\beta$)')
+            a.set_ylabel(r'$\rho_{aa}$ ($2\beta$)')
             a.set_xlabel(r'$\epsilon (2\beta) $')
             # a.legend(loc='best')
             a.set_xlim([-2.5, 2.5])

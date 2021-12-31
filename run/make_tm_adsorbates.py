@@ -10,14 +10,14 @@ PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
 
 if __name__ == '__main__':
 
-    STRUCTURES_FULL_GROUP_LABEL = 'bulk_structures/PBE/SSSP_precision'
-    ADSORBATE  = 'F'
+    STRUCTURES_FULL_GROUP_LABEL = 'PBE/SSSP_efficiency/bulk_structures'
+    ADSORBATE  = 'C'
     MOL_INDEX = 0
 
     if ADSORBATE:
-        STRUCTURES_GROUP_LABEL = f'surface_structures/initial/{ADSORBATE}'
+        STRUCTURES_GROUP_LABEL = f'RPBE/SSSP_efficiency/initial/{ADSORBATE}' 
     else:
-        STRUCTURES_GROUP_LABEL = f'surface_structures/initial/slab'
+        STRUCTURES_GROUP_LABEL = f'RPBE/SSSP_efficiency/initial/slab'
 
     subgroup, _ = orm.Group.objects.get_or_create(label=STRUCTURES_GROUP_LABEL)
 
@@ -30,7 +30,7 @@ if __name__ == '__main__':
               'Ru':'001', 'Rh':'111', 'Pd':'111', 'Ag':'111', 
               'Hf':'001', 'Ta':'110', 'W':'110', 'Re':'001',
               'Os':'001', 'Ir':'111', 'Pt':'111', 'Au':'111',
-              'Al': '111'}
+              'Al': '111', 'Mg': '001'}
 
     query = orm.QueryBuilder()
     query.append(orm.Group, tag='group', filters={'label': STRUCTURES_FULL_GROUP_LABEL})
@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
         if facets[metal] == '001':
             layers = 2
-            repeats = [5, 5, 1]
+            repeats = [4, 4, 1]
         elif facets[metal] == '110':
             layers = 4
             repeats = [2, 3, 1]
@@ -71,7 +71,6 @@ if __name__ == '__main__':
             height = covalent_radii[atomic_numbers[metal]] + covalent_radii[atomic_numbers[list(ADSORBATE)[MOL_INDEX]]]
             adsorbate = build.molecule(ADSORBATE)
             surface_index = np.argmax(surface.positions[:, 2])
-            # adsorbate.rotate(180, 'x')
             build.add_adsorbate(surface, adsorbate, height, position=surface[surface_index].position[:2], mol_index=MOL_INDEX) 
 
         if DRY_RUN:

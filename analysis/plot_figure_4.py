@@ -13,7 +13,8 @@ get_plot_params()
 
 FIRST_ROW   = [ 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn']
 SECOND_ROW  = [ 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd']
-THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl'] 
+THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl']
+EPSILON = 1e-2
 
 def create_plot_layout():
     """Create a plot layout for plotting the Newns-Anderson
@@ -31,6 +32,7 @@ def create_plot_layout():
     ax3 = fig.add_subplot(gs[3:6, 3:6])
     
     # Set the axes labels
+    ax10.set_xlabel('$\epsilon_{d} - \epsilon_{F}$')
     ax11.set_xlabel('$\epsilon_{d} - \epsilon_{F}$')
     ax2.set_xlabel('$\epsilon_{d} - \epsilon_{F}$')
     # Each of ax1, ax2 and ax3 have a twinx() axis, which is used to
@@ -124,7 +126,7 @@ if __name__ == '__main__':
     the d-band centre. This assumption is used so that we can get smooth 
     variations in the figure."""
 
-    FUNCTIONAL = 'PBE_scf_smeared'
+    FUNCTIONAL = 'RPBE_scf_smeared'
     # Read in scaling parameters from the model.
     with open(f"output/O_parameters_{FUNCTIONAL}.json", 'r') as f:
         o_parameters = json.load(f)
@@ -134,8 +136,8 @@ if __name__ == '__main__':
         metal_parameters = json.load(f)
 
     # Create range of parameters 
-    NUMBER_OF_ADSORBATES = 40
-    NUMBER_OF_METALS = 40
+    NUMBER_OF_ADSORBATES = 30
+    NUMBER_OF_METALS = 80
     PLOT_METAL_DOS = 2
     EPS_RANGE = np.linspace(-15, 15, 1000)
     EPS_SP_MIN = -15
@@ -278,8 +280,8 @@ if __name__ == '__main__':
             # The parameter to plot would be the largest eps_d at which 
             # the energy_to_plot reaches Delta0.
             # First find the index at which energy_to_plot becomes delta0
-            print(energy_to_plot, delta0)
-            index_delta0 = np.argwhere(energy_to_plot > -1*delta0).flatten()
+            print(energy_to_plot)
+            index_delta0 = np.argwhere(energy_to_plot > -2*delta0).flatten()
             # Find the maximum value of eps_d at which this occurs
             if len(index_delta0) > 0:
                 eps_d_desc = np.max(np.array(parameters_metal['eps_d'])[index_delta0])
@@ -298,9 +300,9 @@ if __name__ == '__main__':
 
                 ax[0,0][index].plot(parameters_metal['eps_d'], 
                                     energy_to_plot, 
-                                    marker_row[j], 
-                                    alpha=0.75,
-                                    ls='--',
+                                    # alpha=0.75,
+                                    ls='-',
+                                    lw=3,
                                     color=color_row[j])
                 ax[0,0][index].set_ylabel('$E_{\mathregular{hyb}}$ (eV)')
                 ax[0,0][index].annotate('$\epsilon_a = %1.1f$ eV'%eps_a,
@@ -321,7 +323,7 @@ if __name__ == '__main__':
         ax[0,1].plot(final_energy_scaling[metal_row]['max_energy'], 
                      final_energy_scaling[metal_row]['min_energy'], 
                      marker_row[row_index], color=color_row[metal_row], 
-                     alpha=0.75, ls='--', label=f'Row: {metal_row+3}')
+                     alpha=0.75, ls='-', label=f'Row: {metal_row+3}')
     ax[0,1].set_xlabel(r'$\Delta E_{\mathregular{C}}$ (eV)')
     ax[0,1].set_ylabel(r'$\Delta E_{\mathregular{O}}$ (eV)')
 

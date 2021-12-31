@@ -10,7 +10,7 @@ from aiida.plugins import DataFactory, WorkflowFactory
 
 PpDosChain = WorkflowFactory('quantumespresso.pdos')
 
-def calculator(ecutwf, ecutrho):
+def calculator(ecutwf, ecutrho, nbnd=None):
     param_dict =  {
     "CONTROL":{
         'calculation':'scf',
@@ -24,25 +24,36 @@ def calculator(ecutwf, ecutrho):
         "ecutrho": ecutrho,
         "occupations":'smearing',
         "smearing":'cold',
-        "degauss":0.015,
+        "degauss":0.01,
         "nspin": 1,
         "edir": 3,
         "emaxpos": 0.05,
         "eopreg": 0.025,
         "eamp": 0.0,
-        # 'nbnd': 650,
                 },
     "ELECTRONS": {
-        "conv_thr": 1e-10,
-        'electron_maxstep': 200,
-        'mixing_beta': 0.2,
+        "conv_thr": 1e-8,
+        'electron_maxstep': 250,
+        'mixing_beta': 0.1,
         'mixing_ndim': 15,
         'diagonalization': 'david',
         'mixing_mode': 'local-TF',
                 },
     }
 
+    if nbnd is not None:
+        param_dict['SYSTEM']['nbnd'] = int(nbnd)
+
     return param_dict
+
+def get_nbands_data(metal, atoms, family, extra=50):
+    """Given the metal atom, ase atoms object and
+    family of pseudopotentials, find the number of bands
+    to set in the calculation."""
+    upf_data = family.get_pseudo(metal)
+    valence_electrons = upf_data.get_attribute('z_valence')
+    number_electrons = valence_electrons * len(atoms)
+    return number_electrons / 2 + extra 
 
 class DOSSubmissionController(FromGroupSubmissionController):
     """A SubmissionController for submitting DOS calculations for Adsorbates with Quantum ESPRESSO base workflows."""
@@ -65,6 +76,8 @@ class DOSSubmissionController(FromGroupSubmissionController):
         
         # Only the structure is passed
         structure = self.get_parent_node_from_extras(extras_values)
+        # relax_node = self.get_parent_node_from_extras(extras_values)
+        # structure = relax_node.outputs.output_structure
 
         # Get cutoff information
         family = load_group('SSSP/1.1/PBE/efficiency')
@@ -72,13 +85,17 @@ class DOSSubmissionController(FromGroupSubmissionController):
         ecutwf = max(60, cutoffs[0])
         ecutrho = max(480, cutoffs[1])
 
+        # Get the number of bands
+        nbnd = get_nbands_data(extras_values[0], structure.get_ase(), family, 30)
+
         # get the scf information
-        parameters_scf = calculator(ecutwf, ecutrho)
+        # parameters_scf = calculator(ecutwf, ecutrho)
+        parameters_scf = calculator(ecutwf, ecutrho, nbnd)
 
         # Get the nscf information
         parameters_nscf = deepcopy(parameters_scf)
         parameters_nscf['CONTROL']['calculation'] = 'nscf'
-        # parameters_nscf['SYSTEM']['occupations'] = 'tetrahedra'
+        parameters_nscf['SYSTEM']['occupations'] = 'tetrahedra'
 
         # Code related information
         code_pw = load_code(f'pw_6-7{COMPUTER}')
@@ -100,15 +117,15 @@ class DOSSubmissionController(FromGroupSubmissionController):
         # First level of inputs to the Pp workchain 
         builder.structure = structure
 
-        builder.serial_clean = orm.Bool(True)
-        builder.clean_workdir = orm.Bool(True)
+        builder.serial_clean = orm.Bool(False)
+        builder.clean_workdir = orm.Bool(False)
         builder.align_to_fermi = orm.Bool(True)
 
         builder.scf.kpoints = kpoints_scf
         builder.scf.pw.pseudos = family.get_pseudos(structure=structure)
         builder.scf.pw.parameters = orm.Dict(dict=parameters_scf)
         builder.scf.pw.code = code_pw
-        builder.scf.pw.metadata.options.resources = {'num_machines': 4}
+        builder.scf.pw.metadata.options.resources = {'num_machines': 2}
         builder.scf.pw.metadata.options.max_wallclock_seconds =  10 * 60 * 60
         builder.scf.pw.settings = orm.Dict(dict=settings)
 
@@ -149,14 +166,15 @@ class DOSSubmissionController(FromGroupSubmissionController):
 if __name__ == '__main__':
     # For the calculation
     SYSTEM = sys.argv[1]
-    COMPUTER = sys.argv[2] #'@juwels_scr' 
+    COMPUTER = sys.argv[2]
 
     # For the submission controller
     DRY_RUN = False
-    MAX_CONCURRENT = 1
+    MAX_CONCURRENT = 4
     CODE_LABEL = f'pw_6-7{COMPUTER}'
+    # STRUCTURES_GROUP_LABEL = f'PBE/SSSP_efficiency/relax/{SYSTEM}'
     STRUCTURES_GROUP_LABEL = f'PBE/SSSP_efficiency/initial/{SYSTEM}'
-    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_efficiency/cold_smearing_0.2eV/dos_scf/{SYSTEM}'
+    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_efficiency/tetrahedron_smearing/dos_scf/{SYSTEM}' 
 
     controller = DOSSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,

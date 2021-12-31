@@ -1,15 +1,12 @@
-
+"""Get the lattice constants of the different metals."""
 from aiida import orm
 from aiida.engine import run, submit
-from pprint import pprint
 import numpy as np
-import json
 from aiida.tools.groups import GroupPath
-from ase import Atoms
 from ase import build
 import time
 
-def calculator(ecutwf, ecutrho):
+def calculator(ecutwf, ecutrho, nbnd=None):
     param_dict =  {
     "CONTROL":{
         'calculation':'vc-relax',
@@ -23,8 +20,10 @@ def calculator(ecutwf, ecutrho):
         "ecutwfc": ecutwf,
         "ecutrho": ecutrho,
         "occupations":'smearing',
-        "smearing":'cold',
-        "degauss":0.01,
+        "smearing":'gauss',
+        "degauss":0.0075,
+        "input_dft": "rpbe",
+        # "nosym":True,
                 },
     "ELECTRONS": {
         "conv_thr": 1e-9,
@@ -37,30 +36,44 @@ def calculator(ecutwf, ecutrho):
             'cell_dofree':'xyz',
             }
     }
+    if nbnd is not None:
+        param_dict["SYSTEM"]["nbnd"] = int(nbnd)
 
     return param_dict
 
-def runner(structure):
-    ase_structure = structure.get_ase()
-    chemical_symbols = np.unique(ase_structure.get_chemical_symbols())
+def get_nbands_data(metal, atoms, family, extra=30):
+    """Given the metal atom, ase atoms object and
+    family of pseudopotentials, find the number of bands
+    to set in the calculation."""
+    upf_data = family.get_pseudo(metal)
+    valence_electrons = upf_data.get_attribute('z_valence')
+    number_electrons = valence_electrons * len(atoms)
+    return number_electrons / 2 + extra 
 
-    family = load_group('SSSP/1.1/PBE/precision')
+def runner(structure, metal):
+    """Run the calculation based on the settings that we will use throughout
+    the work."""
+
+    family = load_group('SSSP/1.1/PBE/efficiency')
     cutoffs = family.get_recommended_cutoffs(structure=structure)  
-    ecutwf = max(90, cutoffs[0])
-    ecutrho = max(600, cutoffs[1])
+    ecutwf = max(60, cutoffs[0])
+    ecutrho = max(480, cutoffs[1])
 
-    StructureData = DataFactory('structure')
+    # Decide on the number of extra bands that are needed in 
+    # the calculation.
+    nbnd = get_nbands_data(metal, structure.get_ase(), family)
+
     RelaxWorkflow = WorkflowFactory('quantumespresso.pw.relax')
     builder = RelaxWorkflow.get_builder()
 
-    code = load_code('pw_6-7@dtu_xeon24')
+    code = load_code('pw_6-7_vossjo@juwels_scr')
     builder.metadata.label = 'Lattice Relaxation Calculation'
     builder.metadata.description = 'All cell vectors to relax to get the lattice constants.'
     builder.structure = structure 
 
     builder.meta_convergence = orm.Bool(False)
     builder.clean_workdir = orm.Bool(False)
-    builder.base.pw.parameters = orm.Dict(dict=calculator(ecutwf, ecutrho))
+    builder.base.pw.parameters = orm.Dict(dict=calculator(ecutwf, ecutrho, nbnd))
 
     KpointsData = DataFactory('array.kpoints')
     kpoints = KpointsData()
@@ -70,22 +83,27 @@ def runner(structure):
     builder.base.pw.pseudos = family.get_pseudos(structure=structure)
 
     builder.base.pw.metadata.options.resources = {'num_machines': 1}
-    builder.base.pw.metadata.options.max_wallclock_seconds =  1 * 60 * 60
+    builder.base.pw.metadata.options.max_wallclock_seconds = 2 * 60 * 60
 
     builder.base.pw.code = code
 
+    settings = {'cmdline': ['-nk', '2']}
+    builder.base.pw.settings = orm.Dict(dict=settings)
+
     calculation = submit(builder)
     path = GroupPath()
-    path["bulk_structures/PBE/SSSP_precision"].get_group().add_nodes(calculation)
+    path["RPBE/SSSP_efficiency/bulk_structures"].get_group().add_nodes(calculation)
 
 
 if __name__ == '__main__':
 
     StructureData = DataFactory('structure')
 
-    metals = [ 'Sc', 'Ti', 'V', 'Cr', 'Fe', 'Co', 'Ni', 'Cu',
-               'Zr', 'Nb', 'Mo', 'Ru', 'Hf', 'Ta', 'W', 'Y',
-               'Re', 'Os', 'Ir', 'Ag', 'Au', 'Pt', 'Pd', 'Rh' ]
+    # metals = [ 'Sc', 'Ti', 'V', 'Cr', 'Fe', 'Co', 'Ni', 'Cu',
+    #            'Zr', 'Nb', 'Mo', 'Ru', 'Hf', 'Ta', 'W', 'Y',
+    #            'Re', 'Os', 'Ir', 'Ag', 'Au', 'Pt', 'Pd', 'Rh', 
+    #            'Al', ]
+    metals = ['Ca']
 
     for metal in metals:
         try:
@@ -95,4 +113,4 @@ if __name__ == '__main__':
 
         structure = StructureData(ase=atoms)
         time.sleep(3)
-        runner(structure)
+        runner(structure, metal)

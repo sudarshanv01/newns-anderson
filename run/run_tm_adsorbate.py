@@ -10,13 +10,12 @@ from aiida.engine import submit
 
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
 
-def calculator(ecutwf, ecutrho):
+def calculator(ecutwf, ecutrho, nbnds=None):
     param_dict =  {
     "CONTROL":{
-        'calculation':'scf',
+        'calculation':'relax',
         'tprnfor':True,
         'tstress':True,
-        # 'nstep':200,
         'tefield':True,
         'dipfield':True,
                 },
@@ -25,7 +24,7 @@ def calculator(ecutwf, ecutrho):
         "ecutrho": ecutrho,
         "occupations":'smearing',
         "smearing":'cold',
-        "degauss":0.01,
+        "degauss":0.0075,
         "nspin": 1,
         "edir": 3,
         "emaxpos": 0.05,
@@ -41,8 +40,20 @@ def calculator(ecutwf, ecutrho):
         'mixing_mode': 'local-TF',
                 },
     }
+    if nbnds:
+        param_dict['SYSTEM']['nbnd'] = nbnds
 
     return param_dict
+
+def get_nbands_data(metal, atoms, family, extra=50):
+    """Given the metal atom, ase atoms object and
+    family of pseudopotentials, find the number of bands
+    to set in the calculation."""
+    upf_data = family.get_pseudo(metal)
+    valence_electrons = upf_data.get_attribute('z_valence')
+    number_electrons = valence_electrons * len(atoms)
+    return number_electrons / 2 + extra 
+
 
 class AdsorbateSubmissionController(FromGroupSubmissionController):
     """A SubmissionController for submitting Adsorbates with Quantum ESPRESSO base workflows."""
@@ -69,22 +80,27 @@ class AdsorbateSubmissionController(FromGroupSubmissionController):
         inputs = PwBaseWorkChain.get_builder()
         inputs.pw.code = self._code
 
+        # k-points to be used in the calculation
         KpointsData = DataFactory('array.kpoints')
         kpoints = KpointsData()
         kpoints.set_kpoints_mesh([4, 4, 1])
         inputs.kpoints = kpoints
 
+        # Get the cutoff for the calculation
         ecutwf = max(60, cutoffs[0])
         ecutrho = max(480, cutoffs[1])
 
-        parameters = calculator(ecutwf=ecutwf, ecutrho=ecutrho)
+        # Get the number of bands of the calculation
+        nbands = get_nbands_data(extras_values[0], ase_structure, family)
 
+        # Get the parameters for the calculation
+        parameters = calculator(ecutwf=ecutwf, ecutrho=ecutrho, nbnds=nbands)
         inputs.pw.parameters = orm.Dict(dict=parameters)
 
         inputs.pw.structure = structure
         inputs.pw.pseudos = pseudos
 
-        # Constrain the bottom two layers of the metal
+        # Constrain metal atoms
         molecule_symbol = ['C', 'O', 'N', 'H', 'F', 'Cl', 'Br', 'I']
         fixed_coords = []
         for atom in ase_structure:
@@ -95,6 +111,7 @@ class AdsorbateSubmissionController(FromGroupSubmissionController):
 
         settings = {'fixed_coords': fixed_coords, 
                     'cmdline': ['-nk', '4']}
+
         inputs.pw.settings = orm.Dict(dict=settings)
 
         inputs.pw.metadata.options.resources = {'num_machines': 4}
@@ -112,8 +129,8 @@ if __name__ == '__main__':
     DRY_RUN = False
     MAX_CONCURRENT = 25
     CODE_LABEL = f'pw_6-7@{COMPUTER}'
-    STRUCTURES_GROUP_LABEL = f'transition_metals/initial_structures/{ADSORBATE}'
-    WORKFLOWS_GROUP_LABEL = f'transition_metals/scf/{ADSORBATE}'
+    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_efficiency/initial/{ADSORBATE}'
+    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_efficiency/relax/{ADSORBATE}'
 
     controller = AdsorbateSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,

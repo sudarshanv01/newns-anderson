@@ -8,13 +8,14 @@ if __name__ == '__main__':
     """Create the initial bulk structures to be stored."""
 
     # Structures to be stored in this group
-    STRUCTURES_GROUP_LABEL = 'initial_bulk_structures'
+    STRUCTURES_GROUP_LABEL = 'initial_bulk_structures/reference'
 
     # Metals to consider
-    metals = [ 'Sc', 'Ti', 'V', 'Cr', 'Fe', 'Co', 'Ni', 'Cu', 
-               'Y',  'Zr', 'Nb', 'Mo', 'Ru', 'Rh', 'Pd', 'Ag', 
-               'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au',
-               'Al']
+    # metals = [ 'Sc', 'Ti', 'V', 'Cr', 'Fe', 'Co', 'Ni', 'Cu', 
+    #            'Y',  'Zr', 'Nb', 'Mo', 'Ru', 'Rh', 'Pd', 'Ag', 
+    #            'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au',
+    #            'Al']
+    metals = [ 'Al' ]
 
     for metal in metals:
         print('Creating initial bulk structure for {m}'.format(m=metal))

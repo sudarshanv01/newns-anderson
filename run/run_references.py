@@ -22,9 +22,10 @@ def calculator(ecutwf, ecutrho):
         "ecutwfc": ecutwf,
         "ecutrho": ecutrho,
         "occupations": 'smearing',
-        'smearing':'cold',
+        'smearing':'gauss',
         'degauss':1.46997236e-2,
         'nosym':False,
+        'input_dft': 'rpbe',
                 },
     "ELECTRONS": {
         "conv_thr": 4e-10,
@@ -73,12 +74,12 @@ def runner(structure):
 
     calculation = submit(builder)
     path = GroupPath()
-    path["PBE/SSSP_efficiency/references"].get_group().add_nodes(calculation)
+    path["RPBE/SSSP_efficiency/references"].get_group().add_nodes(calculation)
 
 
 if __name__ == '__main__':
     
-    system = molecule('OH') 
+    system = molecule('C') 
     system.set_cell([10, 10, 10])
     StructureData = DataFactory('structure')
     runner(StructureData(ase=system))

@@ -1,6 +1,7 @@
 """Plot the projected density of states from the DFT calculations."""
 import sys
 import json
+import yaml
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from ase.dft import get_distribution_moment
@@ -35,7 +36,9 @@ if __name__ == "__main__":
     from a DFT calculation and compare the result with 
     the fitted Newns-Anderson Delta."""
     # Choice of functional
-    FUNCTIONAL = 'PBE_scf_smeared' 
+    FUNCTIONAL = 'PBE_relax' 
+    # Remove the following metals
+    REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
 
     with open(f'output/pdos_{FUNCTIONAL}.json', 'r') as handle:
         pdos_data = json.load(handle)
@@ -53,6 +56,9 @@ if __name__ == "__main__":
     used_ij = []
 
     for metal in pdos_data['slab']:
+        # Do not plot metals in the remove list
+        if metal in REMOVE_LIST:
+            continue
         # Get all the pdos
         energies, pdos, _ = pdos_data['slab'][metal]
         energies_c, pdos_c = pdos_data['C'][metal]
@@ -99,11 +105,6 @@ if __name__ == "__main__":
         ax[i,j].set_title(metal)
         ax[i,j].set_xticks([])
         ax[i,j].set_ylim(-10, 5)
-        if metal == 'Pt':
-            # TODO: Something with the BZ-integration?
-            # Get the index for the second largest peak
-            index_plot = np.argpartition(pdos, -2)[-2]
-            ax[i,j].set_xlim([None, pdos[index_plot]])
 
         # get the d-band center and the width
         # Fit a semi-ellipse to the data by passing in the 

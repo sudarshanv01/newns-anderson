@@ -122,11 +122,7 @@ class DataFromDFT:
                     index = np.argmax(ase_structure.get_positions()[:,2])
                     # get the positions of that index
                     position = ase_structure.get_positions()[index]
-                    # Get the d states of the metal atom
-                    energies, pdos_d = get_density_of_states_for_node(node, metal, 
-                                                angular_momentum=2, 
-                                                fermi_energy=fermi_energy, 
-                                                position=position)
+                    # Get the sp states of the metal atom
                     energies, pdos_p = get_density_of_states_for_node(node, metal, 
                                                 angular_momentum=1, 
                                                 fermi_energy=fermi_energy, 
@@ -135,6 +131,14 @@ class DataFromDFT:
                                                 angular_momentum=0, 
                                                 fermi_energy=fermi_energy, 
                                                 position=position)
+                    # Store the d states, if they exist
+                    try:
+                        energies, pdos_d = get_density_of_states_for_node(node, metal, 
+                                                    angular_momentum=2, 
+                                                    fermi_energy=fermi_energy, 
+                                                    position=position)
+                    except IndexError:
+                        pdos_d = np.zeros(len(energies))
                     # Sum up sp states
                     pdos_sp = np.array(pdos_p) + np.array(pdos_s)
                     # Store the pdos
@@ -177,10 +181,10 @@ class DataFromDFT:
                 self.adsorption_energies[adsorbate][metal] = DeltaE
                         
 
-def get_references(reference_nodes):
+def get_references(reference_nodes, functional='PBE'):
     """Get the references from the reference dict of nodes."""
     references = defaultdict(float)
-    for adsorbate, reference_node in reference_nodes.items():
+    for adsorbate, reference_node in reference_nodes[functional].items():
         node = load_node(reference_node)
         references[adsorbate] = node.outputs.output_parameters.get_attribute('energy')
     return references
@@ -188,17 +192,18 @@ def get_references(reference_nodes):
 if __name__ == '__main__':
     """Get the d-band center, band width, chemisorption energy from a DFT calculation."""
     GROUPNAMES = [ 
-        'PBE/SSSP_efficiency/cold_smearing_0.2eV/dos_scf/slab',
-        'PBE/SSSP_efficiency/cold_smearing_0.2eV/dos_scf/C',
-        'PBE/SSSP_efficiency/cold_smearing_0.2eV/dos_scf/O',
+        'PBE/SSSP_efficiency/cold_smearing_0.1eV/dos_scf/slab',
+        'PBE/SSSP_efficiency/cold_smearing_0.1eV/dos_relax/C',
+        'PBE/SSSP_efficiency/cold_smearing_0.1eV/dos_relax/O',
     ]
     ADSORBATES = ['slab', 'C', 'O']
-    FUNCTIONAL = 'PBE_scf_smeared'
+    FUNCTIONAL = 'PBE_relax'
+    ROOT_FUNCTIONAL = 'PBE'
 
     # References are just the atoms in vacuum
     with open('references.json', 'r') as handle:
         reference_nodes = json.load(handle)
-    references = get_references(reference_nodes)
+    references = get_references(reference_nodes, functional=ROOT_FUNCTIONAL)
 
     # Get the data from the DFT calculations done with AiiDA
     data = DataFromDFT(GROUPNAMES, ADSORBATES, references)

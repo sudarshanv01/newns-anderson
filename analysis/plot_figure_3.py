@@ -29,10 +29,12 @@ if __name__ == '__main__':
             restart = True
         else:
             restart = False 
+    else:
+        restart = False
 
     # Choose a sequence of adsorbates
     ADSORBATES = ['O', 'C']
-    EPS_A_VALUES = [ -5, -1 ] # eV
+    EPS_A_VALUES = [ -3, -1 ] # eV
     EPS_VALUES = np.linspace(-20, 20, 1000)
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
@@ -42,7 +44,7 @@ if __name__ == '__main__':
     # The functional and type of calculation we will use
     # scf only calculations in order to avoid any noise and look only for 
     # the electronic structure contribution
-    FUNCTIONAL = 'PBE_scf_smeared'
+    FUNCTIONAL = 'PBE_relax'
 
     # get the width and d-band centre parameters
     # The moments of the density of states comes from a DFT calculation 
@@ -53,7 +55,7 @@ if __name__ == '__main__':
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
 
     # Plot the fitted and the real adsorption energies
-    fig, ax = plt.subplots(1, 2, figsize=(10, 4.6), constrained_layout=True)
+    fig, ax = plt.subplots(1, 2, figsize=(8, 4.), constrained_layout=True)
     for i in range(len(ax)):
         ax[i].set_xlabel('DFT energy (eV)')
         ax[i].set_ylabel('Chemisorption energy (eV)')
@@ -137,8 +139,8 @@ if __name__ == '__main__':
         x = np.linspace(np.min(dft_energies)-0.3, np.max(dft_energies)+0.3, 2)
         ax[i].plot(x, x, '--', color='black')
         # Fix the axes to the same scale 
-        # ax[i].set_xlim(np.min(x), np.max(x))
-        # ax[i].set_ylim(np.min(x-output.beta[2]), np.max(x-output.beta[2]))
+        ax[i].set_xlim(np.min(x), np.max(x))
+        ax[i].set_ylim(np.min(x), np.max(x))
 
         texts = []
         for j, metal in enumerate(metals):
@@ -153,6 +155,7 @@ if __name__ == '__main__':
             texts.append(ax[i].text(dft_energies[j], optimised_hyb[j], metal, color=colour, fontsize=14))
 
         adjust_text(texts, ax=ax[i]) 
+        ax[i].set_aspect('equal')
 
         # Write out the fitted parameters as a json file
         json.dump({

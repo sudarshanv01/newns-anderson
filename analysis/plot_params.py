@@ -9,13 +9,13 @@ def get_plot_params():
     from matplotlib import rc
     # mpl.rcParams['text.usetex']=True
     mpl.rcParams['font.family'] = 'sans-serif'
-    mpl.rcParams['font.sans-serif'] = 'Verdana'
-    rc('text.latex', preamble=r'\usepackage{cmbright}')
-    rc('text.latex', preamble=r'\usepackage{color}')
-    plt.rcParams['font.size'] = 18
+    mpl.rcParams['font.sans-serif'] = 'Arial'
+    # rc('text.latex', preamble=r'\usepackage{cmbright}')
+    # rc('text.latex', preamble=r'\usepackage{color}')
+    plt.rcParams['font.size'] = 16
     plt.rcParams['axes.linewidth'] = 2
-    plt.rcParams['xtick.labelsize'] = 16
-    plt.rcParams['ytick.labelsize'] = 16
+    plt.rcParams['xtick.labelsize'] = 14
+    plt.rcParams['ytick.labelsize'] = 14
 
     plt.rcParams['xtick.major.size'] = 10
     plt.rcParams['xtick.major.width'] = 2
@@ -26,7 +26,7 @@ def get_plot_params():
     plt.rcParams['ytick.minor.size'] = 5
     plt.rcParams['ytick.minor.width'] = 2
 
-    plt.rcParams['axes.labelsize'] = 22
+    plt.rcParams['axes.labelsize'] = 18
 
 
     COLOR = 'k'

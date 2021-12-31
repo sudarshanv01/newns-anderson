@@ -13,9 +13,9 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(1, 2, figsize=(16, 6), constrained_layout=True)
 
     # Parameters to change delta
-    widths = np.linspace(1, 12, 20)
-    eps_ds = np.linspace(-6, 5.5, 20)
-    EPS_A = -5
+    widths = np.linspace(1, 12, 75)
+    eps_ds = np.linspace(-6, 5.5, 75)
+    EPS_A = 0
     EPS_RANGE = np.linspace(-15, 15, 1000,) 
     delta0 = 0
     Vak = 1
@@ -32,7 +32,7 @@ if __name__ == '__main__':
                 eps_a = EPS_A,
                 eps_d = eps_d,
                 eps = EPS_RANGE,
-                Delta0 = delta0, 
+                Delta0_mag = delta0, 
             )
             newns.calculate_energy()
             newns.calculate_occupancy()
