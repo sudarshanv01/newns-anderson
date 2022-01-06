@@ -25,10 +25,9 @@ def get_fit_for_Vsdsq(x, y):
 
 def get_fit_for_wd(x, y):
     """Get the fit and error for the width.""" 
-    initial_guess = [1, 1, 0.5]
+    initial_guess = [0.2, 0.1, 0.5]
     popt, pcov = curve_fit(func_a_r_sq, x, y, p0=initial_guess)
     return list(popt), list(pcov)
-    # return [ np.mean(y) ], [ np.std(x) ]
 
 if __name__ == '__main__':
     """Plot the fitting parameters and decide the range to be used."""
@@ -44,9 +43,9 @@ if __name__ == '__main__':
 
 
     # Input parameters to help with the dos from Newns-Anderson
-    FUNCTIONAL = 'PBE_scf_smeared'
-    data_from_dos_calculation = json.load(open(f'output/pdos_moments_{FUNCTIONAL}.json')) 
-    data_from_energy_calculation = json.load(open(f'output/adsorption_energies_{FUNCTIONAL}.json'))
+    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))['group'][0]
+    data_from_dos_calculation = json.load(open(f'output/pdos_moments_{COMP_SETUP}.json')) 
+    data_from_energy_calculation = json.load(open(f'output/adsorption_energies_{COMP_SETUP}.json'))
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
 
     # Plot the fitting of Vsd and weights with filling fractions
@@ -96,8 +95,8 @@ if __name__ == '__main__':
         fitting_parameters['eps_d_minmax'][i] = eps_d_minmax
         fitting_parameters['filling_minmax'][i] = filling_minmax
     
-    fig.savefig(f'output/fitting_metal_parameters_{FUNCTIONAL}.png')
+    fig.savefig(f'output/fitting_metal_parameters_{COMP_SETUP}.png')
 
     # Write out the fitting parameters to a json file
-    json.dump(fitting_parameters, open(f'output/fitting_metal_parameters_{FUNCTIONAL}.json', 'w'), indent=4)
+    json.dump(fitting_parameters, open(f'output/fitting_metal_parameters_{COMP_SETUP}.json', 'w'), indent=4)
 

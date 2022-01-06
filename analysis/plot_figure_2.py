@@ -100,7 +100,7 @@ if __name__ == "__main__":
     """Generate figures with all the parameters for the
     Newns-Anderson model."""
     REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
-    FUNCTIONAL = 'PBE_relax'
+    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))['group'][0]
 
     # Get a cycle of with colormap
     colors =  plt.cm.viridis(np.linspace(0, 1, 10))
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     Vsd_data = data_from_LMTO["Vsdsq"]
     filling_data = data_from_LMTO["filling"]
     # Load the pdos data
-    pdos_data = json.load(open(f'output/pdos_{FUNCTIONAL}.json'))
+    pdos_data = json.load(open(f'output/pdos_{COMP_SETUP}.json'))
 
     x_add = 0
     #-------- Plot Figure 1 --------#
@@ -247,4 +247,4 @@ if __name__ == "__main__":
 
 
     # Save the figure
-    fig.savefig(f'output/figure_2_{FUNCTIONAL}.png', dpi=300)
+    fig.savefig(f'output/figure_2_{COMP_SETUP}.png', dpi=300)

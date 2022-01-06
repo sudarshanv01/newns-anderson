@@ -2,6 +2,7 @@
 import numpy as np
 import scipy
 import json
+import yaml
 from norskov_newns_anderson.NewnsAnderson import NorskovNewnsAnderson, NewnsAndersonNumerical
 from collections import defaultdict
 import matplotlib.pyplot as plt
@@ -20,7 +21,7 @@ def create_plot_layout():
     """Create a plot layout for plotting the Newns-Anderson
     dos and the energies of orthogonalisation, spd hybridisation
     energy for each specific adsorbate."""
-    fig = plt.figure(figsize=(10,8), constrained_layout=True)
+    fig = plt.figure(figsize=(8,6), constrained_layout=True)
     gs = fig.add_gridspec(nrows=6, ncols=6)
     # The first 2 rows will be the orthogonalisation energies, spd
     # hybridisation energy and the total energy as a function of the
@@ -32,9 +33,9 @@ def create_plot_layout():
     ax3 = fig.add_subplot(gs[3:6, 3:6])
     
     # Set the axes labels
-    ax10.set_xlabel('$\epsilon_{d} - \epsilon_{F}$')
-    ax11.set_xlabel('$\epsilon_{d} - \epsilon_{F}$')
-    ax2.set_xlabel('$\epsilon_{d} - \epsilon_{F}$')
+    ax10.set_xlabel('$\epsilon_{d} - \epsilon_{F}$ (eV)')
+    ax11.set_xlabel('$\epsilon_{d} - \epsilon_{F}$ (eV)')
+    ax2.set_xlabel('$\epsilon_{d} - \epsilon_{F}$ (eV)')
     # Each of ax1, ax2 and ax3 have a twinx() axis, which is used to
     # plot the derivative
     ax11.set_ylabel('$\Delta E_{\mathregular{hyb}}$ / eV (--)')
@@ -126,18 +127,18 @@ if __name__ == '__main__':
     the d-band centre. This assumption is used so that we can get smooth 
     variations in the figure."""
 
-    FUNCTIONAL = 'RPBE_scf_smeared'
+    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))['group'][0]
     # Read in scaling parameters from the model.
-    with open(f"output/O_parameters_{FUNCTIONAL}.json", 'r') as f:
+    with open(f"output/O_parameters_{COMP_SETUP}.json", 'r') as f:
         o_parameters = json.load(f)
-    with open(f"output/C_parameters_{FUNCTIONAL}.json", 'r') as f:
+    with open(f"output/C_parameters_{COMP_SETUP}.json", 'r') as f:
         c_parameters = json.load(f)
-    with open(f"output/fitting_metal_parameters_{FUNCTIONAL}.json", 'r') as f:
+    with open(f"output/fitting_metal_parameters_{COMP_SETUP}.json", 'r') as f:
         metal_parameters = json.load(f)
 
     # Create range of parameters 
-    NUMBER_OF_ADSORBATES = 30
-    NUMBER_OF_METALS = 80
+    NUMBER_OF_ADSORBATES = 20
+    NUMBER_OF_METALS = 200
     PLOT_METAL_DOS = 2
     EPS_RANGE = np.linspace(-15, 15, 1000)
     EPS_SP_MIN = -15
@@ -153,8 +154,8 @@ if __name__ == '__main__':
                                              n=NUMBER_OF_ADSORBATES)
 
     # Input parameters to help with the dos from Newns-Anderson
-    data_from_dos_calculation = json.load(open(f'output/pdos_moments_{FUNCTIONAL}.json')) 
-    data_from_energy_calculation = json.load(open(f'output/adsorption_energies_{FUNCTIONAL}.json'))
+    data_from_dos_calculation = json.load(open(f'output/pdos_moments_{COMP_SETUP}.json')) 
+    data_from_energy_calculation = json.load(open(f'output/adsorption_energies_{COMP_SETUP}.json'))
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
 
     # Each column is for a different row of transition metals
@@ -280,8 +281,7 @@ if __name__ == '__main__':
             # The parameter to plot would be the largest eps_d at which 
             # the energy_to_plot reaches Delta0.
             # First find the index at which energy_to_plot becomes delta0
-            print(energy_to_plot)
-            index_delta0 = np.argwhere(energy_to_plot > -2*delta0).flatten()
+            index_delta0 = np.argwhere(energy_to_plot > -delta0).flatten()
             # Find the maximum value of eps_d at which this occurs
             if len(index_delta0) > 0:
                 eps_d_desc = np.max(np.array(parameters_metal['eps_d'])[index_delta0])
@@ -302,17 +302,19 @@ if __name__ == '__main__':
                                     energy_to_plot, 
                                     # alpha=0.75,
                                     ls='-',
-                                    lw=3,
+                                    lw=2,
+                                    alpha=0.75,
                                     color=color_row[j])
                 ax[0,0][index].set_ylabel('$E_{\mathregular{hyb}}$ (eV)')
                 ax[0,0][index].annotate('$\epsilon_a = %1.1f$ eV'%eps_a,
                                         xy=(0.05, 0.05),
                                         xycoords='axes fraction',
+                                        fontsize=12,
                                         )
 
         # Plot the maximum derivative as a function of eps_a for the different metal rows
-        ax[0,2].plot(eps_a_range, argmax_derivative, marker_row[j]+'--',
-                     color=color_row[j], alpha=0.75, label=f'{j+3}d')
+        ax[0,2].plot(eps_a_range, argmax_derivative, '-',
+                     color=color_row[j], lw=2, label=f'{j+3}d', alpha=0.75)
 
         # Store the energies to plot against each other in the form of scaling
         final_energy_scaling[j]['min_energy'].extend(np.min(total_energy_adsorbate, axis=0).tolist())
@@ -322,8 +324,8 @@ if __name__ == '__main__':
     for row_index, metal_row in enumerate(final_energy_scaling):
         ax[0,1].plot(final_energy_scaling[metal_row]['max_energy'], 
                      final_energy_scaling[metal_row]['min_energy'], 
-                     marker_row[row_index], color=color_row[metal_row], 
-                     alpha=0.75, ls='-', label=f'Row: {metal_row+3}')
+                     color=color_row[metal_row], alpha=0.75, 
+                     ls='-', label=f'Row: {metal_row+3}', lw=2)
     ax[0,1].set_xlabel(r'$\Delta E_{\mathregular{C}}$ (eV)')
     ax[0,1].set_ylabel(r'$\Delta E_{\mathregular{O}}$ (eV)')
 
@@ -341,5 +343,5 @@ if __name__ == '__main__':
             a[1].annotate(alphabet[i+1]+')', xy=(0.01, 0.6), xycoords='axes fraction')
             i += 2
 
-    fig.savefig(f'output/figure_4_{FUNCTIONAL}.png', dpi=300)
+    fig.savefig(f'output/figure_4_{COMP_SETUP}.png', dpi=300)
     

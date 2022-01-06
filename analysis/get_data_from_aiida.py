@@ -5,6 +5,7 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import yaml
 from pprint import pprint
 from plot_params import get_plot_params
 from ase.data import atomic_numbers
@@ -51,8 +52,8 @@ class DataFromDFT:
         self.adsorption_energies = defaultdict ( lambda: defaultdict(float) )
         self.pdos = defaultdict( lambda: defaultdict(dict) )
         # Add the slab to the adsorbate
-        if 'slab' not in self.adsorbates:
-            self.adsorbates.append('slab')
+        # if 'slab' not in self.adsorbates:
+        #     self.adsorbates.append('slab')
         
         self.get_raw_energies()
         self.get_DFT_chemisorption_energy()
@@ -191,27 +192,33 @@ def get_references(reference_nodes, functional='PBE'):
         
 if __name__ == '__main__':
     """Get the d-band center, band width, chemisorption energy from a DFT calculation."""
-    GROUPNAMES = [ 
-        'PBE/SSSP_efficiency/cold_smearing_0.1eV/dos_scf/slab',
-        'PBE/SSSP_efficiency/cold_smearing_0.1eV/dos_relax/C',
-        'PBE/SSSP_efficiency/cold_smearing_0.1eV/dos_relax/O',
-    ]
-    ADSORBATES = ['slab', 'C', 'O']
-    FUNCTIONAL = 'PBE_relax'
-    ROOT_FUNCTIONAL = 'PBE'
+    GROUPNAMES = yaml.safe_load(open('root_groups.yaml'))['groups'] 
 
-    # References are just the atoms in vacuum
-    with open('references.json', 'r') as handle:
-        reference_nodes = json.load(handle)
-    references = get_references(reference_nodes, functional=ROOT_FUNCTIONAL)
+    for root_group in GROUPNAMES:
 
-    # Get the data from the DFT calculations done with AiiDA
-    data = DataFromDFT(GROUPNAMES, ADSORBATES, references)
+        ADSORBATES = ['slab', 'C', 'O']
+        # create the groups
+        groups = []
+        for adsorbate in ADSORBATES:
+            groups.append(f'{root_group}/{adsorbate}')
 
-    # Save the adsorption energies and pdos to json
-    with open(f'output/adsorption_energies_{FUNCTIONAL}.json', 'w') as handle:
-        json.dump(data.adsorption_energies, handle, indent=4)
+        ROOT_FUNCTIONAL = root_group.split('/')[0]
+        LABEL = root_group.replace('/', '_')
+        print(LABEL, ROOT_FUNCTIONAL)
+        print(groups)
 
-    # Save the pdos
-    with open(f'output/pdos_{FUNCTIONAL}.json', 'w') as handle:
-        json.dump(data.pdos, handle, indent=4)
+        # References are just the atoms in vacuum
+        with open('references.json', 'r') as handle:
+            reference_nodes = json.load(handle)
+        references = get_references(reference_nodes, functional=ROOT_FUNCTIONAL)
+
+        # Get the data from the DFT calculations done with AiiDA
+        data = DataFromDFT(groups, ADSORBATES, references)
+
+        # Save the adsorption energies and pdos to json
+        with open(f'output/adsorption_energies_{LABEL}.json', 'w') as handle:
+            json.dump(data.adsorption_energies, handle, indent=4)
+
+        # Save the pdos
+        with open(f'output/pdos_{LABEL}.json', 'w') as handle:
+            json.dump(data.pdos, handle, indent=4)

@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     # Choose a sequence of adsorbates
     ADSORBATES = ['O', 'C']
-    EPS_A_VALUES = [ -3, -1 ] # eV
+    EPS_A_VALUES = [ -5, -3 ] # eV
     EPS_VALUES = np.linspace(-20, 20, 1000)
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
@@ -44,14 +44,14 @@ if __name__ == '__main__':
     # The functional and type of calculation we will use
     # scf only calculations in order to avoid any noise and look only for 
     # the electronic structure contribution
-    FUNCTIONAL = 'PBE_relax'
+    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))['group'][0]
 
     # get the width and d-band centre parameters
     # The moments of the density of states comes from a DFT calculation 
     # and the adsorption energy is from scf calculations of the adsorbate
     # at a fixed distance from the surface.
-    data_from_dos_calculation = json.load(open(f'output/pdos_moments_{FUNCTIONAL}.json')) 
-    data_from_energy_calculation = json.load(open(f'output/adsorption_energies_{FUNCTIONAL}.json'))
+    data_from_dos_calculation = json.load(open(f'output/pdos_moments_{COMP_SETUP}.json')) 
+    data_from_energy_calculation = json.load(open(f'output/adsorption_energies_{COMP_SETUP}.json'))
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
 
     # Plot the fitted and the real adsorption energies
@@ -112,7 +112,7 @@ if __name__ == '__main__':
 
         # Is the calculation is a restart one, choose the parameters from the last calculation
         if restart:
-            previous_calc = json.load(open(f'output/{adsorbate}_parameters_{FUNCTIONAL}.json'))
+            previous_calc = json.load(open(f'output/{adsorbate}_parameters_{COMP_SETUP}.json'))
             alpha = previous_calc['alpha']
             beta = previous_calc['beta']
             constant_offest = previous_calc['constant_offset']
@@ -164,6 +164,6 @@ if __name__ == '__main__':
             'delta0': CONSTANT_DELTA0, 
             'constant_offset': output.beta[2],
             'eps_a': eps_a,
-        }, open(f'output/{adsorbate}_parameters_{FUNCTIONAL}.json', 'w'))
+        }, open(f'output/{adsorbate}_parameters_{COMP_SETUP}.json', 'w'))
 
-    fig.savefig(f'output/figure_3_{FUNCTIONAL}.png', dpi=300)
+    fig.savefig(f'output/figure_3_{COMP_SETUP}.png', dpi=300)

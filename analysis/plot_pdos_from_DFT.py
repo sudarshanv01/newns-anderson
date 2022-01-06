@@ -36,11 +36,11 @@ if __name__ == "__main__":
     from a DFT calculation and compare the result with 
     the fitted Newns-Anderson Delta."""
     # Choice of functional
-    FUNCTIONAL = 'PBE_relax' 
+    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))['group'][0]
     # Remove the following metals
-    REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
+    REMOVE_LIST = ['X', 'Al', 'Mg'] # yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
 
-    with open(f'output/pdos_{FUNCTIONAL}.json', 'r') as handle:
+    with open(f'output/pdos_{COMP_SETUP}.json', 'r') as handle:
         pdos_data = json.load(handle)
 
     METALS = [FIRST_ROW, SECOND_ROW, THIRD_ROW]
@@ -91,6 +91,7 @@ if __name__ == "__main__":
             i = 2
             j = METALS[2].index(metal)
         else:
+            print(metal)
             raise ValueError('Metal not in chosen list of metals.')
 
         # If we have gotten so far, there is data to plot
@@ -166,9 +167,9 @@ if __name__ == "__main__":
             if (i,j) not in used_ij:
                 ax[i,j].axis('off')
 
-    fig.savefig(f'output/pdos_{FUNCTIONAL}.png')
+    fig.savefig(f'output/pdos_{COMP_SETUP}.png')
 
     pprint(moments)
 
-    with open(f'output/pdos_moments_{FUNCTIONAL}.json', 'w') as handle:
+    with open(f'output/pdos_moments_{COMP_SETUP}.json', 'w') as handle:
         json.dump(moments, handle, indent=4)
