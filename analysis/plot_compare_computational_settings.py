@@ -6,7 +6,7 @@ from plot_params import get_plot_params
 get_plot_params()
 
 # Define periodic table of elements
-SP_METALS   = [ 'Mg', 'Al' ]
+# SP_METALS   = [ 'Mg', 'Al' ]
 FIRST_ROW   = [ 'Fe', 'Co', 'Ni', 'Cu',]
 SECOND_ROW  = [ 'Ru', 'Rh', 'Pd', 'Ag',]
 THIRD_ROW   = [ 'Os', 'Ir', 'Pt', 'Au',] 
@@ -18,11 +18,11 @@ if __name__ == '__main__':
 
     # Remove the following metals
     REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
-    REMOVE_LIST.remove('Mg')
-    REMOVE_LIST.remove('Al')
+    # REMOVE_LIST.remove('Mg')
+    # REMOVE_LIST.remove('Al')
 
     # Metals list
-    METALS = [SP_METALS, FIRST_ROW, SECOND_ROW, THIRD_ROW]
+    METALS = [FIRST_ROW, SECOND_ROW, THIRD_ROW]
 
     # Generate a color list
     COLORS = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
@@ -65,6 +65,7 @@ if __name__ == '__main__':
         for i, types in enumerate(compare):
             axc[0,2].plot(0, 0, color=COLORS[i], label=labels[data_type][i])
             axo[0,2].plot(0, 0, color=COLORS[i], label=labels[data_type][i])
+            ax[0,2].plot(0, 0, color=COLORS[i], label=labels[data_type][i])
 
         fig.suptitle(data_type)
         # Figure for the energies, if there is more than 
@@ -109,9 +110,9 @@ if __name__ == '__main__':
                 elif metal in METALS[2]:
                     i = 2
                     j = METALS[2].index(metal)
-                elif metal in METALS[3]:
-                    i = 3
-                    j = METALS[3].index(metal)
+                # elif metal in METALS[3]:
+                #     i = 3
+                #     j = METALS[3].index(metal)
                 else:
                     raise ValueError('Metal not in chosen list of metals.')
                 if i == 0:
@@ -137,13 +138,13 @@ if __name__ == '__main__':
                     axo[i,j].set_ylabel('$\epsilon - \epsilon_f$ (eV)')
                     axc[i,j].set_ylabel('$\epsilon - \epsilon_f$ (eV)')
 
-        for i in [2, 3]: 
-            ax[0,i].axis('off')
-            axo[0,i].axis('off')
-            axc[0,i].axis('off')
-        ax[0,2].legend(loc='upper left')
-        axc[0,2].legend(loc='upper left')
-        axo[0,2].legend(loc='upper left')
+        # for i in [2, 3]: 
+        #     ax[0,i].axis('off')
+        #     axo[0,i].axis('off')
+        #     axc[0,i].axis('off')
+        ax[0,2].legend(loc='best')
+        axc[0,2].legend(loc='best')
+        axo[0,2].legend(loc='best')
         fig.savefig(f'output/pdos_compare_{data_type}.png')
         figc.savefig(f'output/pdos_c_compare_{data_type}.png')
         figo.savefig(f'output/pdos_o_compare_{data_type}.png')

@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     # Choose a sequence of adsorbates
     ADSORBATES = ['O', 'C']
-    EPS_A_VALUES = [ -5, -3 ] # eV
+    EPS_A_VALUES = [ -5, -1 ] # eV
     EPS_VALUES = np.linspace(-20, 20, 1000)
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
@@ -118,7 +118,7 @@ if __name__ == '__main__':
             constant_offest = previous_calc['constant_offset']
             initial_guess = [alpha, beta, constant_offest]
         else:
-            initial_guess = [0.1, 0.6, 0.1]
+            initial_guess = [0.01, np.pi*0.6, 0.1]
         
         print('Initial guess: ', initial_guess)
 

@@ -1,4 +1,5 @@
 """Recreate Figure 4 of Vojvodic et al. (2014)."""
+from matplotlib.colors import Colormap
 import numpy as np
 import matplotlib.pyplot as plt
 from norskov_newns_anderson.NewnsAnderson import NewnsAndersonNumerical

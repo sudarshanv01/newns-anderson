@@ -23,8 +23,8 @@ def calculator(ecutwf, ecutrho, nbnd=None):
         "ecutwfc": ecutwf,
         "ecutrho": ecutrho,
         "occupations":'smearing',
-        "smearing":'cold',
-        "degauss":0.01,
+        "smearing": 'cold',
+        "degauss": 0.0075,
         "nspin": 1,
         "edir": 3,
         "emaxpos": 0.05,
@@ -172,9 +172,8 @@ if __name__ == '__main__':
     DRY_RUN = False
     MAX_CONCURRENT = 4
     CODE_LABEL = f'pw_6-7{COMPUTER}'
-    # STRUCTURES_GROUP_LABEL = f'PBE/SSSP_efficiency/relax/{SYSTEM}'
-    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_efficiency/initial/{SYSTEM}'
-    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_efficiency/tetrahedron_smearing/dos_scf/{SYSTEM}' 
+    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_efficiency/facet_dependence/initial/{SYSTEM}'
+    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_efficiency/facet_dependence/cold_smearing_0.1eV/dos_scf/{SYSTEM}' 
 
     controller = DOSSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,

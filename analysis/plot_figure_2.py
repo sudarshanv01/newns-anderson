@@ -57,7 +57,7 @@ def get_plot_layout():
     gs = fig.add_gridspec(nrows=11, ncols=3,)
 
     # Newns-Anderson dos plot
-    ax1 = fig.add_subplot(gs[0:4,0:2])
+    ax1 = fig.add_subplot(gs[0:4,:])
     # ax1.set_xlabel(r'$\Delta, n_a$ (eV)')
     ax1.set_ylabel(r'$\epsilon - \epsilon_f$ (eV)')
     ax1.set_xlabel(r'Projected Density of States (NA)')
@@ -67,14 +67,14 @@ def get_plot_layout():
     ax1.axhline(y=0, color='tab:grey', linestyle='--')
 
     # Plot of Al pdos
-    ax2 = fig.add_subplot(gs[0:4,2])
-    ax2.set_xlabel(r'$p$-Projected Density of States')
-    ax2.yaxis.tick_right()
-    ax2.yaxis.set_label_position("right")
-    ax2.set_xticks([])
-    ax2.set_ylabel(r'$\epsilon - \epsilon_f$ (eV)')
-    ax2.set_ylim([-8,2])
-    ax2.axhline(y=0, color='tab:grey', linestyle='--')
+    # ax2 = fig.add_subplot(gs[0:4,2])
+    # ax2.set_xlabel(r'$p$-Projected Density of States')
+    # ax2.yaxis.tick_right()
+    # ax2.yaxis.set_label_position("right")
+    # ax2.set_xticks([])
+    # ax2.set_ylabel(r'$\epsilon - \epsilon_f$ (eV)')
+    # ax2.set_ylim([-8,2])
+    # ax2.axhline(y=0, color='tab:grey', linestyle='--')
 
     # pdos plots
     axp = []
@@ -94,7 +94,7 @@ def get_plot_layout():
     axp[0,1].plot([], [], '-', color=C_COLOR, label='C*')
     axp[0,1].legend(loc='best')
 
-    return fig, ax1, ax2, axp
+    return fig, ax1, axp
 
 if __name__ == "__main__":
     """Generate figures with all the parameters for the
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     colors =  plt.cm.viridis(np.linspace(0, 1, 10))
 
     # Get the plot parameters
-    fig, ax1, ax2, axp = get_plot_layout()
+    fig, ax1, axp = get_plot_layout()
 
     # Plot the Newns-Anderson DOS for a few d-band centres
     newns_epsds = [ -4, -3, -2, -1 ]
@@ -116,7 +116,7 @@ if __name__ == "__main__":
         for j, newns_epsa in enumerate(newns_epsas):
 
             hybridisation = NewnsAndersonNumerical(
-                Vak = 1, 
+                Vak = 2, 
                 eps_a = newns_epsa, 
                 eps_d = newns_epsd,
                 width = 3,
@@ -228,18 +228,18 @@ if __name__ == "__main__":
         pdos_C = np.array(pdos_C)
         pdos_O = np.array(pdos_O)
     
-        ax2.plot(pdos_metal_sp + x_sp, energies, color=colors_sp[j], ls='-')
+        # ax2.plot(pdos_metal_sp + x_sp, energies, color=colors_sp[j], ls='-')
         # ax2.fill_betweenx(energies, pdos_metal_sp, x_sp, color=colors_sp[j], alpha=0.5)
-        ax2.plot(pdos_C + x_sp, energies_C, color=C_COLOR)
-        ax2.plot(pdos_O + x_sp, energies_O, color=O_COLOR)
-        ax2.annotate(sp_metal, xy=(x_sp+i/10, -6), color=colors_sp[j])
+        # ax2.plot(pdos_C + x_sp, energies_C, color=C_COLOR)
+        # ax2.plot(pdos_O + x_sp, energies_O, color=O_COLOR)
+        # ax2.annotate(sp_metal, xy=(x_sp+i/10, -6), color=colors_sp[j])
 
         x_sp +=  2 * np.max(pdos_C)
 
 
     # Add figure numbers
     alphabet = list(string.ascii_lowercase)
-    for i, a in enumerate([ax1, ax2] + list(axp.flatten())):
+    for i, a in enumerate([ax1] + list(axp.flatten())):
         if i in [1, 2, 3]:
             a.annotate(alphabet[i]+')', xy=(0.01, 1.05), xycoords='axes fraction')
         else:

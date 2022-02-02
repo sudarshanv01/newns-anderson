@@ -161,6 +161,7 @@ if __name__ == '__main__':
     cax = ax_s.scatter(all_C, all_O,  cmap='coolwarm', c=all_dband, marker='o')
     # Fit all the energies to a straight line
     slope, intercept, r_value, p_value, std_err = stats.linregress(all_C, all_O)
+    print('r2-value:', r_value**2)
     p_fit = np.poly1d([slope, intercept])
     ax_sp.plot(all_C, p_fit(all_C), '-', color='tab:blue', alpha=0.5)
     ax_sp.plot(Pt_E_C, Pt_E_O, 'o', color='k')
