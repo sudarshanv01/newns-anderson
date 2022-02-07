@@ -8,7 +8,7 @@ from scipy.integrate import simps
 from scipy.linalg.misc import norm
 from plot_params import get_plot_params
 import matplotlib.ticker as ticker
-from norskov_newns_anderson.NewnsAnderson import NewnsAndersonNumerical
+from catchemi import NewnsAndersonNumerical
 import yaml
 get_plot_params()
 
@@ -58,23 +58,12 @@ def get_plot_layout():
 
     # Newns-Anderson dos plot
     ax1 = fig.add_subplot(gs[0:4,:])
-    # ax1.set_xlabel(r'$\Delta, n_a$ (eV)')
     ax1.set_ylabel(r'$\epsilon - \epsilon_f$ (eV)')
     ax1.set_xlabel(r'Projected Density of States (NA)')
     ax1.set_xticks([])
     ax1.set_ylim([-8,2])
     # Set the Fermi level axvline
-    ax1.axhline(y=0, color='tab:grey', linestyle='--')
-
-    # Plot of Al pdos
-    # ax2 = fig.add_subplot(gs[0:4,2])
-    # ax2.set_xlabel(r'$p$-Projected Density of States')
-    # ax2.yaxis.tick_right()
-    # ax2.yaxis.set_label_position("right")
-    # ax2.set_xticks([])
-    # ax2.set_ylabel(r'$\epsilon - \epsilon_f$ (eV)')
-    # ax2.set_ylim([-8,2])
-    # ax2.axhline(y=0, color='tab:grey', linestyle='--')
+    ax1.axhline(y=0, color='tab:grey', linestyle='-')
 
     # pdos plots
     axp = []
@@ -119,14 +108,14 @@ if __name__ == "__main__":
                 Vak = 2, 
                 eps_a = newns_epsa, 
                 eps_d = newns_epsd,
-                width = 3,
+                width = 1.5,
                 eps = np.linspace(-20, 20, 1000),
                 Delta0_mag = 0.1,
                 eps_sp_max = 15,
                 eps_sp_min = -15,
             )
-            hybridisation.calculate_energy()
-            hybridisation.calculate_occupancy()
+            hybridisation.get_hybridisation_energy()
+            hybridisation.get_occupancy()
             
             # Decide on the x-position based on the d-band centre
             if j == 0:
@@ -143,21 +132,19 @@ if __name__ == "__main__":
             # Get the adsorbate density of states
             na = normalise_na_quantities( hybridisation.get_dos_on_grid(), x_add) 
             # Plot the dos and the quantities that make the dos            
-            ax1.plot(Delta, hybridisation.eps, color='tab:grey')
+            ax1.plot(Delta, hybridisation.eps, color='k')
             ax1.plot(na, hybridisation.eps, color=color)
-            # occupied_energies = np.where(hybridisation.eps <= 0)[0] 
-            # ax1.fill_betweenx(hybridisation.eps[occupied_energies],  x_add, na[occupied_energies], color=color, alpha=0.25)
-            # ax1.plot(Lambda, hybridisation.eps, color='tab:orange', lw=3)
-            # ax1.plot(eps_a_line, hybridisation.eps, color='tab:green', lw=3)
+            occupied_energies = np.where(hybridisation.eps <= 0)[0] 
+            ax1.fill_betweenx(hybridisation.eps[occupied_energies],  x_add, na[occupied_energies], color=color, alpha=0.25)
 
             if j == 0:
-                ax1.annotate(r'$\epsilon_{d} = %.1f$ eV' % newns_epsd, xy=(x_add+0.1, newns_epsd + 1),
-                            xytext=(x_add+0.2, 3),
+                ax1.annotate(r'$\epsilon_{d} = %.1f$ eV' % newns_epsd, xy=(x_add+0.1, newns_epsd + 0.5),
+                            xytext=(x_add+0.2, 2.5),
                             xycoords='data', textcoords='data',
-                            color='tab:grey',
+                            color='k',
                             arrowprops=dict(arrowstyle="->",
                                             connectionstyle="arc3,rad=0.2",
-                                            color='tab:grey'),
+                                            color='k'),
                             fontsize=12)
 
     #-------- Read in the DFT data --------#
@@ -212,30 +199,6 @@ if __name__ == "__main__":
                 color_row ='tab:orange'
             elif row_index == 2:
                 color_row ='tab:green'
-
-    # Plot both the Mg and Al sp density of states 
-    x_sp = 0.0
-    colors_sp = ['tab:olive', 'tab:grey']
-    for j, sp_metal in enumerate(['Al', 'Mg']):
-        energies, pdos_metal_d, pdos_metal_sp = pdos_data['slab'][sp_metal]
-        energies_C, pdos_C = pdos_data['C'][sp_metal]
-        energies_O, pdos_O = pdos_data['O'][sp_metal]
-        # Make everything into numpy arrays
-        energies_C = np.array(energies_C)
-        energies_O = np.array(energies_O)
-        energies = np.array(energies)
-        pdos_metal_sp = np.array(pdos_metal_sp)
-        pdos_C = np.array(pdos_C)
-        pdos_O = np.array(pdos_O)
-    
-        # ax2.plot(pdos_metal_sp + x_sp, energies, color=colors_sp[j], ls='-')
-        # ax2.fill_betweenx(energies, pdos_metal_sp, x_sp, color=colors_sp[j], alpha=0.5)
-        # ax2.plot(pdos_C + x_sp, energies_C, color=C_COLOR)
-        # ax2.plot(pdos_O + x_sp, energies_O, color=O_COLOR)
-        # ax2.annotate(sp_metal, xy=(x_sp+i/10, -6), color=colors_sp[j])
-
-        x_sp +=  2 * np.max(pdos_C)
-
 
     # Add figure numbers
     alphabet = list(string.ascii_lowercase)

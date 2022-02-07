@@ -10,7 +10,7 @@ from scipy.integrate import simps
 from scipy import signal
 from scipy.optimize import curve_fit
 from pprint import pprint
-from norskov_newns_anderson.NewnsAnderson import NewnsAndersonNumerical
+from catchemi import NewnsAndersonNumerical
 from plot_params import get_plot_params
 get_plot_params()
 
@@ -113,9 +113,9 @@ if __name__ == "__main__":
         center, second_moment = get_distribution_moment(energies, pdos, (1, 2)) 
         popt, pcov = curve_fit(semi_ellipse, energies, pdos, p0=[center, 4*np.sqrt(second_moment), 1])
         # The center is just the first element of the popt array
-        center = popt[0]
-        # Store the width as the 2*width from the fitting procedure
-        width =  2 * popt[1] 
+        center =  popt[0]
+        # Store the width as the same as the width from the fitting procedure
+        width = popt[1] 
         # Also store the upper edge of the d-band centre
         # by determining the maximum of the Hilbert transform
         Lambda = np.imag(signal.hilbert(pdos))
@@ -134,8 +134,8 @@ if __name__ == "__main__":
             eps = np.linspace(-20, 20, 1000),
             Delta0_mag = 0.0,
         )
-        hybridisation.calculate_energy()
-        hybridisation.calculate_occupancy()
+        hybridisation.get_hybridisation_energy()
+        hybridisation.get_occupancy()
 
         # Get the Newns-Anderson Delta
         Delta_na = hybridisation.get_Delta_on_grid()

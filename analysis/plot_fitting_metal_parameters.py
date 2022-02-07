@@ -40,7 +40,12 @@ if __name__ == '__main__':
     ax[0].set_ylabel('$V_{sd}^2$')
     ax[1].set_xlabel('Filling fraction')
     ax[1].set_ylabel('$w_{d}$')
-
+    # Plot the fits with the d-band centre
+    fig2, ax2 = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
+    ax2[0].set_xlabel('$\epsilon_d$ (eV)')
+    ax2[0].set_ylabel('$V_{sd}^2$')
+    ax2[1].set_xlabel('$\epsilon_d$ (eV)')
+    ax2[1].set_ylabel('$w_{d}$')
 
     # Input parameters to help with the dos from Newns-Anderson
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))['group'][0]
@@ -62,31 +67,45 @@ if __name__ == '__main__':
             parameters['Vsdsq'][i].append(Vsdsq)
             parameters['filling'][i].append(filling)
             parameters['width'][i].append(width)
+            eps_d = data_from_dos_calculation[metal]['d_band_centre']
+            parameters['eps_d'][i].append(eps_d)
             if metal in REMOVE_LIST:
                 continue
             parameters['filling_rel'][i].append(filling)
-            eps_d = data_from_dos_calculation[metal]['d_band_centre']
-            parameters['eps_d'][i].append(eps_d)
+            parameters['metal'][i].append(metal)
     
     # Get the fits for the metal rows
     fitting_parameters = defaultdict(lambda: defaultdict(list))
     filling_range = np.linspace(0.1, 1.1, 50)
+    epsd_range = np.linspace(-0.1, -4, 50)
 
     # Cycle of colors
     colors = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
+
     for i in range(3):
         fit_Vsdsq = get_fit_for_Vsdsq(parameters['filling'][i], parameters['Vsdsq'][i])
         fit_width = get_fit_for_wd(parameters['filling'][i], parameters['width'][i])
 
+        # Get the same fits with the d-band centre
+        fit_Vsdsq_epsd = get_fit_for_Vsdsq(parameters['eps_d'][i], parameters['Vsdsq'][i])
+        fit_width_epsd = get_fit_for_wd(parameters['eps_d'][i], parameters['width'][i])
+
         fitting_parameters['Vsdsq'][i] = fit_Vsdsq[0]
         fitting_parameters['width'][i] = fit_width[0]
+        fitting_parameters['Vsdsq_epsd'][i] = fit_Vsdsq_epsd[0]
+        fitting_parameters['width_epsd'][i] = fit_width_epsd[0]
 
         ax[0].plot(parameters['filling'][i], parameters['Vsdsq'][i], 'o', label=f'{i+1}-row', color=colors[i])
         ax[0].plot(filling_range, func_a_by_r(filling_range, *fit_Vsdsq[0]), '--', color=colors[i])
 
         ax[1].plot(parameters['filling'][i], parameters['width'][i], 'o', label=f'{i+1}-row', color=colors[i])
         ax[1].plot(filling_range, func_a_r_sq(filling_range, *fit_width[0]), '--', color=colors[i])
-        # ax[1].axhline(fit_width[0], color=colors[i], linestyle='--')
+
+        ax2[0].plot(parameters['eps_d'][i], parameters['Vsdsq'][i], 'o', label=f'{i+1}-row', color=colors[i])
+        ax2[0].plot(epsd_range, func_a_by_r(epsd_range, *fit_Vsdsq_epsd[0]), '--', color=colors[i])
+
+        ax2[1].plot(parameters['eps_d'][i], parameters['width'][i], 'o', label=f'{i+1}-row', color=colors[i])
+        ax2[1].plot(epsd_range, func_a_r_sq(epsd_range, *fit_width_epsd[0]), '--', color=colors[i])
 
         # get the eps_d range and the filling range
         eps_d_minmax = [ np.min(parameters['eps_d'][i]), np.max(parameters['eps_d'][i]) ]
@@ -96,6 +115,7 @@ if __name__ == '__main__':
         fitting_parameters['filling_minmax'][i] = filling_minmax
     
     fig.savefig(f'output/fitting_metal_parameters_{COMP_SETUP}.png')
+    fig2.savefig(f'output/fitting_metal_parameters_dband_{COMP_SETUP}.png')
 
     # Write out the fitting parameters to a json file
     json.dump(fitting_parameters, open(f'output/fitting_metal_parameters_{COMP_SETUP}.json', 'w'), indent=4)

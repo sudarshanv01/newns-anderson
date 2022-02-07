@@ -4,15 +4,15 @@ import json
 import yaml
 import numpy as np
 from dataclasses import dataclass
-from norskov_newns_anderson.NewnsAnderson import NewnsAndersonNumerical, NorskovNewnsAnderson 
 from collections import defaultdict
 from scipy.optimize import minimize, least_squares, leastsq, curve_fit
 from scipy import odr
 from pprint import pprint
 import matplotlib.pyplot as plt
-from plot_params import get_plot_params
 from adjustText import adjust_text
 from yaml import safe_load
+from catchemi import NewnsAndersonLinearRepulsion, FitParametersNewnsAnderson
+from plot_params import get_plot_params
 get_plot_params()
 
 FIRST_ROW   = [ 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn']
@@ -100,15 +100,17 @@ if __name__ == '__main__':
             metals.append(metal)
 
         # Prepare the class for fitting routine 
-        fitting_function =  NorskovNewnsAnderson(
-            Vsd = parameters['Vsd'],
-            width = parameters['width'],
-            eps_a = eps_a,
+        kwargs_fit = dict(
             eps_sp_min = EPS_SP_MIN,
             eps_sp_max = EPS_SP_MAX,
             eps = EPS_VALUES,
             Delta0_mag = CONSTANT_DELTA0,
+            Vsd = parameters['Vsd'],
+            width = parameters['width'],
+            eps_a = eps_a,
+            verbose = True,
         )
+        fitting_function =  FitParametersNewnsAnderson(**kwargs_fit)
 
         # Is the calculation is a restart one, choose the parameters from the last calculation
         if restart:
@@ -131,9 +133,6 @@ if __name__ == '__main__':
 
         # Get the final hybridisation energy
         optimised_hyb = fitting_function.fit_parameters(output.beta, parameters['d_band_centre'])
-        occupancies_final = np.array(fitting_function.na)[np.argsort(parameters['d_band_centre'])]
-        print(f'Occupancies: {occupancies_final}', file=open(f'output/{adsorbate}_occupancies.txt', 'w'))
-        print(f"d-band center: {np.sort(parameters['d_band_centre'])}", file=open(f'output/{adsorbate}_occupancies.txt', 'a'))
 
         # plot the parity line
         x = np.linspace(np.min(dft_energies)-0.3, np.max(dft_energies)+0.3, 2)

@@ -2,7 +2,7 @@
 from matplotlib.colors import Colormap
 import numpy as np
 import matplotlib.pyplot as plt
-from norskov_newns_anderson.NewnsAnderson import NewnsAndersonNumerical
+from catchemi import NewnsAndersonNumerical
 from plot_params import get_plot_params
 get_plot_params()
 
@@ -35,10 +35,8 @@ if __name__ == '__main__':
                 eps = EPS_RANGE,
                 Delta0_mag = delta0, 
             )
-            newns.calculate_energy()
-            newns.calculate_occupancy()
 
-            energy_matrix[i, j] = newns.get_energy()
+            energy_matrix[i, j] = newns.get_hybridisation_energy()
             na_matrix[i, j] = newns.get_occupancy()
 
     # Plot the contour
