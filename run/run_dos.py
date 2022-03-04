@@ -23,7 +23,7 @@ def calculator(ecutwf, ecutrho, nbnd=None):
         "ecutwfc": ecutwf,
         "ecutrho": ecutrho,
         "occupations":'smearing',
-        "smearing": 'cold',
+        "smearing": 'gauss',
         "degauss": 0.0075,
         "nspin": 1,
         "edir": 3,
@@ -80,13 +80,13 @@ class DOSSubmissionController(FromGroupSubmissionController):
         # structure = relax_node.outputs.output_structure
 
         # Get cutoff information
-        family = load_group('SSSP/1.1/PBE/efficiency')
+        family = load_group('SSSP/1.1/PBE/precision')
         cutoffs = family.get_recommended_cutoffs(structure=structure)  
-        ecutwf = max(60, cutoffs[0])
-        ecutrho = max(480, cutoffs[1])
+        ecutwf = max(80, cutoffs[0])
+        ecutrho = max(600, cutoffs[1])
 
         # Get the number of bands
-        nbnd = get_nbands_data(extras_values[0], structure.get_ase(), family, 30)
+        nbnd = get_nbands_data(extras_values[0], structure.get_ase(), family, 300)
 
         # get the scf information
         # parameters_scf = calculator(ecutwf, ecutrho)
@@ -95,12 +95,12 @@ class DOSSubmissionController(FromGroupSubmissionController):
         # Get the nscf information
         parameters_nscf = deepcopy(parameters_scf)
         parameters_nscf['CONTROL']['calculation'] = 'nscf'
-        parameters_nscf['SYSTEM']['occupations'] = 'tetrahedra'
+        # parameters_nscf['SYSTEM']['occupations'] = 'tetrahedra'
 
         # Code related information
-        code_pw = load_code(f'pw_6-7{COMPUTER}')
-        code_dos = load_code(f'dos_6-7{COMPUTER}')
-        code_projwfc = load_code(f'projwfc_6-7{COMPUTER}')
+        code_pw = load_code(f'pw_6-7_stage2022{COMPUTER}')
+        code_dos = load_code(f'dos_6-7_stage2022{COMPUTER}')
+        code_projwfc = load_code(f'projwfc_6-7_stage2022{COMPUTER}')
 
         settings = {'cmdline': ['-nk', '2']}
 
@@ -125,7 +125,7 @@ class DOSSubmissionController(FromGroupSubmissionController):
         builder.scf.pw.pseudos = family.get_pseudos(structure=structure)
         builder.scf.pw.parameters = orm.Dict(dict=parameters_scf)
         builder.scf.pw.code = code_pw
-        builder.scf.pw.metadata.options.resources = {'num_machines': 2}
+        builder.scf.pw.metadata.options.resources = {'num_machines': 4}
         builder.scf.pw.metadata.options.max_wallclock_seconds =  10 * 60 * 60
         builder.scf.pw.settings = orm.Dict(dict=settings)
 
@@ -134,31 +134,31 @@ class DOSSubmissionController(FromGroupSubmissionController):
         builder.nscf.pw.pseudos = family.get_pseudos(structure=structure) 
         builder.nscf.pw.parameters = orm.Dict(dict=parameters_nscf)
         builder.nscf.pw.code = code_pw
-        builder.nscf.pw.metadata.options.resources = {'num_machines': 2}
+        builder.nscf.pw.metadata.options.resources = {'num_machines': 4}
         builder.nscf.pw.metadata.options.max_wallclock_seconds = 10 * 60 * 60
 
         ## dos inputs to Pp workchain
         dos_parameters = {'DOS':
-                                {'Emin':-30,
+                                {'Emin':-20,
                                 'Emax':20, 
                                 'DeltaE':0.01,
                                 }
                         }
         builder.dos.parameters = orm.Dict(dict=dos_parameters) 
         builder.dos.code = code_dos
-        builder.dos.metadata.options.resources = {'num_machines': 1}
+        builder.dos.metadata.options.resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 2}
         builder.dos.metadata.options.max_wallclock_seconds = 10 * 60
 
         ## projwfc inputs to the Pp workchain
         projwfc_parameters = {'PROJWFC':
-                                    {'Emin':-30,
+                                    {'Emin':-20,
                                     'Emax':20, 
                                     'DeltaE':0.01},
                                     }
         builder.projwfc.parameters = orm.Dict(dict=projwfc_parameters) 
         builder.projwfc.code = code_projwfc
-        builder.projwfc.metadata.options.resources = {'num_machines': 1}
-        builder.projwfc.metadata.options.max_wallclock_seconds = 10 * 60
+        builder.projwfc.metadata.options.resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 20}
+        builder.projwfc.metadata.options.max_wallclock_seconds = 60 * 60
 
         return builder, self._process_class
     
@@ -166,14 +166,14 @@ class DOSSubmissionController(FromGroupSubmissionController):
 if __name__ == '__main__':
     # For the calculation
     SYSTEM = sys.argv[1]
-    COMPUTER = sys.argv[2]
+    COMPUTER = '@juwels_scr' # sys.argv[2]
 
     # For the submission controller
     DRY_RUN = False
-    MAX_CONCURRENT = 4
-    CODE_LABEL = f'pw_6-7{COMPUTER}'
-    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_efficiency/facet_dependence/initial/{SYSTEM}'
-    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_efficiency/facet_dependence/cold_smearing_0.1eV/dos_scf/{SYSTEM}' 
+    MAX_CONCURRENT = 11
+    CODE_LABEL = f'pw_6-7_stage2022{COMPUTER}'
+    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/initial/{SYSTEM}'
+    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/dos_scf/{SYSTEM}' 
 
     controller = DOSSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,

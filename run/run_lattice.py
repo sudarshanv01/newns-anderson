@@ -22,8 +22,7 @@ def calculator(ecutwf, ecutrho, nbnd=None):
         "occupations":'smearing',
         "smearing":'gauss',
         "degauss":0.0075,
-        "input_dft": "rpbe",
-        # "nosym":True,
+        "nosym":True,
                 },
     "ELECTRONS": {
         "conv_thr": 1e-9,
@@ -41,7 +40,7 @@ def calculator(ecutwf, ecutrho, nbnd=None):
 
     return param_dict
 
-def get_nbands_data(metal, atoms, family, extra=30):
+def get_nbands_data(metal, atoms, family, extra=50):
     """Given the metal atom, ase atoms object and
     family of pseudopotentials, find the number of bands
     to set in the calculation."""
@@ -54,19 +53,16 @@ def runner(structure, metal):
     """Run the calculation based on the settings that we will use throughout
     the work."""
 
-    family = load_group('SSSP/1.1/PBE/efficiency')
+    family = load_group('SSSP/1.1/PBE/precision')
     cutoffs = family.get_recommended_cutoffs(structure=structure)  
-    ecutwf = max(60, cutoffs[0])
-    ecutrho = max(480, cutoffs[1])
-
-    # Decide on the number of extra bands that are needed in 
-    # the calculation.
+    ecutwf = max(80, cutoffs[0])
+    ecutrho = max(600, cutoffs[1])
     nbnd = get_nbands_data(metal, structure.get_ase(), family)
 
     RelaxWorkflow = WorkflowFactory('quantumespresso.pw.relax')
     builder = RelaxWorkflow.get_builder()
 
-    code = load_code('pw_6-7_vossjo@juwels_scr')
+    code = load_code('pw_6-7_stage2022@juwels_scr')
     builder.metadata.label = 'Lattice Relaxation Calculation'
     builder.metadata.description = 'All cell vectors to relax to get the lattice constants.'
     builder.structure = structure 
@@ -82,7 +78,7 @@ def runner(structure, metal):
 
     builder.base.pw.pseudos = family.get_pseudos(structure=structure)
 
-    builder.base.pw.metadata.options.resources = {'num_machines': 1}
+    builder.base.pw.metadata.options.resources = {'num_machines': 2}
     builder.base.pw.metadata.options.max_wallclock_seconds = 2 * 60 * 60
 
     builder.base.pw.code = code
@@ -92,18 +88,18 @@ def runner(structure, metal):
 
     calculation = submit(builder)
     path = GroupPath()
-    path["RPBE/SSSP_efficiency/bulk_structures"].get_group().add_nodes(calculation)
+    path["PBE/SSSP_precision/gauss_smearing_0.1eV/bulk_structures"].get_group().add_nodes(calculation)
 
 
 if __name__ == '__main__':
 
     StructureData = DataFactory('structure')
 
-    # metals = [ 'Sc', 'Ti', 'V', 'Cr', 'Fe', 'Co', 'Ni', 'Cu',
+    # metals = [ 'Sc', 'Ti', 'V' , 'Cr', 'Fe', 'Co', 'Ni', 'Cu',
     #            'Zr', 'Nb', 'Mo', 'Ru', 'Hf', 'Ta', 'W', 'Y',
-    #            'Re', 'Os', 'Ir', 'Ag', 'Au', 'Pt', 'Pd', 'Rh', 
+    #            'Re', 'Os', 'Ir', 'Ag',  'Pt', 'Pd', 'Rh', 
     #            'Al', ]
-    metals = ['Ca']
+    metals = ['Fe']
 
     for metal in metals:
         try:
@@ -112,5 +108,5 @@ if __name__ == '__main__':
             atoms = build.bulk(metal)
 
         structure = StructureData(ase=atoms)
-        time.sleep(3)
         runner(structure, metal)
+        time.sleep(3)

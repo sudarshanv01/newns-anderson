@@ -23,21 +23,15 @@ if __name__ == '__main__':
     DosWorkflow = WorkflowFactory('quantumespresso.pdos')
 
     qb = QueryBuilder()
-    qb.append(Group, tag='Group', filters={'label':{'ilike':'PBE/SSSP_efficiency/cold_smearing_0.1eV/dos_relax%'}})
+    qb.append(Group, tag='Group', filters={'label':{'ilike':'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/%'}})
     # qb.append(Group, tag='Group', filters={'label':{'ilike':'RPBE/SSSP_efficiency/gauss_%'}})
 
 
     results = {}
     for group in qb.all(flat=True):
 
-        # if 'transition' not in group.label:
-        #    continue
-            
         if 'failed' in group.label:
             continue
-
-        # if 'initial_structures' in group.label:
-        #     continue
 
         if 'dos' in group.label:
             calculation = DosWorkflow

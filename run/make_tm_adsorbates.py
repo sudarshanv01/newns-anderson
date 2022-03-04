@@ -10,18 +10,18 @@ PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
 
 if __name__ == '__main__':
 
-    STRUCTURES_FULL_GROUP_LABEL = 'PBE/SSSP_efficiency/bulk_structures'
+    STRUCTURES_FULL_GROUP_LABEL = 'PBE/SSSP_precision/gauss_smearing_0.1eV/bulk_structures'
     ADSORBATE  = 'C'
     MOL_INDEX = 0
 
     if ADSORBATE:
-        STRUCTURES_GROUP_LABEL = f'RPBE/SSSP_efficiency/initial/{ADSORBATE}' 
+        STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/initial/{ADSORBATE}' 
     else:
-        STRUCTURES_GROUP_LABEL = f'RPBE/SSSP_efficiency/initial/slab'
+        STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/initial/slab'
 
     subgroup, _ = orm.Group.objects.get_or_create(label=STRUCTURES_GROUP_LABEL)
 
-    DRY_RUN = False
+    DRY_RUN = False 
     all_metal_list = []
 
     facets = {'Sc':'001', 'Ti':'001', 'V':'110', 'Cr':'110', 
@@ -52,17 +52,23 @@ if __name__ == '__main__':
             repeats = [4, 4, 1]
         elif facets[metal] == '110':
             layers = 4
-            repeats = [2, 3, 1]
+            repeats = [2, 2, 1]
         elif facets[metal] == '100':
             layers = 3
             repeats = [3, 3, 1]
         else:
-            layers = 3
+            layers = 4
             repeats = [2, 2, 1]
 
-        a = np.linalg.norm(bulk_structure.cell[0])
-        facet_name = [int(a) for a in list(facets[metal])]
-        surface = build.surface(bulk_structure, facet_name , layers=layers, vacuum=10)
+        alat = np.linalg.norm(bulk_structure.cell[0])
+        if facets[metal] == '111':
+            surface = build.fcc111(metal, a=alat, size=(repeats[:-1] + [layers]), vacuum=10)
+        elif facets[metal] == '110':
+            surface = build.bcc110(metal, a=alat, size=(repeats[:-1] + [layers]), vacuum=10)
+        else:
+            facet_name = [int(a) for a in list(facets[metal])]
+            surface = build.surface(bulk_structure, facet_name , layers=layers, vacuum=10)
+
         surface = surface.repeat(repeats)
         surface.set_tags(None)
 
@@ -76,7 +82,7 @@ if __name__ == '__main__':
         if DRY_RUN:
             print(f'Dry run: {surface}')
             surface.write(f'output/transition_metals/{ADSORBATE}_{metal}_{facets[metal]}.cif') 
-            # bulk_structure.write(f'outputs/transition_metals/{metal}_bulk.cif')
+            bulk_structure.write(f'output/transition_metals/{metal}_bulk.cif')
         
         else:
             structure = StructureData(ase=surface)

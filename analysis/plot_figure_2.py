@@ -12,8 +12,8 @@ from catchemi import NewnsAndersonNumerical
 import yaml
 get_plot_params()
 
-C_COLOR = 'tab:blue'
-O_COLOR = 'tab:red'
+C_COLOR = 'tab:purple'
+O_COLOR = 'tab:orange'
 
 # Define periodic table of elements
 FIRST_ROW   = [ 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu',]
@@ -53,7 +53,7 @@ def normalise_na_quantities(quantity, x_add, per_max=True):
 
 def get_plot_layout():
     #-------- Plot parameters --------#
-    fig = plt.figure(figsize=(12,10), constrained_layout=True)
+    fig = plt.figure(figsize=(6.75,5.5), constrained_layout=True)
     gs = fig.add_gridspec(nrows=11, ncols=3,)
 
     # Newns-Anderson dos plot
@@ -61,7 +61,7 @@ def get_plot_layout():
     ax1.set_ylabel(r'$\epsilon - \epsilon_f$ (eV)')
     ax1.set_xlabel(r'Projected Density of States (NA)')
     ax1.set_xticks([])
-    ax1.set_ylim([-8,2])
+    ax1.set_ylim([-8,5])
     # Set the Fermi level axvline
     ax1.axhline(y=0, color='tab:grey', linestyle='-')
 
@@ -76,7 +76,7 @@ def get_plot_layout():
     axp[0,1].set_xlabel('$\epsilon - \epsilon_{F}$ (eV)')
     axp[0,2].set_xlabel('$\epsilon - \epsilon_{F}$ (eV)')
     for i in range(3):
-        axp[0,i].set_xlim([-10,5])
+        axp[0,i].set_xlim([-10,6])
         axp[0,i].set_yticks([])
         axp[0,i].axvline(x=0, color='tab:grey', linestyle='--')
     axp[0,1].plot([], [], '-', color=O_COLOR, label='O*')
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     """Generate figures with all the parameters for the
     Newns-Anderson model."""
     REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
-    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))['group'][0]
+    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
 
     # Get a cycle of with colormap
     colors =  plt.cm.viridis(np.linspace(0, 1, 10))
@@ -135,7 +135,8 @@ if __name__ == "__main__":
             ax1.plot(Delta, hybridisation.eps, color='k')
             ax1.plot(na, hybridisation.eps, color=color)
             occupied_energies = np.where(hybridisation.eps <= 0)[0] 
-            ax1.fill_betweenx(hybridisation.eps[occupied_energies],  x_add, na[occupied_energies], color=color, alpha=0.25)
+            # ax1.fill_betweenx(hybridisation.eps[occupied_energies],  x_add, na[occupied_energies], color=color, alpha=0.25)
+            ax1.fill_betweenx(hybridisation.eps, x_add, Delta, color='k', alpha=0.1)
 
             if j == 0:
                 ax1.annotate(r'$\epsilon_{d} = %.1f$ eV' % newns_epsd, xy=(x_add+0.1, newns_epsd + 0.5),
@@ -145,7 +146,7 @@ if __name__ == "__main__":
                             arrowprops=dict(arrowstyle="->",
                                             connectionstyle="arc3,rad=0.2",
                                             color='k'),
-                            fontsize=12)
+                            )
 
     #-------- Read in the DFT data --------#
     # Load the Vsd and filling data
@@ -154,7 +155,7 @@ if __name__ == "__main__":
     Vsd_data = data_from_LMTO["Vsdsq"]
     filling_data = data_from_LMTO["filling"]
     # Load the pdos data
-    pdos_data = json.load(open(f'output/pdos_{COMP_SETUP}.json'))
+    pdos_data = json.load(open(f"output/pdos_{COMP_SETUP['dos']}.json"))
 
     x_add = 0
     #-------- Plot Figure 1 --------#
@@ -184,9 +185,10 @@ if __name__ == "__main__":
             # Set the maximum of the C, O pdos to the maximum of the metal pdos
 
             # Plot the pdos onto the metal states
-            axp[0,row_index].fill_between(energies, x_add, pdos_metal_d, color=colors[i], alpha=0.5) 
+            axp[0,row_index].plot(energies, pdos_metal_d, color='k',) 
+            axp[0,row_index].fill_between(energies, x_add, pdos_metal_d, color='k',alpha=0.25) 
             # axp[0,row_index].plot(energies, pdos_metal_sp, color=colors[i], ls='--')
-            axp[0,row_index].annotate(element, xy=(-8.5, pdos_metal_d[-1]+0.5), color=colors[i])
+            axp[0,row_index].annotate(element, xy=(-8.5, pdos_metal_d[-1]+0.5), color='k')
             # Plot the C (sp) pdos
             axp[0,row_index].plot(energies_C, pdos_C, color=C_COLOR) 
             # Plot the O (sp) pdos
@@ -204,10 +206,10 @@ if __name__ == "__main__":
     alphabet = list(string.ascii_lowercase)
     for i, a in enumerate([ax1] + list(axp.flatten())):
         if i in [1, 2, 3]:
-            a.annotate(alphabet[i]+')', xy=(0.01, 1.05), xycoords='axes fraction')
+            a.annotate(alphabet[i]+')', xy=(0.01, 0.9), xycoords='axes fraction')
         else:
-            a.annotate(alphabet[i]+')', xy=(0.01, 1.05), xycoords='axes fraction')
+            a.annotate(alphabet[i]+')', xy=(0.01, 0.9), xycoords='axes fraction')
 
 
     # Save the figure
-    fig.savefig(f'output/figure_2_{COMP_SETUP}.png', dpi=300)
+    fig.savefig(f'output/figure_2.png', dpi=300)

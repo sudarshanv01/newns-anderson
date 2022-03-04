@@ -1,4 +1,5 @@
 """Get data needed for the Newns-Anderson model from the DFT calculation."""
+import aiida
 from collections import defaultdict
 from dataclasses import dataclass, field
 import json
@@ -33,7 +34,6 @@ def get_density_of_states_for_node(node, element, angular_momentum=2, fermi_ener
         if position is not None:
             orb_dict = pdos_data[index][0].get_orbital_dict()
             if all(orb_dict['position'] == position):
-                print(orb_dict['position'])
                 pdos += np.array(pdos_data[index][1])
         else:
             pdos += np.array(pdos_data[index][1])
@@ -49,11 +49,12 @@ class DataFromDFT:
     def __post_init__(self):
         """Get the energies, d-band center and the width."""
         self.raw_energies = defaultdict( lambda: defaultdict(dict) )
-        self.adsorption_energies = defaultdict ( lambda: defaultdict(float) )
+        self.adsorption_energies = defaultdict ( lambda: defaultdict(list) )
         self.pdos = defaultdict( lambda: defaultdict(dict) )
+
         # Add the slab to the adsorbate
-        # if 'slab' not in self.adsorbates:
-        #     self.adsorbates.append('slab')
+        if 'slab' not in self.adsorbates:
+            self.adsorbates.append('slab')
         
         self.get_raw_energies()
         self.get_DFT_chemisorption_energy()
@@ -80,7 +81,10 @@ class DataFromDFT:
             energy = self.node.outputs.output_parameters.get_attribute('energy')
 
             # Get information about structure
-            structure = self.node.outputs.output_structure
+            try:
+                structure = self.node.outputs.output_structure
+            except aiida.common.exceptions.NotExistentAttributeError:
+                structure = self.node.inputs.pw.structure
             ase_structure = structure.get_ase()
             metal = np.unique(ase_structure.get_chemical_symbols())
             metal = metal[~np.isin(metal, self.adsorbates)]
@@ -113,11 +117,15 @@ class DataFromDFT:
                 self.node = node
                 metal, energy, fermi_energy, ase_structure = self.get_scf_energies(adsorbate, type_calc=type_calc)
 
-                print(f"{adsorbate} {metal} ")
-                assert len(metal) == 1
-                self.raw_energies[adsorbate][metal[0]] = energy 
+                if 'sampling' in groupname and adsorbate != 'slab':
+                    sampled_index = node.get_extra('sampled_index')
+                    self.raw_energies[adsorbate][metal[0] + '_' + str(sampled_index)] = energy
+                else:
+                    print(f"{adsorbate} {metal} ")
+                    assert len(metal) == 1
+                    self.raw_energies[adsorbate][metal[0]] = energy 
 
-                if adsorbate == 'slab':
+                if adsorbate == 'slab' and 'dos' in groupname:
                     # get the index of the metal atom on the surface
                     # So pick an index with the highest z value
                     index = np.argmax(ase_structure.get_positions()[:,2])
@@ -162,24 +170,35 @@ class DataFromDFT:
                     # We just need the energies here, so we will just ignore
                     # the pdos option here
                     continue
-
-                self.pdos[adsorbate][metal[0]] = pdos_to_store
+                
+                if 'dos' in groupname:
+                    self.pdos[adsorbate][metal[0]] = pdos_to_store
                 
     
     def get_DFT_chemisorption_energy(self):
         """Get the DFT chemisorption energy by subtracting the formation energies."""
         # Remove slab from self.adsorbates
         self.adsorbates.remove('slab')
-        for adsorbate in self.adsorbates:
+        for ai, adsorbate in enumerate(self.adsorbates):
             for metal in self.raw_energies[adsorbate]:
-                try:
-                    DeltaE =  self.raw_energies[adsorbate][metal] \
-                            - self.raw_energies['slab'][metal] \
-                            - self.references[adsorbate]
-                except TypeError:
-                    print(f"Error: {adsorbate} {metal}")
-                    continue
-                self.adsorption_energies[adsorbate][metal] = DeltaE
+                if 'sampling' in self.base_group_name[ai]:
+                    metalname = metal.split('_')[0]
+                    sampling_site = metal.split('_')[1]
+                else:
+                    metalname = metal
+
+                # try:
+                DeltaE =  self.raw_energies[adsorbate][metal] \
+                        - self.raw_energies['slab'][metalname] \
+                        - self.references[adsorbate]
+                # except TypeError:
+                #     print(f"Error: {adsorbate} {metal}")
+                #     continue
+
+                if 'sampling' in self.base_group_name:
+                    self.adsorption_energies[adsorbate][metalname] = DeltaE
+                else:
+                    self.adsorption_energies[adsorbate][metalname].append(DeltaE)
                         
 
 def get_references(reference_nodes, functional='PBE'):
@@ -204,12 +223,11 @@ if __name__ == '__main__':
 
         ROOT_FUNCTIONAL = root_group.split('/')[0]
         LABEL = root_group.replace('/', '_')
-        print(LABEL, ROOT_FUNCTIONAL)
-        print(groups)
 
         # References are just the atoms in vacuum
         with open('references.json', 'r') as handle:
             reference_nodes = json.load(handle)
+
         references = get_references(reference_nodes, functional=ROOT_FUNCTIONAL)
 
         # Get the data from the DFT calculations done with AiiDA

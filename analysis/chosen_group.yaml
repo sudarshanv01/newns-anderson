@@ -1,3 +1,7 @@
 ---
-group:
-  - 'PBE_SSSP_efficiency_cold_smearing_0.1eV_dos_scf'
+dos: 'PBE_SSSP_precision_gauss_smearing_0.1eV_dos_scf'
+dos_groupname: 'PBE/SSSP_precision/gauss_smearing_0.1eV/dos_scf'
+energy: 'PBE_SSSP_precision_gauss_smearing_0.1eV_relax'
+energy_groupname: 'PBE/SSSP_precision/gauss_smearing_0.1eV/relax'
+sampled: 'PBE_SSSP_precision_gauss_smearing_0.1eV_sampling_relax'
+sampled_groupname: 'PBE/SSSP_precision/gauss_smeaing_0.1eV/sampling/relax'

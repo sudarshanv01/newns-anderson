@@ -23,7 +23,7 @@ def calculator(ecutwf, ecutrho, nbnds=None):
         "ecutwfc": ecutwf,
         "ecutrho": ecutrho,
         "occupations":'smearing',
-        "smearing":'cold',
+        "smearing":'gauss',
         "degauss":0.0075,
         "nspin": 1,
         "edir": 3,
@@ -32,9 +32,9 @@ def calculator(ecutwf, ecutrho, nbnds=None):
         "eamp": 0.0,
                 },
     "ELECTRONS": {
-        "conv_thr": 1e-8,
+        "conv_thr": 1e-7,
         'electron_maxstep': 200,
-        'mixing_beta': 0.2,
+        'mixing_beta': 0.1,
         'mixing_ndim': 15,
         'diagonalization': 'david',
         'mixing_mode': 'local-TF',
@@ -66,14 +66,14 @@ class AdsorbateSubmissionController(FromGroupSubmissionController):
     def get_extra_unique_keys(self):
         """Return a tuple of the keys of the unique extras that will be used to uniquely identify your workchains.
         """
-        return ['metal', 'facet']
+        return ['metal', 'facets', 'sampled_index']
 
     def get_inputs_and_processclass_from_extras(self, extras_values):
         """Return inputs and process class for the submission of this specific process.
         """
         structure = self.get_parent_node_from_extras(extras_values)
         ase_structure = structure.get_ase()
-        family = load_group('SSSP/1.1/PBE/efficiency')
+        family = load_group('SSSP/1.1/PBE/precision')
         pseudos = family.get_pseudos(structure=structure)
         cutoffs = family.get_recommended_cutoffs(structure=structure)  
 
@@ -87,11 +87,11 @@ class AdsorbateSubmissionController(FromGroupSubmissionController):
         inputs.kpoints = kpoints
 
         # Get the cutoff for the calculation
-        ecutwf = max(60, cutoffs[0])
-        ecutrho = max(480, cutoffs[1])
+        ecutwf = max(80, cutoffs[0])
+        ecutrho = max(600, cutoffs[1])
 
         # Get the number of bands of the calculation
-        nbands = get_nbands_data(extras_values[0], ase_structure, family)
+        nbands = get_nbands_data(extras_values[0], ase_structure, family, extra=50)
 
         # Get the parameters for the calculation
         parameters = calculator(ecutwf=ecutwf, ecutrho=ecutrho, nbnds=nbands)
@@ -110,27 +110,26 @@ class AdsorbateSubmissionController(FromGroupSubmissionController):
                 fixed_coords.append([True, True, True])
 
         settings = {'fixed_coords': fixed_coords, 
-                    'cmdline': ['-nk', '4']}
+                    'cmdline': ['-nk', '2']}
 
         inputs.pw.settings = orm.Dict(dict=settings)
 
         inputs.pw.metadata.options.resources = {'num_machines': 4}
-        inputs.pw.metadata.options.max_wallclock_seconds = 10 * 60 * 60
+        inputs.pw.metadata.options.max_wallclock_seconds = 15 * 60 * 60
 
         return inputs, self._process_class
 
 if __name__ == '__main__':
 
     # For the calculation
-    COMPUTER = sys.argv[1]
-    ADSORBATE = sys.argv[2]
+    ADSORBATE = sys.argv[1]
 
     # For the submission controller
     DRY_RUN = False
-    MAX_CONCURRENT = 25
-    CODE_LABEL = f'pw_6-7@{COMPUTER}'
-    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_efficiency/initial/{ADSORBATE}'
-    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_efficiency/relax/{ADSORBATE}'
+    MAX_CONCURRENT = 50
+    CODE_LABEL = f'pw_6-7_stage2022@juwels_scr'
+    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/{ADSORBATE}'
+    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/{ADSORBATE}'
 
     controller = AdsorbateSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,

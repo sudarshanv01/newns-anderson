@@ -37,8 +37,9 @@ if __name__ == "__main__":
     the fitted Newns-Anderson Delta."""
     # Choice of functional
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))['group'][0]
+
     # Remove the following metals
-    REMOVE_LIST = ['X', 'Al', 'Mg'] # yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
+    REMOVE_LIST = ['X', 'Al', 'Mg']
 
     with open(f'output/pdos_{COMP_SETUP}.json', 'r') as handle:
         pdos_data = json.load(handle)
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     METALS = [FIRST_ROW, SECOND_ROW, THIRD_ROW]
 
     fig, ax = plt.subplots(len(METALS), len(METALS[0]), 
-                           figsize=(16,12), sharey=True,
+                           figsize=(8.25,8), sharey=True,
                            constrained_layout=True)
 
     # Store the moments to plot later
@@ -61,12 +62,12 @@ if __name__ == "__main__":
             continue
         # Get all the pdos
         energies, pdos, _ = pdos_data['slab'][metal]
-        energies_c, pdos_c = pdos_data['C'][metal]
-        energies_o, pdos_o = pdos_data['O'][metal]
+        # energies_c, pdos_c = pdos_data['C'][metal]
+        # energies_o, pdos_o = pdos_data['O'][metal]
 
         # Normalise the quantities
-        pdos_c = normalise_na_quantities(pdos_c)
-        pdos_o = normalise_na_quantities(pdos_o)
+        # pdos_c = normalise_na_quantities(pdos_c)
+        # pdos_o = normalise_na_quantities(pdos_o)
         pdos = normalise_na_quantities(pdos)
 
         # in case the maximum value of energies is
@@ -91,7 +92,6 @@ if __name__ == "__main__":
             i = 2
             j = METALS[2].index(metal)
         else:
-            print(metal)
             raise ValueError('Metal not in chosen list of metals.')
 
         # If we have gotten so far, there is data to plot
@@ -148,24 +148,26 @@ if __name__ == "__main__":
         filling_dband = hybridisation.get_dband_filling()
 
         # Annotate the filling_dband
-        ax[i,j].annotate(f'f={filling_dband:.2f}',
-                            xy=(0.1, 0.2),
-                            xycoords='axes fraction',
-                            fontsize=14,
-        )
+        # ax[i,j].annotate(f'f={filling_dband:.2f}',
+        #                     xy=(0.1, 0.2),
+        #                     xycoords='axes fraction',
+        # )
 
         # Plot the Newns-Anderson Delta
         ax[i,j].plot(Delta_na, energy_na, color='tab:blue', ls='--')
 
-        # ax[i,j].axhline(y=center, color='k', linestyle='-')
-        # ax[i,j].axhline(y=center + width / 2, color='k', linestyle='--')
-        # ax[i,j].axhline(y=center - width / 2, color='k', linestyle='--')
-        ax[i,j].axhline(y=energies[index_max], color='k', linestyle='--')
+        ax[i,j].axhline(y=center, color='k', linestyle='-')
+        # ax[i,j].axhline(y=center + width, color='k', linestyle='--')
+        # ax[i,j].axhline(y=center - width, color='k', linestyle='--')
+        # ax[i,j].axhline(y=energies[index_max], color='k', linestyle='--')
     
     for i in range(len(METALS)):
         for j in range(len(METALS[i])):
             if (i,j) not in used_ij:
                 ax[i,j].axis('off')
+    
+    for a in ax[:,0]:
+        a.set_ylabel(r'$\epsilon - \epsilon_f$ (eV)')
 
     fig.savefig(f'output/pdos_{COMP_SETUP}.png')
 
