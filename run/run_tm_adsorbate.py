@@ -10,7 +10,7 @@ from aiida.engine import submit
 
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
 
-def calculator(ecutwf, ecutrho, nbnds=None):
+def calculator(ecutwf, ecutrho, metal, nbnds=None):
     param_dict =  {
     "CONTROL":{
         'calculation':'relax',
@@ -30,6 +30,8 @@ def calculator(ecutwf, ecutrho, nbnds=None):
         "emaxpos": 0.05,
         "eopreg": 0.025,
         "eamp": 0.0,
+        "nspin":2,
+        "starting_magnetization":{metal: 0.5},
                 },
     "ELECTRONS": {
         "conv_thr": 1e-7,
@@ -94,7 +96,7 @@ class AdsorbateSubmissionController(FromGroupSubmissionController):
         nbands = get_nbands_data(extras_values[0], ase_structure, family, extra=50)
 
         # Get the parameters for the calculation
-        parameters = calculator(ecutwf=ecutwf, ecutrho=ecutrho, nbnds=nbands)
+        parameters = calculator(ecutwf=ecutwf, ecutrho=ecutrho, nbnds=nbands, metal=extras_values[0])
         inputs.pw.parameters = orm.Dict(dict=parameters)
 
         inputs.pw.structure = structure
@@ -128,8 +130,8 @@ if __name__ == '__main__':
     DRY_RUN = False
     MAX_CONCURRENT = 50
     CODE_LABEL = f'pw_6-7_stage2022@juwels_scr'
-    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/{ADSORBATE}'
-    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/{ADSORBATE}'
+    STRUCTURES_GROUP_LABEL = f'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/{ADSORBATE}'
+    WORKFLOWS_GROUP_LABEL = f'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/{ADSORBATE}'
 
     controller = AdsorbateSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,

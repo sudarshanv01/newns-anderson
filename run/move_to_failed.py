@@ -20,11 +20,12 @@ def move_failed_group(groupname, type_of_calc):
 if __name__ == '__main__':
 
     PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
+    PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
     DosWorkflow = WorkflowFactory('quantumespresso.pdos')
 
     qb = QueryBuilder()
-    qb.append(Group, tag='Group', filters={'label':{'ilike':'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/%'}})
-    # qb.append(Group, tag='Group', filters={'label':{'ilike':'RPBE/SSSP_efficiency/gauss_%'}})
+    # qb.append(Group, tag='Group', filters={'label':{'ilike':'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/dos_scf/slab'}})
+    qb.append(Group, tag='Group', filters={'label':{'ilike':'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/%'}})
 
 
     results = {}
@@ -36,7 +37,7 @@ if __name__ == '__main__':
         if 'dos' in group.label:
             calculation = DosWorkflow
         else:
-            calculation = PwBaseWorkChain 
+            calculation =  PwBaseWorkChain  # PwRelaxWorkChain, PwBaseWorkChain 
         
         print(group.label)
 

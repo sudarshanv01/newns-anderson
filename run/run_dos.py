@@ -10,7 +10,7 @@ from aiida.plugins import DataFactory, WorkflowFactory
 
 PpDosChain = WorkflowFactory('quantumespresso.pdos')
 
-def calculator(ecutwf, ecutrho, nbnd=None):
+def calculator(ecutwf, ecutrho, metal, nbnd=None):
     param_dict =  {
     "CONTROL":{
         'calculation':'scf',
@@ -30,6 +30,8 @@ def calculator(ecutwf, ecutrho, nbnd=None):
         "emaxpos": 0.05,
         "eopreg": 0.025,
         "eamp": 0.0,
+        "nspin":2,
+        "starting_magnetization":{metal: 0.5},
                 },
     "ELECTRONS": {
         "conv_thr": 1e-8,
@@ -90,7 +92,7 @@ class DOSSubmissionController(FromGroupSubmissionController):
 
         # get the scf information
         # parameters_scf = calculator(ecutwf, ecutrho)
-        parameters_scf = calculator(ecutwf, ecutrho, nbnd)
+        parameters_scf = calculator(ecutwf, ecutrho, extras_values[0], nbnd)
 
         # Get the nscf information
         parameters_nscf = deepcopy(parameters_scf)
@@ -146,7 +148,7 @@ class DOSSubmissionController(FromGroupSubmissionController):
                         }
         builder.dos.parameters = orm.Dict(dict=dos_parameters) 
         builder.dos.code = code_dos
-        builder.dos.metadata.options.resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 2}
+        builder.dos.metadata.options.resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 10}
         builder.dos.metadata.options.max_wallclock_seconds = 10 * 60
 
         ## projwfc inputs to the Pp workchain
@@ -170,10 +172,10 @@ if __name__ == '__main__':
 
     # For the submission controller
     DRY_RUN = False
-    MAX_CONCURRENT = 11
+    MAX_CONCURRENT = 10
     CODE_LABEL = f'pw_6-7_stage2022{COMPUTER}'
-    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/initial/{SYSTEM}'
-    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/dos_scf/{SYSTEM}' 
+    STRUCTURES_GROUP_LABEL = f'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/initial/{SYSTEM}'
+    WORKFLOWS_GROUP_LABEL = f'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/dos_scf/{SYSTEM}' 
 
     controller = DOSSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,

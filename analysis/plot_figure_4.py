@@ -109,18 +109,26 @@ if __name__ == '__main__':
     the d-band centre. This assumption is used so that we can get smooth 
     variations in the figure."""
 
-    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))['group'][0]
+    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
+    CHOSEN_SETUP = 'energy'
     # Read in scaling parameters from the model.
-    with open(f"output/O_parameters_{COMP_SETUP}.json", 'r') as f:
+    with open(f"output/O_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         o_parameters = json.load(f)
-    with open(f"output/C_parameters_{COMP_SETUP}.json", 'r') as f:
+    with open(f"output/C_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         c_parameters = json.load(f)
-    with open(f"output/fitting_metal_parameters_{COMP_SETUP}.json", 'r') as f:
+    with open(f"output/fitting_metal_parameters.json", 'r') as f:
         metal_parameters = json.load(f)
+    GRID_LEVEL = 'high' # 'high' or 'low'
 
     # Create range of parameters 
-    NUMBER_OF_ADSORBATES = 25
-    NUMBER_OF_METALS = 50
+    if GRID_LEVEL == 'high':
+        NUMBER_OF_ADSORBATES = 25
+        NUMBER_OF_METALS = 50
+        GRID_SPACING_DERIV = 120
+    elif GRID_LEVEL == 'low':
+        NUMBER_OF_ADSORBATES = 2
+        NUMBER_OF_METALS = 4
+        GRID_SPACING_DERIV = 10
     EPS_RANGE = np.linspace(-20, 20, 1000)
     ADSORBATES = ['O', 'C']
 
@@ -128,7 +136,6 @@ if __name__ == '__main__':
     # states of the metal
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
-    GRID_SPACING_DERIV = 120
     CUTOFF_VALUE = -0.1
 
     # Create an idealised range of parameters by interpolating each 
@@ -157,9 +164,10 @@ if __name__ == '__main__':
     eps_s = defaultdict(list)
 
     # Input parameters to help with the dos from Newns-Anderson
-    data_from_dos_calculation = json.load(open(f'output/pdos_moments_{COMP_SETUP}.json')) 
-    data_from_energy_calculation = json.load(open(f'output/adsorption_energies_{COMP_SETUP}.json'))
+    data_from_dos_calculation = json.load(open(f"output/pdos_moments_{COMP_SETUP['dos']}.json")) 
+    data_from_energy_calculation = json.load(open(f"output/adsorption_energies_{COMP_SETUP[CHOSEN_SETUP]}.json"))
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
+    dft_Vsdsq = json.load(open(f"output/dft_Vsdsq.json"))
 
     # Get the main figure with the energies and the axes
     # and the supporting figure with the density of states

@@ -37,7 +37,7 @@ if __name__ == '__main__':
     # Choose a sequence of adsorbates
     ADSORBATES = ['O', 'C']
     EPS_A_VALUES = [ -5, -1 ] # eV
-    EPS_VALUES = np.linspace(-20, 20, 1000)
+    EPS_VALUES = np.linspace(-30, 10, 1000)
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
     CONSTANT_DELTA0 = 0.1
@@ -47,13 +47,15 @@ if __name__ == '__main__':
     # scf only calculations in order to avoid any noise and look only for 
     # the electronic structure contribution
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
+    CHOSEN_SETUP = 'energy'
+    no_of_bonds = 1
 
     # get the width and d-band centre parameters
     # The moments of the density of states comes from a DFT calculation 
     # and the adsorption energy is from scf calculations of the adsorbate
     # at a fixed distance from the surface.
     data_from_dos_calculation = json.load(open(f"output/pdos_moments_{COMP_SETUP['dos']}.json")) 
-    data_from_energy_calculation = json.load(open(f"output/adsorption_energies_{COMP_SETUP['energy']}.json"))
+    data_from_energy_calculation = json.load(open(f"output/adsorption_energies_{COMP_SETUP[CHOSEN_SETUP]}.json"))
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
     dft_Vsdsq = json.load(open(f"output/dft_Vsdsq.json"))
 
@@ -116,13 +118,13 @@ if __name__ == '__main__':
             width = parameters['width'],
             eps_a = eps_a,
             verbose = True,
-            no_of_bonds = 1,
+            no_of_bonds = no_of_bonds,
         )
         fitting_function =  FitParametersNewnsAnderson(**kwargs_fit)
 
         # Is the calculation is a restart one, choose the parameters from the last calculation
         if restart:
-            previous_calc = json.load(open(f'output/{adsorbate}_parameters.json'))
+            previous_calc = json.load(open(f'output/{adsorbate}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json'))
             alpha = previous_calc['alpha']
             beta = previous_calc['beta']
             constant_offest = previous_calc['constant_offset']
@@ -171,6 +173,7 @@ if __name__ == '__main__':
             'delta0': CONSTANT_DELTA0, 
             'constant_offset': output.beta[2],
             'eps_a': eps_a,
-        }, open(f'output/{adsorbate}_parameters.json', 'w'))
+            'no_of_bonds': no_of_bonds,
+        }, open(f'output/{adsorbate}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json', 'w'))
 
-    fig.savefig(f'output/figure_3_only_fitting.png', dpi=300)
+    fig.savefig(f'output/figure_3_fitting_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)

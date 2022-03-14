@@ -8,6 +8,8 @@ from adjustText import adjust_text
 from plot_params import get_plot_params
 import numpy as np
 import yaml
+from ase.data import covalent_radii, atomic_numbers
+from ase import units
 get_plot_params()
 
 # Define periodic table of elements
@@ -44,11 +46,13 @@ if __name__ == "__main__":
     pprint(bond_lengths_all) 
 
     # Plot the data according to the metal row
-    fig, ax = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)
+    fig, ax = plt.subplots(2, 2, figsize=(6., 5), constrained_layout=True)
 
     # Store text for adjustable plots
     text_C = []
+    text_C2 = []
     text_O = []
+    text_O2 = []
 
     for type_calc, bond_lengths in bond_lengths_all.items():
         for row_index, row in enumerate([FIRST_ROW, SECOND_ROW, THIRD_ROW]):
@@ -61,18 +65,32 @@ if __name__ == "__main__":
 
             for metal in row:
                 if metal in bond_lengths['C']:
-                    ax[0].plot(filling_data[metal], bond_lengths['C'][metal], 'o', color=color)
-                    text_C.append(ax[0].text(filling_data[metal], bond_lengths['C'][metal], metal, color=color, fontsize=15))
+                    ax[0,0].plot(filling_data[metal], bond_lengths['C'][metal], 'o', color=color)
+                    text_C.append(ax[0,0].text(filling_data[metal], bond_lengths['C'][metal], metal, color=color))
+                    # Plot the bond length assuming it is the sum of the 
+                    # Wigner-Seitz radius and the covalent radius
+                    bond_length = data_from_LMTO['s'][metal]*units.Bohr + covalent_radii[atomic_numbers['C']] 
+                    ax[1,0].plot(filling_data[metal], bond_length, 'v', color=color)
+                    text_C2.append(ax[1,0].text(filling_data[metal], bond_length, metal, color=color))
                 if metal in bond_lengths['O']:
-                    ax[1].plot(filling_data[metal], bond_lengths['O'][metal], 'o', color=color)
-                    text_O.append(ax[1].text(filling_data[metal], bond_lengths['O'][metal], metal, color=color, fontsize=15))
+                    ax[0,1].plot(filling_data[metal], bond_lengths['O'][metal], 'o', color=color)
+                    text_O.append(ax[0,1].text(filling_data[metal], bond_lengths['O'][metal], metal, color=color))
+                    # Plot the bond length assuming it is the sum of the 
+                    # Wigner-Seitz radius and the covalent radius
+                    bond_length = data_from_LMTO['s'][metal]*units.Bohr + covalent_radii[atomic_numbers['O']] 
+                    ax[1,1].plot(filling_data[metal], bond_length, 'v', color=color)
+                    text_O2.append(ax[1,1].text(filling_data[metal], bond_length, metal, color=color))
 
-    ax[0].set_xlabel('Filling')
-    ax[0].set_ylabel('Bond length C* (Å)')
-    ax[1].set_xlabel('Filling')
-    ax[1].set_ylabel('Bond length O* (Å)')
+    for a in ax[0,:]:
+        a.set_xlabel('Filling')
+        a.set_ylabel('Bond length C* (Å)')
+    for a in ax[1,:]:
+        a.set_xlabel('Filling')
+        a.set_ylabel('Wigner-Seitz radius + covalent radius (Å)')
 
-    adjust_text(text_C, ax=ax[0])
-    adjust_text(text_O, ax=ax[1])
+    adjust_text(text_C, ax=ax[0,0])
+    adjust_text(text_O, ax=ax[0,1])
+    adjust_text(text_C2, ax=ax[1,0])
+    adjust_text(text_O2, ax=ax[1,1])
 
-    fig.savefig(f'output/bond_lengths.png')
+    fig.savefig(f'output/bond_lengths.png', dpi=300)

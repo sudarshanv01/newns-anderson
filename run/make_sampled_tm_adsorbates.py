@@ -13,14 +13,14 @@ PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
 
 if __name__ == '__main__':
 
-    STRUCTURES_FULL_GROUP_LABEL = 'PBE/SSSP_precision/gauss_smearing_0.1eV/bulk_structures'
+    STRUCTURES_FULL_GROUP_LABEL = 'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/bulk_structures'
     ADSORBATE  = 'O'
     MOL_INDEX = 0
 
     if ADSORBATE:
-        STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/{ADSORBATE}' 
+        STRUCTURES_GROUP_LABEL = f'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/{ADSORBATE}' 
     else:
-        STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/slab'
+        STRUCTURES_GROUP_LABEL = f'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/slab'
 
     subgroup, _ = orm.Group.objects.get_or_create(label=STRUCTURES_GROUP_LABEL)
 

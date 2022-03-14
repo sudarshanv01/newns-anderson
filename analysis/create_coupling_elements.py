@@ -4,9 +4,11 @@ import yaml
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
+from ase.data import covalent_radii, atomic_numbers
 from plot_params import get_plot_params
 get_plot_params()
 import matplotlib as mpl
+from ase import units
 mpl.rcParams['lines.markersize'] = 4
 
 # Define periodic table of elements
@@ -28,6 +30,7 @@ if __name__ == '__main__':
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
     # Load data from the DFT calculation
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
+    CHOSEN_SETUP = 'sampled'
     data_from_dos_calculation = json.load(open(f"output/pdos_moments_{COMP_SETUP['dos']}.json")) 
 
     # Remove list
@@ -40,7 +43,7 @@ if __name__ == '__main__':
     filling_data = data_from_LMTO['filling']
     s_data = data_from_LMTO['s']
     anderson_band_width_data = data_from_LMTO['anderson_band_width']
-    bond_lengths = json.load(open(f"output/bond_lengths_{COMP_SETUP['energy']}.json"))
+    bond_lengths = json.load(open(f"output/bond_lengths_{COMP_SETUP[CHOSEN_SETUP]}.json"))
 
     coupling_elements = defaultdict(dict)
 
@@ -65,15 +68,18 @@ if __name__ == '__main__':
                 tabulated_Vsdsq = s_data[metal]**5 * anderson_band_width_data[metal]
                 tabulated_Vsdsq /= ( s_data['Cu']**5 * anderson_band_width_data['Cu'] )
 
-                # Now compute the same quantity assuming that Delta is the
-                # band width from the DFT calculation
-                bond_length = bond_lengths[adsorbate][metal]
-                bond_length_Cu = bond_lengths[adsorbate]['Cu']
-                dft_Vsdsq = s_data[metal]**5 * data_from_dos_calculation[metal]['width']
-                dft_Vsdsq /= ( s_data[metal]**5 * data_from_dos_calculation['Cu']['width'] )
+                bond_length = data_from_LMTO['s'][metal]*units.Bohr  + covalent_radii[atomic_numbers[adsorbate]] 
+                bond_length_Cu = data_from_LMTO['s']['Cu']*units.Bohr  + covalent_radii[atomic_numbers[adsorbate]]
+                dft_Vsdsq = s_data[metal]**5 * anderson_band_width_data[metal]
+                dft_Vsdsq /= ( s_data[metal]**5 * anderson_band_width_data['Cu'] )
                 dft_Vsdsq *= bond_length_Cu**8 / bond_length**8
 
                 print(f'{metal} Vsdsq: {Vsdsq}, tabulated Vsdsq: {tabulated_Vsdsq}, DFT Vsdsq: {dft_Vsdsq}')
+
+                # Now compute the same quantity assuming that Delta is the
+                # band width from the DFT calculation
+                # bond_length = bond_lengths[adsorbate][metal]
+                # bond_length_Cu = bond_lengths[adsorbate]['Cu']
 
                 # Plot the data against the filling
                 filling = filling_data[metal]
@@ -85,7 +91,7 @@ if __name__ == '__main__':
                 coupling_elements[adsorbate][metal] = dft_Vsdsq
     
     # Save the data
-    json.dump(coupling_elements, open('output/dft_Vsdsq.json', 'w'), indent=4)
+    json.dump(coupling_elements, open(f'output/dft_Vsdsq.json', 'w'), indent=4)
 
     for a in ax[1,:]:
         a.set_xlabel('Filling')
@@ -95,4 +101,4 @@ if __name__ == '__main__':
     ax[0,1].plot([], [], 'o', color='tab:green', label='DFT')
     ax[0,1].legend(loc='best')
 
-    fig.savefig('output/Vsdsq_comparison.png', dpi=300)
+    fig.savefig(f'output/Vsdsq_comparison.png', dpi=300)

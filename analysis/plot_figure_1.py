@@ -25,8 +25,8 @@ COLORS_ROW = ['tab:red', 'tab:blue', 'tab:green']
 
 def get_plot_layout():
     """Create the plot layout for Figure 1."""
-    fig = plt.figure(figsize=(6.75, 5), constrained_layout=True)
-    gs = gridspec.GridSpec(6, 6, figure=fig)
+    fig = plt.figure(figsize=(3.75, 4), constrained_layout=True)
+    gs = gridspec.GridSpec(6, 4, figure=fig)
 
     # Create the scaling plot first
     ax_scaling = fig.add_subplot(gs[0:4, 0:4])
@@ -35,12 +35,12 @@ def get_plot_layout():
     # ax_scaling.set_aspect('equal')
 
     # Create the plots with individual scaling
-    ax_row = []
-    for i in range(3):
-        ax_row.append(fig.add_subplot(gs[2*i:2*(i+1), 4:]))
-        # if i == 0:
-        ax_row[i].set_ylabel(r'$\Delta E_{\mathregular{O}}$ (eV)')
-        ax_row[i].set_xlabel(r'$\Delta E_{\mathregular{C}}$ (eV)')
+    # ax_row = []
+    # for i in range(3):
+    #     ax_row.append(fig.add_subplot(gs[2*i:2*(i+1), 4:]))
+    #     # if i == 0:
+    #     ax_row[i].set_ylabel(r'$\Delta E_{\mathregular{O}}$ (eV)')
+    #     ax_row[i].set_xlabel(r'$\Delta E_{\mathregular{C}}$ (eV)')
     
     # Create plots with the d-band centre
     ax_dband = []
@@ -49,7 +49,7 @@ def get_plot_layout():
         ax_dband[i].set_ylabel(r'$\Delta E_{\mathrm{%s}}$ (eV)'%ADSORBATES[i])
         ax_dband[i].set_xlabel(r'$\epsilon_d$ (eV)')
 
-    return fig, ax_scaling, ax_row, ax_dband
+    return fig, ax_scaling, ax_dband
 
 def set_same_limits(axes, y_set=True, x_set=False):
     """Set the limits of all axes to the same value."""
@@ -78,10 +78,11 @@ def set_same_limits(axes, y_set=True, x_set=False):
 if __name__ == '__main__':
     """Plot the scaling relations from the energy file."""
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
+    CHOSEN_SETUP = 'energy'
     REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
 
     # Read the energy file.
-    with open(f"output/adsorption_energies_{COMP_SETUP['energy']}.json", 'r') as f:
+    with open(f"output/adsorption_energies_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         ads_energy = json.load(f)
 
     # Read the pdos file
@@ -91,7 +92,7 @@ if __name__ == '__main__':
     ADSORBATES = ['O', 'C']
 
     # Plot separately for each row of the periodic table.
-    fig, ax_s, ax_r, ax_d = get_plot_layout()
+    fig, ax_s, ax_d = get_plot_layout()
 
 
     # Store the text output
@@ -128,30 +129,31 @@ if __name__ == '__main__':
         if isinstance(DeltaE_C, list):
             DeltaE_C = np.min(DeltaE_C)
 
-        d_band_desc = pdos_data[metal]['d_band_centre'] # pdos_data[metal]['d_band_upper_edge']
+        d_band_desc = pdos_data[metal]['d_band_centre']
         d_band_centre = pdos_data[metal]['d_band_centre']
 
         # Plot all the DeltaE_C and DeltaE_O
         d_band_energies.append([DeltaE_C, DeltaE_O, d_band_centre])
-        texts_s.append( ax_s.text(DeltaE_C, DeltaE_O, metal, color=color, ))
+        texts_s.append( ax_s.text(DeltaE_C, DeltaE_O, metal, color=color, fontsize=7, alpha=0.5))
 
         # Plot the individual energies against themselves or against
-        ax_r[row_i].plot(DeltaE_C, DeltaE_O, 'o', color=color)
-        texts_r[row_i].append( ax_r[row_i].text(DeltaE_C, DeltaE_O, metal, color=color, fontsize=8 ))
+        # ax_r[row_i].plot(DeltaE_C, DeltaE_O, 'o', color=color)
+        # texts_r[row_i].append( ax_r[row_i].text(DeltaE_C, DeltaE_O, metal, color=color, fontsize=8 ))
+        ax_s.plot(DeltaE_C, DeltaE_O, 'o', color=color)
         energies_row[row_i].append([DeltaE_C, DeltaE_O, d_band_desc])
 
         # Plot against the d-band centre
         ax_d[0].plot(d_band_desc, DeltaE_O, 'o', color=color)
-        texts_d[0].append( ax_d[0].text(d_band_desc, DeltaE_O, metal, color=color, fontsize=8))
+        texts_d[0].append( ax_d[0].text(d_band_desc, DeltaE_O, metal, color=color, fontsize=6, alpha=0.5))
         ax_d[1].plot(d_band_desc, DeltaE_C, 'o', color=color)
-        texts_d[1].append( ax_d[1].text(d_band_desc, DeltaE_C, metal, color=color, fontsize=8))
+        texts_d[1].append( ax_d[1].text(d_band_desc, DeltaE_C, metal, color=color, fontsize=6, alpha=0.5))
 
         # If the metal is Pt make a point on the d-band centre
         if metal == 'Pt':
             Pt_E_C, Pt_E_O = DeltaE_C, DeltaE_O
 
     all_C, all_O, all_dband = np.array(d_band_energies).T 
-    cax = ax_s.scatter(all_C, all_O,  cmap='cividis', c=all_dband, marker='o')
+    # cax = ax_s.scatter(all_C, all_O,  cmap='cividis', c=all_dband, marker='o')
 
     # Fit all the energies to a straight line
     slope, intercept, r_value, p_value, std_err = stats.linregress(all_C, all_O)
@@ -178,8 +180,8 @@ if __name__ == '__main__':
         # ax_r[row].plot(minmax_rowC, p_fit(minmax_rowC), '--', color=COLORS_ROW[row], alpha=0.5)
 
     # Plot colorbar
-    cbaxes = inset_axes(ax_s, width="30%", height="3%", loc=2) 
-    cbar = fig.colorbar(cax, cax=cbaxes, label='$\epsilon_d$ (eV)', orientation='horizontal') 
+    # cbaxes = inset_axes(ax_s, width="30%", height="3%", loc=2) 
+    # cbar = fig.colorbar(cax, cax=cbaxes, label='$\epsilon_d$ (eV)', orientation='horizontal') 
 
     adjust_text(texts_s, ax=ax_s)
     for row_i, row in texts_r.items(): 
@@ -188,15 +190,15 @@ if __name__ == '__main__':
     adjust_text(texts_d[1], ax=ax_d[1])
 
     
-    for i in range(3):
-        ax_r[i].annotate(f'{i+3}$d$', xy=(0.8, 0.2), xycoords='axes fraction', color=COLORS_ROW[i]) 
+    # for i in range(3):
+    #     ax_r[i].annotate(f'{i+3}$d$', xy=(0.8, 0.2), xycoords='axes fraction', color=COLORS_ROW[i]) 
 
 
-    all_axes = [ax_s, *ax_r, *ax_d]
+    all_axes = [ax_s,  *ax_d]
     # Add figure numbers
     alphabet = list(string.ascii_lowercase)
     for i, a in enumerate(all_axes):
-        if i in [4, 5]:
+        if i in [1, 2]:
             xy=(0.05, 0.1)
         elif i in [0]:
             xy=(0.8, 0.1)
@@ -204,7 +206,7 @@ if __name__ == '__main__':
             xy=(0.05, 0.8)
         a.annotate(alphabet[i]+')', xy=xy, xycoords='axes fraction') 
 
-    set_same_limits(ax_r, y_set=True)
+    # set_same_limits(ax_r, y_set=True)
     # set_same_limits(ax_d, y_set=True)
 
     fig.savefig(f'output/figure_1.png', dpi=300)

@@ -1,5 +1,6 @@
 """Plot Figure 3 of the manuscript."""
 
+from tkinter import CHORD
 import numpy as np
 import scipy
 import json
@@ -67,23 +68,25 @@ if __name__ == '__main__':
 
     REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
     KEEP_LIST = []
-    GRID_LEVEL = 'low' # 'high'
+    GRID_LEVEL = 'high' # 'high' or 'low'
 
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
+    CHOSEN_SETUP = 'energy'
     # Read in scaling parameters from the model.
-    with open(f"output/O_parameters.json", 'r') as f:
+    with open(f"output/O_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         o_parameters = json.load(f)
-    with open(f"output/C_parameters.json", 'r') as f:
+    with open(f"output/C_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         c_parameters = json.load(f)
     with open(f"output/fitting_metal_parameters.json", 'r') as f:
         metal_parameters = json.load(f)
+    adsorbate_params = {'O': o_parameters, 'C': c_parameters}
 
     # get the width and d-band centre parameters
     # The moments of the density of states comes from a DFT calculation 
     # and the adsorption energy is from scf calculations of the adsorbate
     # at a fixed distance from the surface.
     data_from_dos_calculation = json.load(open(f"output/pdos_moments_{COMP_SETUP['dos']}.json")) 
-    data_from_energy_calculation = json.load(open(f"output/adsorption_energies_{COMP_SETUP['energy']}.json"))
+    data_from_energy_calculation = json.load(open(f"output/adsorption_energies_{COMP_SETUP[CHOSEN_SETUP]}.json"))
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
     dft_Vsdsq = json.load(open(f"output/dft_Vsdsq.json"))
 
@@ -92,13 +95,12 @@ if __name__ == '__main__':
     EPS_A_VALUES = [ -5, -1 ] # eV
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
-    CONSTANT_DELTA0 = 0.1
-    EPS_VALUES = np.linspace(-20, 20, 1000)
+    EPS_VALUES = np.linspace(-30, 10, 1000)
     color_row = ['tab:red', 'tab:blue', 'tab:green',]
     if GRID_LEVEL == 'high':
         NUMBER_OF_METALS = 120
     elif GRID_LEVEL == 'low':
-        NUMBER_OF_METALS = 10
+        NUMBER_OF_METALS = 8
 
     # Functions of Vsd and width as a function of the filling
     function_Vsd, function_Vsd_p = get_fitted_function('Vsd') 
@@ -112,6 +114,12 @@ if __name__ == '__main__':
     # simulatenously iterate over ADSORBATES and EPS_A_VALUES
     for i, (adsorbate, eps_a) in enumerate(zip(ADSORBATES, EPS_A_VALUES)):
         print(f"Plotting parameters for adsorbate {adsorbate} with eps_a {eps_a}")
+        alpha = adsorbate_params[adsorbate]['alpha']
+        beta = adsorbate_params[adsorbate]['beta']
+        constant_offest = adsorbate_params[adsorbate]['constant_offset']
+        CONSTANT_DELTA0 = adsorbate_params[adsorbate]['delta0']
+        final_params = [alpha, beta, constant_offest]
+
         # Store the parameters in order of metals in this list
         parameters = defaultdict(list)
         # Store the final DFT energies
@@ -163,11 +171,6 @@ if __name__ == '__main__':
 
         fitting_function =  FitParametersNewnsAnderson(**kwargs_fit)
 
-        previous_calc = json.load(open(f'output/{adsorbate}_parameters.json'))
-        alpha = previous_calc['alpha']
-        beta = previous_calc['beta']
-        constant_offest = previous_calc['constant_offset']
-        final_params = [alpha, beta, constant_offest]
 
         # Get the final hybridisation energy
         optimised_hyb = fitting_function.fit_parameters(final_params, parameters['d_band_centre'])
@@ -208,11 +211,11 @@ if __name__ == '__main__':
             parameters_metal = defaultdict(list)
 
             # get the metal fitting parameters
-            Vsd_fit = metal_parameters['Vsd'][str(j)]
-            wd_fit = metal_parameters['width'][str(j)]
-            epsd_filling_fit = metal_parameters['epsd_filling'][str(j)]
-            filling_min, filling_max = metal_parameters['filling_minmax'][str(j)]
-            eps_d_min, eps_d_max = metal_parameters['eps_d_minmax'][str(j)]
+            Vsd_fit = metal_parameters[adsorbate]['Vsd'][str(j)]
+            wd_fit = metal_parameters[adsorbate]['width'][str(j)]
+            epsd_filling_fit = metal_parameters[adsorbate]['epsd_filling'][str(j)]
+            filling_min, filling_max = metal_parameters[adsorbate]['filling_minmax'][str(j)]
+            eps_d_min, eps_d_max = metal_parameters[adsorbate]['eps_d_minmax'][str(j)]
             filling_range = np.linspace(filling_max, filling_min, NUMBER_OF_METALS)
             eps_d_range = np.linspace(eps_d_min, eps_d_max, NUMBER_OF_METALS)
 

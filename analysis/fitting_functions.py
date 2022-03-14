@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import curve_fit
+from scipy.interpolate import UnivariateSpline
 
 def allow_epsd_inputs(func):
     """Decorator to allow eps_d values 
@@ -12,7 +13,7 @@ def allow_epsd_inputs(func):
             # from an eps_d value to a filling value.
             fitted_epsd_to_filling = kwargs.get('fitted_epsd_to_filling', None)
             if fitted_epsd_to_filling is not None:
-                filling = function_linear(x, *fitted_epsd_to_filling)
+                filling = function_cubic(x, *fitted_epsd_to_filling)
                 if kwargs.get('is_derivative', False):
                     # We are computing a derivative, so we need
                     # to use chain rule, which is the first term
@@ -58,11 +59,17 @@ def function_linear(x, a, b):
 def function_quadratic(x, a, b, c):
     return a * x**2 + b * x + c
 
+def function_cubic(x, a, b, c, d):
+    return a * x**3 + b * x**2 + c * x + d
+
+def function_fourth_order(x, a, b, c, d, e):
+    return a * x**4 + b * x**3 + c * x**2 + d * x + e
+
 def get_fit_for_Vsd(x, y, **kwargs):
     """Prepare the fitting function and perform
     the fit for Vsd."""
-    initial_guess = [1]
-    popt, pcov = curve_fit(lambda x, a: func_a_by_r(x, a, **kwargs),
+    initial_guess = [1, 0.1, 0.6]
+    popt, pcov = curve_fit(lambda x, a, b, c: func_a_r_sq(x, a, b, c, **kwargs),
                             x, y, p0=initial_guess)
     return list(popt), list(pcov)
 
@@ -75,8 +82,13 @@ def get_fit_for_wd(x, y, **kwargs):
 
 def get_fit_for_epsd(x, y):
     """Get the fit and error for epsd vs. filling."""
-    popt, pcov = curve_fit(function_linear, x, y)
+    popt, pcov = curve_fit(function_cubic, x, y)
     return list(popt), list(pcov)
+
+def interpolate_quantity(x, y):
+    """Interpolate the quantities."""
+    spline = UnivariateSpline(x, y,)
+    return spline
 
 def get_fitted_function(quantity_y: str):
     """For a given quantity varied against another, return
@@ -87,6 +99,6 @@ def get_fitted_function(quantity_y: str):
     if quantity_y == 'wd':
         return func_a_r_sq, func_a_r_sq_derivative
     elif quantity_y == 'Vsd':
-        return func_a_by_r, func_a_by_r_derivative
+        return func_a_r_sq, func_a_r_sq_derivative
     else:
         raise ValueError(f'{quantity_y} are not valid quantities.')

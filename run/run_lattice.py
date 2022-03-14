@@ -6,7 +6,7 @@ from aiida.tools.groups import GroupPath
 from ase import build
 import time
 
-def calculator(ecutwf, ecutrho, nbnd=None):
+def calculator(ecutwf, ecutrho, metal, nbnd=None):
     param_dict =  {
     "CONTROL":{
         'calculation':'vc-relax',
@@ -23,6 +23,8 @@ def calculator(ecutwf, ecutrho, nbnd=None):
         "smearing":'gauss',
         "degauss":0.0075,
         "nosym":True,
+        "nspin":2,
+        "starting_magnetization":{metal: 0.5}
                 },
     "ELECTRONS": {
         "conv_thr": 1e-9,
@@ -67,9 +69,10 @@ def runner(structure, metal):
     builder.metadata.description = 'All cell vectors to relax to get the lattice constants.'
     builder.structure = structure 
 
+
     builder.meta_convergence = orm.Bool(False)
     builder.clean_workdir = orm.Bool(False)
-    builder.base.pw.parameters = orm.Dict(dict=calculator(ecutwf, ecutrho, nbnd))
+    builder.base.pw.parameters = orm.Dict(dict=calculator(ecutwf, ecutrho, metal, nbnd))
 
     KpointsData = DataFactory('array.kpoints')
     kpoints = KpointsData()
@@ -88,7 +91,7 @@ def runner(structure, metal):
 
     calculation = submit(builder)
     path = GroupPath()
-    path["PBE/SSSP_precision/gauss_smearing_0.1eV/bulk_structures"].get_group().add_nodes(calculation)
+    path["PBE_spin/SSSP_precision/gauss_smearing_0.1eV/bulk_structures"].get_group().add_nodes(calculation)
 
 
 if __name__ == '__main__':
@@ -98,8 +101,8 @@ if __name__ == '__main__':
     # metals = [ 'Sc', 'Ti', 'V' , 'Cr', 'Fe', 'Co', 'Ni', 'Cu',
     #            'Zr', 'Nb', 'Mo', 'Ru', 'Hf', 'Ta', 'W', 'Y',
     #            'Re', 'Os', 'Ir', 'Ag',  'Pt', 'Pd', 'Rh', 
-    #            'Al', ]
-    metals = ['Fe']
+    #            'Al', 'Au' ]
+    metals = [ 'Co', 'Sc', 'Ti', 'Zr', 'Ru', 'Hf', 'Y', 'Re', 'Os' ]
 
     for metal in metals:
         try:

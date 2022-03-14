@@ -79,9 +79,9 @@ def get_plot_layout():
         axp[0,i].set_xlim([-10,6])
         axp[0,i].set_yticks([])
         axp[0,i].axvline(x=0, color='tab:grey', linestyle='--')
-    axp[0,1].plot([], [], '-', color=O_COLOR, label='O*')
-    axp[0,1].plot([], [], '-', color=C_COLOR, label='C*')
-    axp[0,1].legend(loc='best')
+    axp[0,1].plot([], [], '-', color=O_COLOR, label='$p$-O*')
+    axp[0,1].plot([], [], '-', color=C_COLOR, label='$p$-C*')
+    axp[0,1].legend(loc='best', fontsize=7)
 
     return fig, ax1, axp
 

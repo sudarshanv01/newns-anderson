@@ -16,6 +16,8 @@ FIRST_ROW   = [ 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn']
 SECOND_ROW  = [ 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd']
 THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl'] 
 
+colors = {'ontop':'tab:red', 'threefold':'tab:blue'}
+
 if __name__ == '__main__':
     """Compare the d-band centre from the LMTO calculations
     of Ruban et al. (1997), Vojvodic (2014) and my own."""
@@ -67,21 +69,29 @@ if __name__ == '__main__':
                 # Get the d-band centre
                 d_band_centre = d_band_centres[metal]['d_band_centre']
 
-                ax[ads_i,row_i].plot(d_band_centre, energies, 'o', color=color_row[row_i])
-                ax[ads_i,row_i].plot(d_band_centre*np.ones(len(sampled_energies)), 
-                                    sampled_energies, '-', color=color_row[row_i], alpha=0.5)
+                ax[ads_i,row_i].plot(d_band_centre, energies, 'o', color=colors['ontop'])
+
+                ax[ads_i,row_i].plot(d_band_centre, np.min(sampled_energies), 'o',
+                                    color=colors['threefold'])
 
                 # Store texts to be adjusted later
                 texts[row_i].append(ax[ads_i,row_i].text(d_band_centre, energies, 
-                                    metal, fontsize=8, color=color_row[row_i]))
+                                    metal, fontsize=8, color='k'))
+
             # Adjust text for the different rows
             adjust_text(texts[row_i], ax=ax[ads_i,row_i], )
 
+    for site, color in colors.items():
+        ax[0,0].plot([] , [], 'o', color=color, label=site)
+    ax[0,0].legend(loc='best', fontsize=7)
 
     for a in ax[1,:]:
         a.set_xlabel('$\epsilon_d$ (eV)')
     for i, a in enumerate(ax[:,0]):
         a.set_ylabel(r'$\Delta E$ for '+f'{ADSORBATES[i]}*')
+    for i, a in enumerate(ax[0,:]):
+        a.set_title(f'{i+3}$d$')
+    
 
     fig.savefig('output/compare_energy_dband_centre_scaling.png', dpi=300)
     
