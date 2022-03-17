@@ -1,0 +1,53 @@
+---
+sampled:
+  Sc: 3
+  Ti: 3
+  V : 3
+  Cr: 3
+  Fe: 3 
+  Co: 3 
+  Ni: 3 
+  Cu: 3 
+  Y : 3 
+  Zr: 3 
+  Nb: 3
+  Mo: 3 
+  Ru: 3 
+  Rh: 3 
+  Pd: 3 
+  Ag: 3 
+  Hf: 3 
+  Ta: 3 
+  W : 3 
+  Re: 3 
+  Os: 3 
+  Ir: 3 
+  Pt: 3 
+  Au: 3 
+  average: 3
+energy:
+  Sc: 1
+  Ti: 1
+  V : 1
+  Cr: 1
+  Fe: 1 
+  Co: 1 
+  Ni: 1 
+  Cu: 1 
+  Y : 1 
+  Zr: 1 
+  Nb: 1
+  Mo: 1 
+  Ru: 1 
+  Rh: 1 
+  Pd: 1 
+  Ag: 1 
+  Hf: 1 
+  Ta: 1 
+  W : 1 
+  Re: 1 
+  Os: 1 
+  Ir: 1 
+  Pt: 1 
+  Au: 1 
+  average: 1

@@ -46,7 +46,7 @@ if __name__ == "__main__":
     pprint(bond_lengths_all) 
 
     # Plot the data according to the metal row
-    fig, ax = plt.subplots(2, 2, figsize=(6., 5), constrained_layout=True)
+    fig, ax = plt.subplots(3, 2, figsize=(6., 7), constrained_layout=True)
 
     # Store text for adjustable plots
     text_C = []
@@ -69,24 +69,35 @@ if __name__ == "__main__":
                     text_C.append(ax[0,0].text(filling_data[metal], bond_lengths['C'][metal], metal, color=color))
                     # Plot the bond length assuming it is the sum of the 
                     # Wigner-Seitz radius and the covalent radius
-                    bond_length = data_from_LMTO['s'][metal]*units.Bohr + covalent_radii[atomic_numbers['C']] 
+                    bond_length = data_from_LMTO['s'][metal]*units.Bohr #+ covalent_radii[atomic_numbers['C']] 
+                    wigner_seitz_radii = data_from_LMTO['s'][metal]*units.Bohr
+                    anderson_band_width = data_from_LMTO['anderson_band_width'][metal]
                     ax[1,0].plot(filling_data[metal], bond_length, 'v', color=color)
                     text_C2.append(ax[1,0].text(filling_data[metal], bond_length, metal, color=color))
+                    # ax[2,0].plot(filling_data[metal], anderson_band_width, 'v', color=color)
+                    ax[2,0].plot(filling_data[metal], wigner_seitz_radii**5, 'v', color=color)
                 if metal in bond_lengths['O']:
                     ax[0,1].plot(filling_data[metal], bond_lengths['O'][metal], 'o', color=color)
                     text_O.append(ax[0,1].text(filling_data[metal], bond_lengths['O'][metal], metal, color=color))
+                    anderson_band_width = data_from_LMTO['anderson_band_width'][metal]
                     # Plot the bond length assuming it is the sum of the 
                     # Wigner-Seitz radius and the covalent radius
-                    bond_length = data_from_LMTO['s'][metal]*units.Bohr + covalent_radii[atomic_numbers['O']] 
+                    bond_length = data_from_LMTO['s'][metal]*units.Bohr #+ covalent_radii[atomic_numbers['O']] 
                     ax[1,1].plot(filling_data[metal], bond_length, 'v', color=color)
                     text_O2.append(ax[1,1].text(filling_data[metal], bond_length, metal, color=color))
+                    ax[2,1].plot(filling_data[metal], anderson_band_width, 'v', color=color)
 
     for a in ax[0,:]:
         a.set_xlabel('Filling')
         a.set_ylabel('Bond length C* (Å)')
     for a in ax[1,:]:
         a.set_xlabel('Filling')
-        a.set_ylabel('Wigner-Seitz radius + covalent radius (Å)')
+        a.set_ylabel('Wigner-Seitz radius, s (Å)')
+    for a in ax[2,:]:
+        a.set_xlabel('Filling')
+    ax[2,1].set_ylabel('Anderson band width (eV)')
+    ax[2,0].set_ylabel('$s^{5}$ (Å$^5$)')
+    fig.delaxes(ax[1,1])
 
     adjust_text(text_C, ax=ax[0,0])
     adjust_text(text_O, ax=ax[0,1])

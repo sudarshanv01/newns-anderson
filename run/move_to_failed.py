@@ -24,8 +24,8 @@ if __name__ == '__main__':
     DosWorkflow = WorkflowFactory('quantumespresso.pdos')
 
     qb = QueryBuilder()
-    # qb.append(Group, tag='Group', filters={'label':{'ilike':'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/dos_scf/slab'}})
-    qb.append(Group, tag='Group', filters={'label':{'ilike':'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/%'}})
+    qb.append(Group, tag='Group', filters={'label':{'ilike':'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/dos_scf/slab'}})
+    # qb.append(Group, tag='Group', filters={'label':{'ilike':'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/%'}})
 
 
     results = {}

@@ -4,13 +4,15 @@ import numpy as np
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+from scipy.interpolate import interp1d
 import yaml
 import marshal
-from fitting_functions import ( func_a_by_r, func_exp, func_a_r_sq, 
-                                get_fit_for_Vsd, get_fit_for_wd,
-                                get_fit_for_epsd, function_linear, function_cubic, 
-                                function_quadratic, interpolate_quantity )
+from fitting_functions import ( interpolate_quantity,
+                                get_fitted_function )
 from plot_params import get_plot_params
+from ase import units
+import pickle
+from create_coupling_elements import create_coupling_elements
 get_plot_params()
 
 FIRST_ROW   = [ 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn']
@@ -22,28 +24,21 @@ if __name__ == '__main__':
     """Plot the fitting parameters and decide the range to be used."""
 
     REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
-    ADSORBATES = ['O', 'C']
 
     # Plot the fits
-    fig, axa = plt.subplots(len(ADSORBATES), 3, figsize=(6.75, 4), constrained_layout=True)
+    fig, axa = plt.subplots(1, 5, figsize=(6.75, 2), constrained_layout=True, squeeze=False)
 
-    # Plot the fits with the d-band centre
-    fig2, ax2a = plt.subplots(len(ADSORBATES), 2, figsize=(5.05, 4), constrained_layout=True)
-
-    for ai, adsorbate in enumerate(ADSORBATES):
-        ax = axa[ai,:]
-        ax[0].set_xlabel('Filling fraction')
-        ax[0].set_ylabel('$V_{sd}$ (eV)')
-        ax[1].set_xlabel('Filling fraction')
-        ax[1].set_ylabel('$w_{d}$ (eV)')
-        ax[2].set_ylabel('Filling fraction')
-        ax[2].set_xlabel('$\epsilon_d$ (eV)')
-
-        ax2 = ax2a[ai,:]
-        ax2[0].set_xlabel('$\epsilon_d$ (eV)')
-        ax2[0].set_ylabel('$V_{sd}$')
-        ax2[1].set_xlabel('$\epsilon_d$ (eV)')
-        ax2[1].set_ylabel('$w_{d}$')
+    ax = axa[0,:]
+    ax[0].set_xlabel('Filling fraction')
+    ax[0].set_ylabel('s (Bohr)')
+    ax[1].set_xlabel('Filling fraction')
+    ax[1].set_ylabel('Anderson $\Delta$ (a.u.)')
+    ax[2].set_xlabel('Filling fraction')
+    ax[2].set_ylabel('$V_{sd}^2$ (eV)')
+    ax[3].set_xlabel('Filling fraction')
+    ax[3].set_ylabel('$w_{d}$ (eV)')
+    ax[4].set_xlabel('Filling fraction')
+    ax[4].set_ylabel('$\epsilon_d$ (eV)')
 
     # Input parameters to help with the dos from Newns-Anderson
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
@@ -51,94 +46,117 @@ if __name__ == '__main__':
     data_from_dos_calculation = json.load(open(f"output/pdos_moments_{COMP_SETUP['dos']}.json")) 
     data_from_energy_calculation = json.load(open(f"output/adsorption_energies_{COMP_SETUP[CHOSEN_SETUP]}.json"))
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
-    dft_Vsdsq = json.load(open(f"output/dft_Vsdsq.json"))
+    dft_Vsdsq = json.load(open('output/dft_Vsdsq.json'))
+
+    # Get the bond length-corrected Vsd 
+    anderson_band_width_data = data_from_LMTO['anderson_band_width']
+    s_data = data_from_LMTO['s']
+    Vsdsq_data = data_from_LMTO['Vsdsq']
+    no_of_bonds = yaml.safe_load(open('inputs/number_bonds.yaml', 'r'))
 
     # Cycle of colors
     colors = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
 
     # Get the fits for the metal rows
     fitting_parameters = defaultdict( lambda: defaultdict(lambda: defaultdict(list)))
-    filling_range = np.linspace(0.1, 1.1, 50)
 
+    # Get the fitting functions (without the derivatives)
+    fitted_function_Md, fitted_function_bl = get_fitted_function(quantity_y='Vsd', return_derivative=False)
+    fitted_function_wd = get_fitted_function(quantity_y='wd', return_derivative=False)
     
-    # Run the fitting for each coupling elements for each adsorbate
-    for ai, adsorbate in enumerate(ADSORBATES):
+    # Plot the fitting of Vsd and weights with filling fractions
+    parameters = defaultdict(lambda: defaultdict(list))
+    # Plot everything on this axis
+    ax = axa[0,:]
 
-        # Plot the fitting of Vsd and weights with filling fractions
-        parameters = defaultdict(lambda: defaultdict(list))
-        # Plot everything on this axis
-        ax = axa[ai,:]
-        ax2 = ax2a[ai,:]
+    for i, metal_row in enumerate([FIRST_ROW, SECOND_ROW, THIRD_ROW]):
+        for j, metal in enumerate(metal_row):
+            if metal in REMOVE_LIST:
+                continue
+            try:
+                width = data_from_dos_calculation[metal]['width']
+                filling = data_from_LMTO['filling'][metal]
+                Vsdsq = dft_Vsdsq[metal]
+            except KeyError:
+                continue
 
-        for i, metal_row in enumerate([FIRST_ROW, SECOND_ROW, THIRD_ROW]):
-            for j, metal in enumerate(metal_row):
-                try:
-                    width = data_from_dos_calculation[metal]['width']
-                    filling = data_from_LMTO['filling'][metal]
-                    Vsdsq = dft_Vsdsq[adsorbate][metal]
-                except KeyError:
-                    continue
+            parameters['Vsdsq'][i].append(Vsdsq)
+            parameters['filling'][i].append(filling)
+            parameters['width'][i].append(width)
+            eps_d = data_from_dos_calculation[metal]['d_band_centre']
+            parameters['eps_d'][i].append(eps_d)
+            if metal in REMOVE_LIST:
+                continue
+            parameters['eps_d_rel'][i].append(eps_d)
+            parameters['filling_rel'][i].append(filling)
+            parameters['metal'][i].append(metal)
+            parameters['s'][i].append(s_data[metal])
+            parameters['Delta_anderson'][i].append(anderson_band_width_data[metal])
 
-                parameters['Vsd'][i].append(np.sqrt(Vsdsq))
-                parameters['filling'][i].append(filling)
-                parameters['width'][i].append(width)
-                eps_d = data_from_dos_calculation[metal]['d_band_centre']
-                parameters['eps_d'][i].append(eps_d)
-                if metal in REMOVE_LIST:
-                    continue
-                parameters['eps_d_rel'][i].append(eps_d)
-                parameters['filling_rel'][i].append(filling)
-                parameters['metal'][i].append(metal)
+
+    # Iterate through each row of transition metals
+    spline_objects = defaultdict(dict)
+    minmax_dict = defaultdict(lambda: defaultdict(list))
+    for i in range(3):
         
+        # get the eps_d range and the filling range
+        eps_drel_minmax = [ np.min(parameters['eps_d_rel'][i]), np.max(parameters['eps_d_rel'][i]) ]
+        eps_d_minmax = [ np.min(parameters['eps_d'][i]), np.max(parameters['eps_d'][i]) ]
+        filling_minmax = [ np.min(parameters['filling_rel'][i]), np.max(parameters['filling_rel'][i]) ]
+        # minmax_dict[i]['eps_d_rel'] = eps_drel_minmax
+        minmax_dict[i]['eps_d'] = eps_d_minmax
+        minmax_dict[i]['filling'] = filling_minmax
 
-        for i in range(3):
-            # First fit everything with respect to the filling fraction
-            fit_Vsd = get_fit_for_Vsd(parameters['filling'][i], parameters['Vsd'][i])
-            fit_width = get_fit_for_wd(parameters['filling'][i], parameters['width'][i])
-            fit_epsd_filling = get_fit_for_epsd(parameters['eps_d'][i], parameters['filling'][i])
+        # Plotting based on the epsd range of the metal row
+        epsd_range = np.linspace(eps_d_minmax[0], eps_d_minmax[1], 50)
+        filling_range = np.linspace(filling_minmax[0], filling_minmax[1], 50)
 
-            # get the eps_d range and the filling range
-            eps_drel_minmax = [ np.min(parameters['eps_d_rel'][i]), np.max(parameters['eps_d_rel'][i]) ]
-            eps_d_minmax = [ np.min(parameters['eps_d'][i]), np.max(parameters['eps_d'][i]) ]
-            filling_minmax = [ np.min(parameters['filling_rel'][i]), np.max(parameters['filling_rel'][i]) ]
+        # Interpolate the fitting parameters
+        spline_epsd = interpolate_quantity(parameters['filling'][i], parameters['eps_d'][i])
+        spline_s = interpolate_quantity(parameters['filling'][i], parameters['s'][i])
+        spline_Delta_anderson = interpolate_quantity(parameters['filling'][i], parameters['Delta_anderson'][i])
+        spline_width = interpolate_quantity(parameters['filling'][i], parameters['width'][i])
+        spline_filling = np.poly1d(np.polyfit(parameters['eps_d'][i], parameters['filling'][i], 1)) 
+        # interp1d(parameters['eps_d'][i], parameters['filling'][i])
+        spline_Vsdsq = interpolate_quantity(parameters['filling'][i], parameters['Vsdsq'][i])
+        spline_Vsd = interpolate_quantity(parameters['filling'][i], np.sqrt(parameters['Vsdsq'][i]))
+        spline_objects[i]['eps_d'] = spline_epsd
+        spline_objects[i]['s'] = spline_s
+        spline_objects[i]['Delta_anderson'] = spline_Delta_anderson
+        spline_objects[i]['width'] = spline_width
+        spline_objects[i]['filling'] = spline_filling
+        spline_objects[i]['Vsdsq'] = spline_Vsdsq
+        spline_objects[i]['Vsd'] = spline_Vsd
 
-            # Plotting based on the epsd range of the metal row
-            epsd_range = np.linspace(eps_d_minmax[0], eps_d_minmax[1], 50)
+        # Get the coupling elements based on the fit
+        Vsdsq_interp = []
+        for filling in filling_range:
+            s_filling = spline_s(filling)
+            Delta_anderson_filling = spline_Delta_anderson(filling)
+            Vsdsq_filling = s_filling**-3 * Delta_anderson_filling
 
-            # Get the same fits with the d-band centre
-            kwargs = {'input_epsd':True, 'fitted_epsd_to_filling':fit_epsd_filling[0]}
-            
-            fitting_parameters[adsorbate]['Vsd'][i] = fit_Vsd[0]
-            fitting_parameters[adsorbate]['width'][i] = fit_width[0]
-            fitting_parameters[adsorbate]['epsd_filling'][i] = fit_epsd_filling[0]
+            # Reference to Cu
+            Vsdsq_filling /= s_data['Cu']**-3 * anderson_band_width_data['Cu']
+            Vsdsq_interp.append(Vsdsq_filling)
 
-            # Interpolate the fitting parameters
-            spline_epsd = interpolate_quantity(parameters['filling'][i], parameters['eps_d'][i])
+        # Plot the real and interpolated values of s, Delta_anderson, Vsdsq, width and eps_d
+        ax[0].plot(parameters['filling'][i], parameters['s'][i], 'o', color=colors[i], label=f'{metal_row[i]}')
+        ax[0].plot(filling_range, spline_s(filling_range), color=colors[i], ls='-')
+        ax[1].plot(parameters['filling'][i], parameters['Delta_anderson'][i], 'o', color=colors[i], label=f'{metal_row[i]}')
+        ax[1].plot(filling_range, spline_Delta_anderson(filling_range), color=colors[i], ls='-')
+        ax[2].plot(parameters['filling'][i], parameters['Vsdsq'][i], 'o', color=colors[i], label=f'{metal_row[i]}')
+        # ax[2].plot(filling_range, Vsdsq_interp, color=colors[i], label=f'{metal_row[i]}')
+        ax[2].plot(filling_range, spline_Vsdsq(filling_range), color=colors[i], ls='-')
+        ax[3].plot(parameters['filling'][i], parameters['width'][i], 'o', color=colors[i], label=f'{metal_row[i]}')
+        ax[3].plot(filling_range, spline_width(filling_range), color=colors[i], ls='-')
+        ax[4].plot(parameters['filling'][i], parameters['eps_d'][i], 'o', color=colors[i], label=f'{metal_row[i]}')
+        # ax[4].plot(filling_range, spline_epsd(filling_range), color=colors[i], ls='-')
+        ax[4].plot(spline_filling(epsd_range), epsd_range, color=colors[i], ls='-')
 
-            ax[0].plot(parameters['filling'][i], parameters['Vsd'][i], 'o', label=f'{i+1}-row', color=colors[i])
-            ax[0].plot(filling_range, func_a_r_sq(filling_range, *fit_Vsd[0]), '--', color=colors[i])
-            # ax[0].plot(filling_range, spline_Vsd(filling_range), '--', color=colors[i])
+    # Write out spline objects as a pickle file
+    with open('output/spline_objects.pkl', 'wb') as f:
+        pickle.dump(spline_objects, f)
+    with open('output/minmax_parameters.json', 'w') as handle:
+        json.dump(minmax_dict, handle, indent=4)
 
-            ax[1].plot(parameters['filling'][i], parameters['width'][i], 'o', label=f'{i+1}-row', color=colors[i])
-            ax[1].plot(filling_range, func_a_r_sq(filling_range, *fit_width[0]), '--', color=colors[i])
-
-            ax[2].plot( parameters['eps_d'][i], parameters['filling'][i],'o', label=f'{i+1}-row', color=colors[i])
-            ax[2].plot(epsd_range, function_cubic(epsd_range, *fit_epsd_filling[0]), '--', color=colors[i])
-            # ax[2].plot(filling_range, spline_epsd(filling_range), '--', color=colors[i])
-
-            ax2[0].plot(parameters['eps_d'][i], parameters['Vsd'][i], 'o', label=f'{i+1}-row', color=colors[i])
-            ax2[0].plot(epsd_range, func_a_r_sq(epsd_range, *fit_Vsd[0], **kwargs), '--', color=colors[i])
-
-            ax2[1].plot(parameters['eps_d'][i], parameters['width'][i], 'o', label=f'{i+1}-row', color=colors[i])
-            ax2[1].plot(epsd_range, func_a_r_sq(epsd_range, *fit_width[0], **kwargs), '--', color=colors[i])
-
-
-            fitting_parameters[adsorbate]['eps_d_minmax'][i] = eps_drel_minmax
-            fitting_parameters[adsorbate]['filling_minmax'][i] = filling_minmax
-    
     fig.savefig(f'output/fitting_metal_parameters.png', dpi=300)
-    fig2.savefig(f'output/fitting_metal_parameters_dband.png', dpi=300)
-
-    # Write out the fitting parameters to a json file
-    json.dump(fitting_parameters, open(f'output/fitting_metal_parameters.json', 'w'), indent=4)
-

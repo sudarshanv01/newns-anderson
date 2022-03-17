@@ -10,6 +10,8 @@ from scipy.optimize import curve_fit
 from scipy import special, interpolate
 import string
 from fitting_functions import get_fitted_function
+from create_coupling_elements import create_coupling_elements
+import pickle
 from catchemi import ( NewnsAndersonLinearRepulsion,
                        NewnsAndersonNumerical,
                        NewnsAndersonDerivativeEpsd,
@@ -110,33 +112,31 @@ if __name__ == '__main__':
     variations in the figure."""
 
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
-    CHOSEN_SETUP = 'energy'
+    CHOSEN_SETUP = open('chosen_setup', 'r').read() 
     # Read in scaling parameters from the model.
     with open(f"output/O_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         o_parameters = json.load(f)
     with open(f"output/C_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         c_parameters = json.load(f)
-    with open(f"output/fitting_metal_parameters.json", 'r') as f:
-        metal_parameters = json.load(f)
     GRID_LEVEL = 'high' # 'high' or 'low'
 
     # Create range of parameters 
     if GRID_LEVEL == 'high':
-        NUMBER_OF_ADSORBATES = 25
-        NUMBER_OF_METALS = 50
-        GRID_SPACING_DERIV = 120
+        NUMBER_OF_ADSORBATES = 20
+        NUMBER_OF_METALS = 30
+        GRID_SPACING_DERIV = 300
     elif GRID_LEVEL == 'low':
-        NUMBER_OF_ADSORBATES = 2
-        NUMBER_OF_METALS = 4
+        NUMBER_OF_ADSORBATES = 10
+        NUMBER_OF_METALS = 10
         GRID_SPACING_DERIV = 10
-    EPS_RANGE = np.linspace(-20, 20, 1000)
+    EPS_RANGE = np.linspace(-30, 10, 1000)
     ADSORBATES = ['O', 'C']
 
     # Fix the energy width of the sp 
     # states of the metal
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
-    CUTOFF_VALUE = -0.1
+    CUTOFF_VALUE = 0.1 # Any value lower than this considered saturated
 
     # Create an idealised range of parameters by interpolating each 
     # parameter inclusing eps_a linearly over the entire energy range
@@ -168,6 +168,14 @@ if __name__ == '__main__':
     data_from_energy_calculation = json.load(open(f"output/adsorption_energies_{COMP_SETUP[CHOSEN_SETUP]}.json"))
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
     dft_Vsdsq = json.load(open(f"output/dft_Vsdsq.json"))
+    no_of_bonds = yaml.safe_load(open('inputs/number_bonds.yaml', 'r'))
+    s_data = data_from_LMTO['s']
+    anderson_band_width_data = data_from_LMTO['anderson_band_width']
+    minmax_parameters = json.load(open('output/minmax_parameters.json'))
+
+    with open(f"output/spline_objects.pkl", 'rb') as f:
+        spline_objects = pickle.load(f)
+
 
     # Get the main figure with the energies and the axes
     # and the supporting figure with the density of states
@@ -202,14 +210,16 @@ if __name__ == '__main__':
             # row of the metal.
 
             # get the metal fitting parameters
-            Vsd_fit = metal_parameters['Vsd'][str(j)]
-            wd_fit = metal_parameters['width'][str(j)]
-            epsd_filling_fit = metal_parameters['epsd_filling'][str(j)]
+            s_fit = spline_objects[j]['s']
+            Delta_anderson_fit = spline_objects[j]['Delta_anderson']
+            wd_fit = spline_objects[j]['width']
+            eps_d_fit = spline_objects[j]['eps_d']
+
 
             # Consider only a specific range of metals in the analysis
             # Those used in Figures 1-3 of the paper
-            filling_min, filling_max = metal_parameters['filling_minmax'][str(j)]
-            eps_d_min, eps_d_max = metal_parameters['eps_d_minmax'][str(j)]
+            filling_min, filling_max = minmax_parameters[str(j)]['filling']
+            eps_d_min, eps_d_max = minmax_parameters[str(j)]['eps_d']
             # Generate grid for differentiation
             diff_grid = np.linspace(eps_d_min, eps_d_max, GRID_SPACING_DERIV)
 
@@ -218,31 +228,31 @@ if __name__ == '__main__':
             filling_range = np.linspace(filling_max, filling_min, NUMBER_OF_METALS)
             eps_d_range = np.linspace(eps_d_min, eps_d_max, NUMBER_OF_METALS)
 
-
-            # Functions of Vsd and width as a function of the filling
-            function_Vsd, function_Vsd_p = get_fitted_function('Vsd') 
-            function_wd, function_wd_p = get_fitted_function('wd')
-            # Generate the kwargs needed to pass in eps_d values 
-            # to functions which are fit to the filling  
-            kwargs = {'input_epsd':True, 'fitted_epsd_to_filling':epsd_filling_fit}
-            kwargs_deriv = {'input_epsd':True, 
-                            'fitted_epsd_to_filling':epsd_filling_fit, 
-                            'is_derivative':True}
-
             # Store the metal parameters to be used in the fitting model
             parameters_metal = defaultdict(list)
 
             for i, filling in enumerate(filling_range):
                 # Continuous setting of parameters for each 
                 # continous variation of the metal
-                Vsd = function_Vsd(filling, *Vsd_fit )
-                width = function_wd(filling, *wd_fit )
-                eps_d = eps_d_range[i]                
+                width = wd_fit(filling) 
+                eps_d = eps_d_fit(filling) 
+                Vsdsq = create_coupling_elements(s_metal=s_fit(filling),
+                                                s_Cu=s_data['Cu'],
+                                                anderson_band_width=Delta_anderson_fit(filling),
+                                                anderson_band_width_Cu=anderson_band_width_data['Cu'],
+                                                r=s_fit(filling),
+                                                r_Cu=s_data['Cu'],
+                                                normalise_by_Cu=True,
+                                                normalise_bond_length=True
+                                                )
+                Vsd = np.sqrt(Vsdsq)
 
                 parameters_metal['Vsd'].append(Vsd)
                 parameters_metal['eps_d'].append(eps_d)
                 parameters_metal['width'].append(width)
                 parameters_metal['filling'].append(filling)
+                # TODO: Fix the number of bonds issue
+                parameters_metal['no_of_bonds'].append(no_of_bonds[CHOSEN_SETUP]['average'])
 
             # Now plot the energies for each row
             kwargs_fitting = dict(
@@ -254,6 +264,7 @@ if __name__ == '__main__':
                 eps_sp_min=EPS_SP_MIN,
                 Delta0_mag=delta0,
                 store_hyb_energies = True,
+                no_of_bonds = parameters_metal['no_of_bonds'],
             )
             jna = FitParametersNewnsAnderson(**kwargs_fitting)
 
@@ -279,10 +290,10 @@ if __name__ == '__main__':
             # the d-band centre to be plotted in the third figure
             # Generate the continuous variation of parameters as a 
             # function of eps_d for each row.
-            f_Vsd = lambda x: function_Vsd(x, *Vsd_fit, **kwargs)
-            f_Vsd_p = lambda x: function_Vsd_p(x, *Vsd_fit, **kwargs_deriv)
-            f_wd = lambda x: function_wd(x, *wd_fit, **kwargs)
-            f_wd_p = lambda x: function_wd_p(x, *wd_fit, **kwargs_deriv)
+            f_Vsd = lambda x: spline_objects[j]['Vsd']( spline_objects[j]['filling'](x)  ) 
+            f_Vsd_p = lambda x: spline_objects[j]['Vsd'].derivative()( spline_objects[j]['filling'](x)  ) 
+            f_wd = lambda x: spline_objects[j]['width']( spline_objects[j]['filling'](x)  ) 
+            f_wd_p = lambda x: spline_objects[j]['width'].derivative()( spline_objects[j]['filling'](x)  ) 
 
             # Get the derivative of the hybridisation energy with eps_d
             derivative = NewnsAndersonDerivativeEpsd(f_Vsd=f_Vsd,f_Vsd_p=f_Vsd_p,
@@ -297,7 +308,9 @@ if __name__ == '__main__':
             # Store the highest epsilon_d value at which the 
             # analytical derivative saturates to CUTOFF_VALUE
             saturation_epsd_arg = [ a for a in range(len(analytical_hyb_deriv)) 
-                                if analytical_hyb_deriv[a] > CUTOFF_VALUE]
+                                if np.abs(analytical_hyb_deriv[a]) < CUTOFF_VALUE]
+            # Remove all points that are more than -1 eV
+            saturation_epsd_arg = [ a for a in saturation_epsd_arg if diff_grid[a] < -1]
             if len(saturation_epsd_arg) > 0:
                 saturation_epsd = diff_grid[saturation_epsd_arg]            
                 eps_s[j].append(np.max(saturation_epsd))
@@ -332,6 +345,6 @@ if __name__ == '__main__':
             i -= 1
         a.annotate(alphabet[i]+')', xy=(0.05, 0.5), fontsize=8, xycoords='axes fraction')
 
-    fig.savefig(f'output/figure_4_{COMP_SETUP}.png', dpi=300)
-    figs.savefig(f'output/final_param_na_dos_{COMP_SETUP}.png', dpi=300)
+    fig.savefig(f'output/figure_4_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)
+    figs.savefig(f'output/final_param_na_dos_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)
     

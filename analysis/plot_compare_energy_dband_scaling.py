@@ -16,7 +16,7 @@ FIRST_ROW   = [ 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn']
 SECOND_ROW  = [ 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd']
 THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl'] 
 
-colors = {'ontop':'tab:red', 'threefold':'tab:blue'}
+colors = {'ontop':'tab:red', 'hollow':'tab:blue'}
 
 if __name__ == '__main__':
     """Compare the d-band centre from the LMTO calculations
@@ -72,7 +72,7 @@ if __name__ == '__main__':
                 ax[ads_i,row_i].plot(d_band_centre, energies, 'o', color=colors['ontop'])
 
                 ax[ads_i,row_i].plot(d_band_centre, np.min(sampled_energies), 'o',
-                                    color=colors['threefold'])
+                                    color=colors['hollow'])
 
                 # Store texts to be adjusted later
                 texts[row_i].append(ax[ads_i,row_i].text(d_band_centre, energies, 

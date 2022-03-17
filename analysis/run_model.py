@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 from adjustText import adjust_text
 from yaml import safe_load
 from catchemi import NewnsAndersonLinearRepulsion, FitParametersNewnsAnderson
+from create_coupling_elements import create_coupling_elements
+from ase.data import covalent_radii, atomic_numbers
+from ase import units
 from plot_params import get_plot_params
 get_plot_params()
 import matplotlib as mpl
@@ -47,8 +50,7 @@ if __name__ == '__main__':
     # scf only calculations in order to avoid any noise and look only for 
     # the electronic structure contribution
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
-    CHOSEN_SETUP = 'energy'
-    no_of_bonds = 1
+    CHOSEN_SETUP = 'sampled'
 
     # get the width and d-band centre parameters
     # The moments of the density of states comes from a DFT calculation 
@@ -57,7 +59,10 @@ if __name__ == '__main__':
     data_from_dos_calculation = json.load(open(f"output/pdos_moments_{COMP_SETUP['dos']}.json")) 
     data_from_energy_calculation = json.load(open(f"output/adsorption_energies_{COMP_SETUP[CHOSEN_SETUP]}.json"))
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
-    dft_Vsdsq = json.load(open(f"output/dft_Vsdsq.json"))
+    s_data = data_from_LMTO['s']
+    anderson_band_width_data = data_from_LMTO['anderson_band_width']
+    Vsdsq_data = data_from_LMTO['Vsdsq']
+    no_of_bonds = yaml.safe_load(open('inputs/number_bonds.yaml', 'r'))
 
     # Plot the fitted and the real adsorption energies
     fig, ax = plt.subplots(1, 2, figsize=(6.75, 3), constrained_layout=True)
@@ -95,10 +100,23 @@ if __name__ == '__main__':
                 dft_energies.append(np.min(adsorption_energy))
             else:
                 dft_energies.append(adsorption_energy)
+            
+            # Get the bond length from the LMTO calculations
+            bond_length = data_from_LMTO['s'][metal]*units.Bohr #\
+                        # + covalent_radii[atomic_numbers[adsorbate]] 
+            bond_length_Cu = data_from_LMTO['s']['Cu']*units.Bohr # \
+                        # + covalent_radii[atomic_numbers[adsorbate]]
 
-            # get the idealised parameters 
-            # Vsd = np.sqrt(data_from_LMTO['Vsdsq'][metal])
-            Vsd = np.sqrt(dft_Vsdsq[adsorbate][metal])
+            Vsdsq = create_coupling_elements(s_metal=s_data[metal],
+                s_Cu=s_data['Cu'],
+                anderson_band_width=anderson_band_width_data[metal],
+                anderson_band_width_Cu=anderson_band_width_data['Cu'],
+                r=bond_length,
+                r_Cu=bond_length_Cu,
+                normalise_bond_length=True,
+                normalise_by_Cu=True)
+            # Report the square root
+            Vsd = np.sqrt(Vsdsq)
             parameters['Vsd'].append(Vsd)
 
             # Get the metal filling
@@ -107,6 +125,10 @@ if __name__ == '__main__':
 
             # Store the order of the metals
             metals.append(metal)
+
+            # Get the number of bonds based on the 
+            # DFT calculation
+            parameters['no_of_bonds'].append(no_of_bonds[CHOSEN_SETUP][metal])
 
         # Prepare the class for fitting routine 
         kwargs_fit = dict(
@@ -118,7 +140,7 @@ if __name__ == '__main__':
             width = parameters['width'],
             eps_a = eps_a,
             verbose = True,
-            no_of_bonds = no_of_bonds,
+            no_of_bonds = parameters['no_of_bonds'],
         )
         fitting_function =  FitParametersNewnsAnderson(**kwargs_fit)
 
@@ -173,7 +195,7 @@ if __name__ == '__main__':
             'delta0': CONSTANT_DELTA0, 
             'constant_offset': output.beta[2],
             'eps_a': eps_a,
-            'no_of_bonds': no_of_bonds,
+            # 'no_of_bonds': no_of_bonds,
         }, open(f'output/{adsorbate}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json', 'w'))
 
     fig.savefig(f'output/figure_3_fitting_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)

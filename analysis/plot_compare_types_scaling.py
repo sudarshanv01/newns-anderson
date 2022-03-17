@@ -7,6 +7,8 @@ from catchemi import ( NewnsAndersonLinearRepulsion,
                        NewnsAndersonDerivativeEpsd,
                        FitParametersNewnsAnderson
                      )  
+import pickle
+from create_coupling_elements import create_coupling_elements
 from plot_params import get_plot_params
 import yaml
 import json
@@ -53,17 +55,21 @@ if __name__ == '__main__':
     metals vs. just one transition metal, with different facets."""
 
     # The chosen computational setup.  
-    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))['group'][0]
+    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
+    CHOSEN_SETUP = open('chosen_setup', 'r').read() 
     # Remove these metals from consideration because they are not part of the study.
     REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
     # Read in scaling parameters from the model.
-    with open(f"output/O_parameters_{COMP_SETUP}.json", 'r') as f:
+    with open(f"output/O_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         o_parameters = json.load(f)
-    with open(f"output/C_parameters_{COMP_SETUP}.json", 'r') as f:
+    with open(f"output/C_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         c_parameters = json.load(f)
-    adsorbate_parameters = {'C': c_parameters, 'O': o_parameters}
-    with open(f"output/fitting_metal_parameters_{COMP_SETUP}.json", 'r') as f:
-        metal_parameters = json.load(f)
+    adsorbate_params = {'O': o_parameters, 'C': c_parameters}
+    # Read in the metal fitting splines
+    with open(f"output/spline_objects.pkl", 'rb') as f:
+        spline_objects = pickle.load(f)
+
+    GRID_LEVEL = 'high' # 'high' or 'low'
 
     # Choose a sequence of adsorbates
     ADSORBATES = ['O', 'C']
@@ -72,18 +78,24 @@ if __name__ == '__main__':
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
     CONSTANT_DELTA0 = 0.1
-    GRID_SIZE = 120
+    if GRID_LEVEL == 'high':
+        GRID_SIZE = 120
+    elif GRID_LEVEL == 'low':
+        GRID_SIZE = 10
 
     # Figure layout for comparison.
     fig, ax, axd = figure_layout()
     figa, axa = aux_fig_layout()
 
     # Input parameters to help with the dos from Newns-Anderson
-    data_from_dos_calculation = json.load(open(f'output/pdos_moments_{COMP_SETUP}.json')) 
-    data_from_energy_calculation = json.load(open(f'output/adsorption_energies_{COMP_SETUP}.json'))
+    data_from_dos_calculation = json.load(open(f"output/pdos_moments_{COMP_SETUP['dos']}.json")) 
+    data_from_energy_calculation = json.load(open(f"output/adsorption_energies_{COMP_SETUP[CHOSEN_SETUP]}.json"))
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
-    function_Vsd, function_Vsd_p = get_fitted_function('Vsd') 
-    function_wd, function_wd_p = get_fitted_function('wd')
+    no_of_bonds = yaml.safe_load(open('inputs/number_bonds.yaml', 'r'))
+    dft_Vsdsq = json.load(open(f"output/dft_Vsdsq.json"))
+    s_data = data_from_LMTO['s']
+    anderson_band_width_data = data_from_LMTO['anderson_band_width']
+    minmax_parameters = json.load(open('output/minmax_parameters.json'))
 
     for j, metal_row in enumerate([FIRST_ROW, SECOND_ROW, THIRD_ROW]):
         # Create a plot of the chemisorption energy as a function
@@ -92,31 +104,19 @@ if __name__ == '__main__':
         # Store the parameters in order of metals in this list
         parameters = defaultdict(list)
 
-        # Get parameters of continuous fitting for each row
-        Vsd_fit = metal_parameters['Vsd'][str(j)]
-        wd_fit = metal_parameters['width'][str(j)]
-        epsd_filling_fit = metal_parameters['epsd_filling'][str(j)]
-
         # Consider only a specific range of metals in the analysis
         # Those used in Figures 1-3 of the paper
-        filling_min, filling_max = metal_parameters['filling_minmax'][str(j)]
-        eps_d_min, eps_d_max = metal_parameters['eps_d_minmax'][str(j)]
+        filling_min, filling_max = minmax_parameters[str(j)]['filling']
+        eps_d_min, eps_d_max = minmax_parameters[str(j)]['eps_d']
         # Create linearlised variation of this parameter for
         # the chosen set of materials
         filling_range = np.linspace(filling_max, filling_min, GRID_SIZE, endpoint=True)
         eps_d_range = np.linspace(eps_d_min, eps_d_max, GRID_SIZE, endpoint=True)
 
-        # Truncated eps_d range based on the expected metal-only scaling plot
-        # eps_d_range_trunc = np.linspace()
-        parameters['Vsd_interp'] = function_Vsd( filling_range, *Vsd_fit ) 
-        parameters['width_interp'] = function_wd(filling_range, *wd_fit)
-
-        # Generate the kwargs needed to pass in eps_d values 
-        # to functions which are fit to the filling  
-        kwargs = {'input_epsd':True, 'fitted_epsd_to_filling':epsd_filling_fit}
-        kwargs_deriv = {'input_epsd':True, 
-                        'fitted_epsd_to_filling':epsd_filling_fit, 
-                        'is_derivative':True}
+        s_fit = spline_objects[j]['s']
+        Delta_anderson_fit = spline_objects[j]['Delta_anderson']
+        wd_fit = spline_objects[j]['width']
+        eps_d_fit = spline_objects[j]['eps_d']
 
         for i, metal in enumerate(metal_row): 
             # Remove metals that are not used in this study.
@@ -129,15 +129,33 @@ if __name__ == '__main__':
             index_d_band_interp = np.argmin(np.abs(d_band_centre - eps_d_range))
             d_band_centre = eps_d_range[index_d_band_interp]
             parameters['d_band_centre'].append(d_band_centre)
-
-            width = parameters['width_interp'][index_d_band_interp] 
+            width = data_from_dos_calculation[metal]['width']
             parameters['width'].append(width)
-
-            Vsd = parameters['Vsd_interp'][index_d_band_interp]
+            Vsd = np.sqrt(dft_Vsdsq[metal])
             parameters['Vsd'].append(Vsd)
-
             parameters['metal'].append(metal)
-        
+            parameters['no_of_bonds'].append(no_of_bonds[CHOSEN_SETUP][metal])
+
+        # Populate the interpolated Vsd and width values
+        for l, eps_d_interp in enumerate(eps_d_range):
+            # Continuous setting of parameters for each 
+            # continous variation of the metal
+            filling_fit = spline_objects[j]['filling'](eps_d_interp)
+            width = spline_objects[j]['width'](filling_fit) 
+            Vsdsq = create_coupling_elements(s_metal=s_fit(filling_fit),
+                                            s_Cu=s_data['Cu'],
+                                            anderson_band_width=Delta_anderson_fit(filling_fit),
+                                            anderson_band_width_Cu=anderson_band_width_data['Cu'],
+                                            r=s_fit(filling_fit),
+                                            r_Cu=s_data['Cu'],
+                                            normalise_by_Cu=True,
+                                            normalise_bond_length=True
+                                            )
+            Vsd = np.sqrt(Vsdsq)
+            parameters['Vsd_interp'].append(Vsd)
+            parameters['width_interp'].append(width)
+            parameters['no_of_bond_interp'].append(no_of_bonds[CHOSEN_SETUP]['average'])
+
         # Compute separately the chemisorption energy for each row
         # for each adsorbate.
         total_energy = {}
@@ -156,25 +174,28 @@ if __name__ == '__main__':
                 eps_sp_min=EPS_SP_MIN,
                 Delta0_mag=CONSTANT_DELTA0,
                 store_hyb_energies = True,
+                no_of_bonds = parameters['no_of_bonds'],
             )
             fitting_function = FitParametersNewnsAnderson(**kwargs_fitting)
             
-            alpha = adsorbate_parameters[adsorbate]['alpha']
-            beta = adsorbate_parameters[adsorbate]['beta']
-            constant = adsorbate_parameters[adsorbate]['constant_offset']
+            alpha = adsorbate_params[adsorbate]['alpha']
+            beta = adsorbate_params[adsorbate]['beta']
+            constant = adsorbate_params[adsorbate]['constant_offset']
 
             # Gather energies
             total_energy[adsorbate] = fitting_function.fit_parameters( [alpha, beta, constant],
                                                                         parameters['d_band_centre'])
+
             fitting_function.Vsd = parameters['Vsd_interp']
             fitting_function.width = parameters['width_interp']
+            fitting_function.no_of_bonds = parameters['no_of_bond_interp']
             range_energy[adsorbate] = fitting_function.fit_parameters( [alpha, beta, constant],
                                                                         eps_d_range )
             # Gather the derivative of the hybridisation energy with eps_d
-            f_Vsd = lambda x: function_Vsd(x, *Vsd_fit, **kwargs)
-            f_Vsd_p = lambda x: function_Vsd_p(x, *Vsd_fit, **kwargs_deriv)
-            f_wd = lambda x: function_wd(x, *wd_fit, **kwargs)
-            f_wd_p = lambda x: function_wd_p(x, *wd_fit, **kwargs_deriv)
+            f_Vsd = lambda x: spline_objects[j]['Vsd']( spline_objects[j]['filling'](x)  ) 
+            f_Vsd_p = lambda x: spline_objects[j]['Vsd'].derivative()( spline_objects[j]['filling'](x)  ) 
+            f_wd = lambda x: spline_objects[j]['width']( spline_objects[j]['filling'](x)  ) 
+            f_wd_p = lambda x: spline_objects[j]['width'].derivative()( spline_objects[j]['filling'](x)  ) 
 
             # Get the derivative of the hybridisation energy with eps_d
             derivative = NewnsAndersonDerivativeEpsd(f_Vsd=f_Vsd,f_Vsd_p=f_Vsd_p,
@@ -258,10 +279,10 @@ if __name__ == '__main__':
     for i, a in enumerate(list(axa.flatten())):
         a.annotate(alphabet[i]+')', xy=(0.01, 1.05), xycoords='axes fraction')
 
-    axa[0,1].annotate('$V_{ak}^2=\mathrm{const}, w_d=\mathrm{const}$', xy=(0.05, 0.1), xycoords='axes fraction',
-                        color='tab:orange', fontsize=8)
-    axa[1,1].annotate('$V_{ak}^2 \propto \epsilon_d^{-1},w_d\propto \epsilon_d^2$', xy=(0.05, 0.1), xycoords='axes fraction',
-                        color='tab:blue',fontsize=8)
+    # axa[0,1].annotate('$V_{ak}^2=\mathrm{const}, w_d=\mathrm{const}$', xy=(0.05, 0.1), xycoords='axes fraction',
+    #                     color='tab:orange', fontsize=8)
+    # axa[1,1].annotate('$V_{ak}^2 \propto \epsilon_d^{-1},w_d\propto \epsilon_d^2$', xy=(0.05, 0.1), xycoords='axes fraction',
+    #                     color='tab:blue',fontsize=8)
 
     fig.savefig('output/compare_types_scaling.png', dpi=300)
 

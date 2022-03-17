@@ -5,6 +5,7 @@ from aiida import orm
 from ase import io
 from collections import defaultdict
 import json, yaml
+
 # --- AiiDA imports
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
 DosWorkflow = WorkflowFactory('quantumespresso.pdos')
@@ -15,7 +16,10 @@ if __name__ == '__main__':
     plot the bond length of C and O from the metal centers."""
 
     # Group name for the adsorbate on the transition metal
-    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))['energy_groupname']
+    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
+    CHOSEN_SETUP = open('chosen_setup', 'r').read() + '_groupname' 
+    COMP_SETUP = COMP_SETUP[CHOSEN_SETUP]
+
     ADSORBATES = ['C', 'O'] 
     type_of_calc = PwBaseWorkChain 
     LABEL = COMP_SETUP.replace('/', '_')
@@ -75,7 +79,8 @@ if __name__ == '__main__':
         # Get the lowest energy for each metal
         for metal, energies_list in all_energies.items():
             argmin_energies = np.argmin(energies_list)
-            most_stable_structure.append(all_structures[metal][argmin_energies])
+            # most_stable_structure.append(all_structures[metal][argmin_energies])
+            most_stable_structure.extend(all_structures[metal])
             most_stable_bond_length[metal] = bond_lengths[metal][argmin_energies]
         all_bond_lengths[ADSORBATE] = most_stable_bond_length
         io.write(f'output/all_structures_{ADSORBATE}_{LABEL}.xyz', most_stable_structure)

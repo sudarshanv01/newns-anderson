@@ -78,7 +78,7 @@ def set_same_limits(axes, y_set=True, x_set=False):
 if __name__ == '__main__':
     """Plot the scaling relations from the energy file."""
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
-    CHOSEN_SETUP = 'energy'
+    CHOSEN_SETUP = open('chosen_setup', 'r').read() 
     REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
 
     # Read the energy file.
@@ -209,4 +209,4 @@ if __name__ == '__main__':
     # set_same_limits(ax_r, y_set=True)
     # set_same_limits(ax_d, y_set=True)
 
-    fig.savefig(f'output/figure_1.png', dpi=300)
+    fig.savefig(f'output/figure_1_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)
