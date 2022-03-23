@@ -38,8 +38,8 @@ if __name__ == '__main__':
         restart = False
 
     # Choose a sequence of adsorbates
-    ADSORBATES = ['O', 'C']
-    EPS_A_VALUES = [ -5, -1 ] # eV
+    ADSORBATES = ['O', 'N', 'C']
+    EPS_A_VALUES = [ -5, -3, -1 ] # eV
     EPS_VALUES = np.linspace(-30, 10, 1000)
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     no_of_bonds = yaml.safe_load(open('inputs/number_bonds.yaml', 'r'))
 
     # Plot the fitted and the real adsorption energies
-    fig, ax = plt.subplots(1, 2, figsize=(6.75, 3), constrained_layout=True)
+    fig, ax = plt.subplots(1, len(ADSORBATES), figsize=(6.75, 3), constrained_layout=True)
     for i in range(len(ax)):
         ax[i].set_xlabel('DFT energy (eV)')
         ax[i].set_ylabel('Chemisorption energy (eV)')

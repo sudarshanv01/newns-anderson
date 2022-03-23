@@ -215,7 +215,7 @@ if __name__ == '__main__':
 
     for root_group in GROUPNAMES:
 
-        ADSORBATES = ['slab', 'C', 'O']
+        ADSORBATES = ['slab', 'C', 'O', 'N']
         # create the groups
         groups = []
         for adsorbate in ADSORBATES:

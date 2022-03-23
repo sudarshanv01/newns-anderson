@@ -55,7 +55,10 @@ if __name__ == '__main__':
     no_of_bonds = yaml.safe_load(open('inputs/number_bonds.yaml', 'r'))
 
     # Cycle of colors
-    colors = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
+    colors = ['tab:red', 'tab:blue', 'tab:green'] # ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
+    for i in range(3):
+        ax[-1].plot([], [], color=colors[i], label=f'{i+3}$d$')
+    ax[-1].legend(bbox_to_anchor=(1.04,1), borderaxespad=0)
 
     # Get the fits for the metal rows
     fitting_parameters = defaultdict( lambda: defaultdict(lambda: defaultdict(list)))

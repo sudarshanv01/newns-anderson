@@ -47,7 +47,7 @@ if __name__ == '__main__':
     it with values taken from Anderson, Jensen, Gotzel."""
 
     # Plot the Vsd terms, only plot for each row of TMs
-    fig, ax = plt.subplots(1, 3, figsize=(5.5, 2), constrained_layout=True, sharex=True, sharey=True)
+    fig, ax = plt.subplots(1, 1, figsize=(3, 2), constrained_layout=True, sharex=True, sharey=True)
 
     # Load the input quantities from the LMTO calculation
     data_from_LMTO = json.load(open('inputs/data_from_LMTO.json'))
@@ -65,6 +65,9 @@ if __name__ == '__main__':
     anderson_band_width_data = data_from_LMTO['anderson_band_width']
 
     coupling_elements = defaultdict(list)
+
+    # Color for each row
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 
     for row_i, metal_row in enumerate([FIRST_ROW, SECOND_ROW, THIRD_ROW]):
         for metal in metal_row:
@@ -110,9 +113,9 @@ if __name__ == '__main__':
 
             # Plot the data against the filling
             filling = filling_data[metal]
-            ax[row_i].plot(filling, Vsdsq, 'v', color='tab:blue', alpha=0.5)
-            ax[row_i].plot(filling, tabulated_Vsdsq, 'o', color='tab:orange', alpha=0.5)
-            ax[row_i].plot(filling, Vsdsq_rdep, '*', color='tab:green', alpha=0.5)
+            # ax.plot(filling, Vsdsq, 'v', color='tab:blue', alpha=0.5)
+            # ax.plot(filling, tabulated_Vsdsq, 'o', color=colors[row_i], alpha=0.5)
+            ax.plot(filling, Vsdsq_rdep, '*', color=colors[row_i])
 
             # Save the data
             coupling_elements[metal] = Vsdsq_rdep
@@ -120,12 +123,12 @@ if __name__ == '__main__':
     # Save the data
     json.dump(coupling_elements, open(f'output/dft_Vsdsq.json', 'w'), indent=4)
 
-    for a in ax:
-        a.set_xlabel('Filling')
-    for i, a in enumerate(ax):
-        a.set_ylabel(r'$V_{pd}^2 / V_{p,Cu}^2$')
-    ax[0].plot([], [], 'o', color='tab:orange', label='LMTO')
-    ax[0].plot([], [], 'o', color='tab:green', label='DFT')
-    ax[0].legend(loc='best')
+    # for a in ax:
+    ax.set_xlabel('Filling')
+    # for i, a in enumerate(ax):
+    ax.set_ylabel(r'$V_{pd}^2 / V_{p,Cu}^2$')
+    # ax[0].plot([], [], 'o', color='tab:orange', label='LMTO')
+    # ax[0].plot([], [], 'o', color='tab:green', label='DFT')
+    # ax[0].legend(loc='best')
 
     fig.savefig(f'output/Vsdsq_comparison.png', dpi=300)

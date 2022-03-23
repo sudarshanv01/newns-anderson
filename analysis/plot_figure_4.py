@@ -22,47 +22,75 @@ get_plot_params()
 FIRST_ROW   = [ 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn']
 SECOND_ROW  = [ 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd']
 THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl']
-EPSILON = 1e-2
+C_COLOR = 'tab:purple'
+O_COLOR = 'tab:orange'
 
 def create_plot_layout():
     """Create a plot layout for plotting the Newns-Anderson
     dos and the energies of orthogonalisation, spd hybridisation
     energy for each specific adsorbate."""
+    # Create 3x3 grid of plots
+    fig, ax = plt.subplots(3, 3, figsize=(6.9, 5), constrained_layout=True)
 
-    fig, ax = plt.subplots(2, 3, figsize=(5, 3), constrained_layout=True)
-    for i, a in enumerate(ax):
+    # Twin x-axis for the first column
+    ax_p = [a.twinx() for a in ax[:-1, 0]]
+    ax_p = np.array(ax_p).reshape(-1)
+
+    # Twin x-axis for the second column
+    ax_n = [a.twinx() for a in ax[:-1, 1]]
+    ax_n = np.array(ax_n).reshape(-1)
+
+    for i, a in enumerate(ax[:-1]):
+        a[0].set_xlabel(r'$\epsilon_d$ / eV')
+        a[1].set_xlabel(r'$\epsilon_d$ / eV')
         if i == 1:
-            a[0].set_xlabel(r'$\epsilon_d$ (eV)')
-            a[1].set_xlabel(r'$\epsilon_d$ (eV)')
-            a[2].set_xlabel(r'$\epsilon_a$ (eV)')
-        a[0].set_ylabel(r'$E_{\rm hyb}$ %s* (eV)'%ADSORBATES[i])
-        a[1].set_ylabel(r'$E_{\rm hyb} ^\prime$ %s*'%ADSORBATES[i])
+            a[2].set_xlabel(r'$\epsilon_a$ / eV')
         # Make a twin axis for the hybridisation energy panel
+        a[0].set_ylabel(r'$E_{\rm hyb}$  %s* / eV'%ADSORBATES[i])
+        ax_p[i].set_ylabel(r'$E_{\rm hyb} ^\prime$  %s* / eV'%ADSORBATES[i], color='tab:grey')
+        a[1].set_ylabel(r'$E_{\mathrm{ortho}}$  %s* / eV'%ADSORBATES[i])
+        ax_n[i].set_ylabel(r'$\left ( n_a + f \right )$  %s* / e'%ADSORBATES[i], color='tab:grey')
+
+        # Have an arrow pointing to the two y-axis showing the right marker
+        a[0].annotate('$--$', xy=(1,0.95), xytext=(0.8, 0.95), xycoords='axes fraction',
+                    arrowprops=dict(facecolor='black', width=0.1, headwidth=2.5),
+                    horizontalalignment='right', verticalalignment='center', color='tab:grey')
+        a[1].annotate('$--$', xy=(1,0.95), xytext=(0.8, 0.95), xycoords='axes fraction',
+                    arrowprops=dict(facecolor='black', width=0.1, headwidth=2.5, ),
+                    horizontalalignment='right', verticalalignment='center', color='tab:grey')
+        a[0].annotate('$-$', xy=(0,0.1), xytext=(0.25, 0.1), xycoords='axes fraction',
+                    arrowprops=dict(facecolor='black', width=0.1, headwidth=2.5),
+                    horizontalalignment='right', verticalalignment='center',)
+        a[1].annotate('$-$', xy=(0,0.1), xytext=(0.25, 0.1), xycoords='axes fraction',
+                    arrowprops=dict(facecolor='black', width=0.1, headwidth=2.5),
+                    horizontalalignment='right', verticalalignment='center',)
+        ax_n[i].tick_params(axis='y', labelcolor='tab:grey')
+        ax_p[i].tick_params(axis='y', labelcolor='tab:grey')
+
+    ax[-1,0].set_ylabel(r'$E_{\mathrm{hyb}}$ %s* / eV'%ADSORBATES[0])
+    ax[-1,1].set_ylabel(r'$E_{\mathrm{ortho}}$ %s* / eV'%ADSORBATES[0])
+    ax[-1,0].set_xlabel(r'$E_{\mathrm{hyb}}$ %s* / eV'%ADSORBATES[-1])
+    ax[-1,1].set_xlabel(r'$E_{\mathrm{ortho}}$ %s* / eV'%ADSORBATES[-1])
+    # ax[-1,-1].set_xlabel(r'$\left ( n_a + f \right )$ %s* / e'%ADSORBATES[-1])
+    # ax[-1,-1].set_ylabel(r'$\left ( n_a + f \right )$ %s* / e'%ADSORBATES[0])
+
+    ax[0,-1].set_yticks([])
+    ax[0,-1].set_ylabel(r'Projected density of states', fontsize=8)
+    ax[0,-1].set_xlabel(r'$\epsilon - \epsilon_F$ / eV')
+
+    # Make a legend on the last plot to show 
+    # the different eps_d ranges
+    for i in [0, 1]:
+        ax[-1,i].plot([], [], color='tab:grey', label='Saturated $\epsilon_d$')
+        ax[-1,i].plot([], [], color='k', label='$\epsilon_d$ > $\epsilon_s$')
+        ax[-1,i].legend(loc='lower right', frameon=False, fontsize=6)
+        # ax[-1,i].legend(bbox_to_anchor=(1.04,1), borderaxespad=0)
+
+
     ax[1,2].set_ylabel(r'$\epsilon_s$ (eV)')
-    ax[0,2].axis('off')
+    # ax[0,2].axis('off')
 
-
-    # Confirm the density of states figures
-    # from the Newns-Anderson equations
-    figs = plt.figure(figsize=(10,11), constrained_layout=True)
-    gs = figs.add_gridspec(nrows=6, ncols=6)
-    axi1 = figs.add_subplot(gs[:, 0:2])
-    axi2 = figs.add_subplot(gs[:, 2:4])
-    axi3 = figs.add_subplot(gs[:, 4:6])
-    # Set the axes labels
-    axi1.set_xlabel(r'$\epsilon - \epsilon_{f}$ (eV)')
-    axi2.set_xlabel(r'$\epsilon - \epsilon_{f}$ (eV)')
-    axi3.set_xlabel(r'$\epsilon - \epsilon_{f}$ (eV)')
-    axi1.set_ylabel('Projected Density of States')
-    axi1.set_title('3d')
-    axi2.set_title('4d')
-    axi3.set_title('5d')
-    # Remove y-ticks from 4, 5, 6
-    axi1.set_yticks([])
-    axi2.set_yticks([])
-    axi3.set_yticks([])
-
-    return fig, figs, ax, np.array([axi1, axi2, axi3])
+    return fig, ax, ax_p, ax_n 
 
 def set_same_limits(axes, y_set=True, x_set=False):
     """Set the limits of all axes to the same value."""
@@ -87,18 +115,21 @@ def set_same_limits(axes, y_set=True, x_set=False):
         for ax in axes:
             ax.set_xlim([xmin, xmax])
     
-def create_range_parameters(param1, param2, n=50):
+def create_range_parameters(param1, param2, n=51):
     """Linearly interpolate between two parameters."""
     return np.linspace(param1, param2, n)
 
-def normalise_na_quantities(quantity, x_add):
+def normalise_na_quantities(quantity, x_add=0, per_max=True):
     """Utility function to align the density of states for Newns-Anderson plots."""
-    return quantity / np.max(np.abs(quantity)) + x_add
+    if per_max:
+        return quantity / np.max(quantity) + x_add
+    else:
+        return quantity + x_add
 
 def plot_epsa_value(eps_a):
     """Function to evaluate if eps_a value is to 
     be plotted."""
-    chosen_values = [o_parameters['eps_a'], c_parameters['eps_a']]
+    chosen_values = CHOSEN_EPS_A_TO_PLOT 
     if eps_a in chosen_values: 
         return True, chosen_values.index(eps_a) 
     else:
@@ -118,19 +149,28 @@ if __name__ == '__main__':
         o_parameters = json.load(f)
     with open(f"output/C_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         c_parameters = json.load(f)
+    adsorbate_params = {'O': o_parameters, 'C': c_parameters}
     GRID_LEVEL = 'high' # 'high' or 'low'
+    color_ads = [O_COLOR, C_COLOR]
 
     # Create range of parameters 
     if GRID_LEVEL == 'high':
-        NUMBER_OF_ADSORBATES = 20
-        NUMBER_OF_METALS = 30
+        NUMBER_OF_ADSORBATES = 21
+        NUMBER_OF_METALS = 50
         GRID_SPACING_DERIV = 300
     elif GRID_LEVEL == 'low':
-        NUMBER_OF_ADSORBATES = 10
+        NUMBER_OF_ADSORBATES = 5
         NUMBER_OF_METALS = 10
         GRID_SPACING_DERIV = 10
-    EPS_RANGE = np.linspace(-30, 10, 1000)
+    
+    # Make sure the number of adsorbate is odd
+    assert NUMBER_OF_ADSORBATES % 2 == 1, 'Number of adsorbates must be odd.'
+
+    EPS_RANGE = np.linspace(-30, 20, 1000)
     ADSORBATES = ['O', 'C']
+    EPS_A_VALUES = [ -5, -1 ] # eV
+    CHOSEN_EPS_A_TO_PLOT = [ *EPS_A_VALUES, -3]
+    CHOSEN_METAL = 'Rh'
 
     # Fix the energy width of the sp 
     # states of the metal
@@ -179,20 +219,23 @@ if __name__ == '__main__':
 
     # Get the main figure with the energies and the axes
     # and the supporting figure with the density of states
-    fig, figs, ax, axs = create_plot_layout() 
+    fig, ax, ax_p, ax_n  = create_plot_layout() 
 
     # get a color cycle for the different adsorbates based on viridis
     color = plt.cm.coolwarm_r(np.linspace(0, 1, NUMBER_OF_ADSORBATES))
     color_row = ['tab:red', 'tab:blue', 'tab:green',]
     marker_row = ['o', 's', '^']
     ls_row = ['-', '-', '-']
+    ls_eps_a = [':', '-', '-.']
+
     # Plot the legend for the rows
     for i in range(len(color_row)):
-        ax[0,2].plot([], [], color=color_row[i], ls=ls_row[i], label=f'{i+3}' + r'$d$')
-    ax[0,2].legend(loc='upper right')
+        ax[1,2].plot([], [], color=color_row[i], ls=ls_row[i], label=f'{i+3}' + r'$d$')
+    # ax[0,2].legend(loc='center', fontsize=12)
+    ax[1,2].legend(bbox_to_anchor=(1.04,1), borderaxespad=0, fontsize=8)
 
     # Store the final energies to plot in a scaling line
-    final_energy_scaling = defaultdict(lambda: defaultdict(list))
+    final_energy_scaling = defaultdict( lambda: defaultdict(lambda: defaultdict(list)))
 
     for a, eps_a in enumerate(eps_a_range):
         # Iterate separately over the different adsorbates
@@ -214,7 +257,6 @@ if __name__ == '__main__':
             Delta_anderson_fit = spline_objects[j]['Delta_anderson']
             wd_fit = spline_objects[j]['width']
             eps_d_fit = spline_objects[j]['eps_d']
-
 
             # Consider only a specific range of metals in the analysis
             # Those used in Figures 1-3 of the paper
@@ -243,8 +285,7 @@ if __name__ == '__main__':
                                                 r=s_fit(filling),
                                                 r_Cu=s_data['Cu'],
                                                 normalise_by_Cu=True,
-                                                normalise_bond_length=True
-                                                )
+                                                normalise_bond_length=True)
                 Vsd = np.sqrt(Vsdsq)
 
                 parameters_metal['Vsd'].append(Vsd)
@@ -254,37 +295,54 @@ if __name__ == '__main__':
                 # TODO: Fix the number of bonds issue
                 parameters_metal['no_of_bonds'].append(no_of_bonds[CHOSEN_SETUP]['average'])
 
-            # Now plot the energies for each row
-            kwargs_fitting = dict(
-                Vsd = parameters_metal['Vsd'],
-                eps_a = eps_a,
-                width = parameters_metal['width'],
-                eps = EPS_RANGE, 
-                eps_sp_max=EPS_SP_MAX,
-                eps_sp_min=EPS_SP_MIN,
-                Delta0_mag=delta0,
-                store_hyb_energies = True,
-                no_of_bonds = parameters_metal['no_of_bonds'],
-            )
-            jna = FitParametersNewnsAnderson(**kwargs_fitting)
-
-            # Gather energies
-            chemisorption_energy = jna.fit_parameters( [alpha, beta, constant], eps_d_range)
-            # This energy will be used as a basis for comparison
-            # We are looking for the maximum eps_d at which energy_to_plot
-            # saturates to its values of -Delta0
-            energy_to_plot = jna.hyb_energy
-            energy_to_plot = np.array(energy_to_plot)
-            ortho_energy = jna.ortho_energy
-            occupancy = jna.occupancy
-
             if to_plot: 
                 # If the adsorbate is C or O, plot the energy
-                # ax[index_plot, 0].plot(parameters_metal['eps_d'], chemisorption_energy,
-                #             '-', color=color_row[j], ls=ls_row[j],)
-                ax[index_plot, 0].plot(parameters_metal['eps_d'], 
-                                 energy_to_plot, '-',
-                                 color=color_row[j], ls=ls_row[j],)
+                # Generate the kwargs to pass on to FitParametersNewnsAnderson
+                kwargs_fitting = dict(
+                    Vsd = parameters_metal['Vsd'],
+                    eps_a = eps_a,
+                    width = parameters_metal['width'],
+                    eps = EPS_RANGE, 
+                    eps_sp_max=EPS_SP_MAX,
+                    eps_sp_min=EPS_SP_MIN,
+                    Delta0_mag=delta0,
+                    store_hyb_energies = True,
+                    no_of_bonds = parameters_metal['no_of_bonds'],
+                )
+                jna = FitParametersNewnsAnderson(**kwargs_fitting)
+
+                # Gather energies
+                chemisorption_energy = jna.fit_parameters( [alpha, beta, constant], eps_d_range)
+
+                # This energy will be used as a basis for comparison
+                # We are looking for the maximum eps_d at which energy_to_plot
+                # saturates to its values of -Delta0
+                hyb_energy = np.array(jna.hyb_energy)
+                ortho_energy = np.array(jna.ortho_energy)
+                occupancy = np.array(jna.occupancy)
+                filling = np.array(jna.filling_factor)
+                na_plus_f = occupancy + filling
+
+                # Store the energies to plot in a scaling line
+                final_energy_scaling[eps_a][j]['hyb_energy'].extend(hyb_energy)
+                final_energy_scaling[eps_a][j]['ortho_energy'].extend(ortho_energy)
+                final_energy_scaling[eps_a][j]['occupancy'].extend(occupancy)
+                final_energy_scaling[eps_a][j]['filling'].extend(filling)
+                final_energy_scaling[eps_a][j]['na_plus_f'].extend(na_plus_f)
+                final_energy_scaling[eps_a][j]['chemisorption_energy'].extend(chemisorption_energy)
+
+                # Plot only if it is an adsorbate we compute
+                if eps_a in EPS_A_VALUES:
+                    ax[index_plot,0].plot(parameters_metal['eps_d'], 
+                                    hyb_energy, '-',
+                                    color=color_row[j], ls=ls_row[j],)
+                    ax[index_plot,1].plot(parameters_metal['eps_d'],
+                                    ortho_energy, '-',
+                                    color=color_row[j], ls=ls_row[j],)
+                    ax_n[index_plot].plot(parameters_metal['eps_d'],
+                                    na_plus_f, '--', alpha=0.4,
+                                    color=color_row[j], ls='--',)
+                
         
             # Compute the derivative of the hybridisation energy with 
             # the d-band centre to be plotted in the third figure
@@ -314,37 +372,122 @@ if __name__ == '__main__':
             if len(saturation_epsd_arg) > 0:
                 saturation_epsd = diff_grid[saturation_epsd_arg]            
                 eps_s[j].append(np.max(saturation_epsd))
-                if to_plot:
-                    # ax[index_plot,0].axvline(x=np.max(saturation_epsd),
-                    #                          color=color_row[j],
-                    #                          alpha=0.5,
-                    #                          ls='--')
-                    ax[index_plot,1].axvline(x=np.max(saturation_epsd),
-                                             color=color_row[j],
-                                             alpha=0.5,
-                                             ls='--')
+                final_energy_scaling[eps_a][j]['eps_s'].extend(saturation_epsd)
+                if to_plot and eps_a in EPS_A_VALUES:
+                    ax_p[index_plot].plot(np.max(saturation_epsd),
+                                          analytical_hyb_deriv[np.argmax(saturation_epsd)],
+                                          '*', color=color_row[j],)
             else:
                 eps_s[j].append(None)
 
-            if to_plot:
+            if to_plot and eps_a in EPS_A_VALUES:
                 # Plot the derivative of the hybridisation energy with eps_d
-                ax[index_plot, 1].plot(diff_grid, analytical_hyb_deriv,
-                                       ls=ls_row[j], color=color_row[j])
+                ax_p[index_plot].plot(diff_grid, analytical_hyb_deriv,
+                                       ls='--', color=color_row[j],
+                                       alpha=0.4)
     # Plot the eps_s values for each row
     for i, (row, eps_s_row) in enumerate(eps_s.items()):
         if eps_s_row:
             ax[1,2].plot(eps_a_range, eps_s_row, ls=ls_row[j], color=color_row[i]) 
-             
+        
+    # Plot the scaling lines between C and O for the hybridisation
+    # and orthogonalisation energies
+    # for eps_a, row_scaling in final_energy_scaling.items():
+    for i, row_index in enumerate(final_energy_scaling[-1.0].keys()):
+        ax[-1,0].plot(final_energy_scaling[-1.0][row_index]['hyb_energy'],
+                      final_energy_scaling[-5.0][row_index]['hyb_energy'],
+                      color=color_row[row_index], ls='-', alpha=0.2)
+        ax[-1,1].plot(final_energy_scaling[-1.0][row_index]['ortho_energy'],
+                      final_energy_scaling[-5.0][row_index]['ortho_energy'],
+                      color=color_row[row_index], ls='-', alpha=0.2)
+        # Get the index where eps_d of eps_d_range is less than eps_s for a row
+        if final_energy_scaling[-5.0][row_index]['eps_s']:
+            eps_d_index = [i for i, eps_d in enumerate(eps_d_range) if eps_d > np.max(final_energy_scaling[-5.0][row_index]['eps_s'])]
+            print(eps_d_index, final_energy_scaling[-1.0][row_index]['eps_s'])
+            ax[-1,0].plot(np.array(final_energy_scaling[-1.0][row_index]['hyb_energy'])[eps_d_index],
+                          np.array(final_energy_scaling[-5.0][row_index]['hyb_energy'])[eps_d_index],
+                          color=color_row[row_index], alpha=0.8, ls='-')
+            ax[-1,1].plot(np.array(final_energy_scaling[-1.0][row_index]['ortho_energy'])[eps_d_index],
+                          np.array(final_energy_scaling[-5.0][row_index]['ortho_energy'])[eps_d_index],
+                          color=color_row[row_index], alpha=0.8, ls='-')
+        else:
+            # There is no saturation point for this row, so all points
+            # are fair to plot
+            ax[-1,0].plot(np.array(final_energy_scaling[-1.0][row_index]['hyb_energy']),
+                          np.array(final_energy_scaling[-5.0][row_index]['hyb_energy']),
+                          color=color_row[row_index], alpha=0.8, ls='-')
+            ax[-1,1].plot(np.array(final_energy_scaling[-1.0][row_index]['ortho_energy']),
+                          np.array(final_energy_scaling[-5.0][row_index]['ortho_energy']),
+                          color=color_row[row_index], alpha=0.8, ls='-')
+
+    # Run the Newns-Anderson model with the parameters to plot the 
+    # projected density of states of the adsorbate and the metal
+    for i, (adsorbate, eps_a) in enumerate(zip(ADSORBATES, EPS_A_VALUES)):
+        print(f"Plotting parameters for adsorbate {adsorbate} with eps_a {eps_a}")
+        alpha = adsorbate_params[adsorbate]['alpha']
+        beta = adsorbate_params[adsorbate]['beta']
+        constant_offest = adsorbate_params[adsorbate]['constant_offset']
+        CONSTANT_DELTA0 = adsorbate_params[adsorbate]['delta0']
+        final_params = [alpha, beta, constant_offest]
+
+        hybridisation = NewnsAndersonNumerical(
+            Vak = np.sqrt(beta * dft_Vsdsq[CHOSEN_METAL]),
+            eps_a = eps_a, 
+            eps_d = data_from_dos_calculation[CHOSEN_METAL]['d_band_centre'],
+            width = data_from_dos_calculation[CHOSEN_METAL]['width'],
+            eps = EPS_RANGE,
+            Delta0_mag = CONSTANT_DELTA0,
+            eps_sp_max = EPS_SP_MAX,
+            eps_sp_min = EPS_SP_MIN,
+        )
+
+        # Get the density of states
+        adsorbate_dos = hybridisation.get_dos_on_grid()
+        adsorbate_dos = normalise_na_quantities(adsorbate_dos)
+        Delta = hybridisation.get_Delta_on_grid()
+        Delta = normalise_na_quantities(Delta)
+
+        # plot the adsorbate density of states
+        ax[0,-1].plot(EPS_RANGE, adsorbate_dos, color=color_ads[i])
+        ax[0,-1].plot(EPS_RANGE, Delta,  color='k', alpha=0.5)
+        ax[0,-1].fill_between(EPS_RANGE, adsorbate_dos, color=color_ads[i], alpha=0.5)
+        # Annotate the metal name in the top left
+        ax[0,-1].text(0.05, 0.95, CHOSEN_METAL, transform=ax[0,-1].transAxes, fontsize=12,
+                        verticalalignment='top', horizontalalignment='left')
+
+        occupancy = hybridisation.get_occupancy()
+        # Annotate the occupancy on the top right corner of the plot
+        ax[0,-1].annotate(r"$n_a$"+f"({adsorbate}*)={occupancy:.2f}", xy=(0.98, 0.8-0.2*i), xycoords='axes fraction',
+                        xytext=(-5, 5), textcoords='offset points',
+                        ha='right', va='top', color=color_ads[i], fontsize=6,
+                        bbox=dict(boxstyle='round,pad=0.5', fc='white', alpha=0.5),
+        )
+        ax[0,-1].set_xlim(-20, 20)
+
+    # Plot the energies for for each eps_a with the eps_a for O
+    for a, eps_a in enumerate(CHOSEN_EPS_A_TO_PLOT):
+        for j, metal_row in enumerate([FIRST_ROW, SECOND_ROW, THIRD_ROW]):
+            # Plot the energies for each row
+            ax[-1,-1].plot(final_energy_scaling[-5][j]['ortho_energy'],
+                       final_energy_scaling[eps_a][j]['ortho_energy'],
+                       color=color_row[j],
+                       ls=ls_eps_a[a],
+                       label=f"{metal_row}",
+                       alpha=0.5)
+        # Annotate nearby the line with the eps_a value
+        ax[-1,-1].annotate("$\epsilon_a=$"+f"{eps_a} eV", xy=( final_energy_scaling[-5][j]['ortho_energy'][1]+2,
+                                            final_energy_scaling[eps_a][j]['ortho_energy'][1]+0.5),
+                                xycoords='data',
+                                xytext=(-5, 5), textcoords='offset points',
+                                ha='right', va='top', color='k', fontsize=6,
+                                # bbox=dict(boxstyle='round,pad=0.5', fc='white', alpha=0.25),
+            )
+    ax[-1,-1].set_xlabel("$\Delta E_{\mathrm{ortho}}$ ($-5$ eV) / eV")
+    ax[-1,-1].set_ylabel("$\Delta E_{\mathrm{ortho}}$ / eV")
 
     # Add figure numbers
     alphabet = list(string.ascii_lowercase)
     for i, a in enumerate(ax.T.flatten()):
-        if i == 4:
-            continue
-        if i == 5:
-            i -= 1
         a.annotate(alphabet[i]+')', xy=(0.05, 0.5), fontsize=8, xycoords='axes fraction')
 
     fig.savefig(f'output/figure_4_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)
-    figs.savefig(f'output/final_param_na_dos_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)
-    

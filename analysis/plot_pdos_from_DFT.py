@@ -36,13 +36,14 @@ if __name__ == "__main__":
     from a DFT calculation and compare the result with 
     the fitted Newns-Anderson Delta."""
     # Choice of functional
-    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))['group'][0]
+    COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
+    CHOSEN_SETUP = open('chosen_setup', 'r').read() 
 
     # Remove the following metals
     REMOVE_LIST = ['X', 'Al', 'Mg']
 
-    with open(f'output/pdos_{COMP_SETUP}.json', 'r') as handle:
-        pdos_data = json.load(handle)
+    # Load the pdos data
+    pdos_data = json.load(open(f"output/pdos_{COMP_SETUP['dos']}.json"))
 
     METALS = [FIRST_ROW, SECOND_ROW, THIRD_ROW]
 
@@ -110,8 +111,8 @@ if __name__ == "__main__":
         # get the d-band center and the width
         # Fit a semi-ellipse to the data by passing in the 
         # moments as an initial guess to the curve fitting procedure
-        center, second_moment = get_distribution_moment(energies, pdos, (1, 2)) 
-        popt, pcov = curve_fit(semi_ellipse, energies, pdos, p0=[center, 4*np.sqrt(second_moment), 1])
+        zeroth_moment, second_moment = get_distribution_moment(energies, pdos, (1, 2)) 
+        popt, pcov = curve_fit(semi_ellipse, energies, pdos, p0=[zeroth_moment, 4*np.sqrt(second_moment), 1])
         # The center is just the first element of the popt array
         center =  popt[0]
         # Store the width as the same as the width from the fitting procedure
@@ -122,6 +123,7 @@ if __name__ == "__main__":
         index_max = np.argmax(Lambda)
         # Store the moments
         moments[metal]['d_band_centre'] = center
+        moments[metal]['zeroth_moment'] = zeroth_moment
         moments[metal]['width'] = width
         moments[metal]['d_band_upper_edge'] = energies[index_max]
 
@@ -169,9 +171,9 @@ if __name__ == "__main__":
     for a in ax[:,0]:
         a.set_ylabel(r'$\epsilon - \epsilon_f$ (eV)')
 
-    fig.savefig(f'output/pdos_{COMP_SETUP}.png')
+    fig.savefig(f"output/pdos_{COMP_SETUP[CHOSEN_SETUP]}.png")
 
     pprint(moments)
 
-    with open(f'output/pdos_moments_{COMP_SETUP}.json', 'w') as handle:
+    with open(f"output/pdos_moments_{COMP_SETUP[CHOSEN_SETUP]}.json", 'w') as handle:
         json.dump(moments, handle, indent=4)

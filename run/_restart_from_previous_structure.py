@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     qb = QueryBuilder()
     qb.append(Group, filters={'label':group_name}, tag='Group')
-    qb.append(RelaxWorkflow, with_group='Group', tag='Screening')
+    qb.append(BaseWorkflow, with_group='Group', tag='Screening')
 
     for node in qb.all(flat=True):
         if node.is_failed or node.is_killed:
@@ -34,21 +34,17 @@ if __name__ == '__main__':
 
             try:
                 print('Starting from old structure...')
-                new_structure = node.called_descendants[-1].outputs.output_structure
+                new_structure = node.called_descendants[0].outputs.output_structure
             except Exception:
                 print('Starting from input structure...')
                 new_structure = node.inputs.structure
-            builder.structure = new_structure
+            builder.pw['structure'] = new_structure
 
-            # Set new parameters
-            parameters = builder.base.pw['parameters'].get_dict()
-            parameters['CELL']['cell_dofree'] = 'xyz'
-            parameters['SYSTEM']['nosym'] = True
-            builder.base.pw['parameters'] = orm.Dict(dict=parameters)
+            num_machines = 4
+            builder.pw.setdefault('metadata',{}).setdefault('options',{})['resources'] = {'num_machines': num_machines}
+            builder.pw.setdefault('metadata',{}).setdefault('options',{})['max_wallclock_seconds'] = 50 * 60 * 60
 
-            num_machines = 1
-            builder.base.pw.setdefault('metadata',{}).setdefault('options',{})['resources'] = {'num_machines': num_machines}
-            builder.base.pw.setdefault('metadata',{}).setdefault('options',{})['max_wallclock_seconds'] = 2 * 60 * 60
+            builder.pw.code = load_code('pw_6-7_intel2021@dtu_xeon40_home')
 
             calculation = submit(builder)
 
@@ -56,7 +52,6 @@ if __name__ == '__main__':
             path = GroupPath()
             path[group_name].get_group().add_nodes(calculation)
 
-            # time.sleep(2)
             # remove older calculation
             path[group_name].get_group().remove_nodes(node) 
 

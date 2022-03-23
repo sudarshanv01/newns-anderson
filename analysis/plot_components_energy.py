@@ -1,13 +1,9 @@
-"""Plot Figure 3 of the manuscript."""
-
-import readline
+"""Plot the different components of the energy for C and O."""
 import numpy as np
-import scipy
 import json
 import yaml
 from collections import defaultdict
 import matplotlib.pyplot as plt
-from plot_params import get_plot_params
 from scipy.optimize import curve_fit
 from scipy import special, interpolate
 import string
@@ -19,11 +15,11 @@ from catchemi import ( NewnsAndersonLinearRepulsion,
                        NewnsAndersonDerivativeEpsd,
                        FitParametersNewnsAnderson
                      )  
-from plot_figure_2 import normalise_na_quantities
 import pickle
-get_plot_params()
 from scipy import stats
 from plot_figure_4 import set_same_limits
+from plot_params import get_plot_params
+get_plot_params()
 import matplotlib as mpl
 mpl.rcParams['lines.markersize'] = 4
 
@@ -35,51 +31,9 @@ SECOND_ROW  = [ 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd']
 THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl'] 
 ls_ads = ['--', '-']
 
-def get_figure_layout():
-    """Figure layout for the Figure 3 
-    of the manuscript."""
-
-    # Create gridspec for the figure
-    fig = plt.figure(figsize=(6., 4.75))
-    gs = plt.GridSpec(6, 3, figure=fig)
-
-    # Create axes for the figure
-    ax1 = [] ; ax2 = [] ; ax3 = []
-    for i in range(2):
-        ax1.append(fig.add_subplot(gs[3*i:3*(i+1),1]))
-    for i in range(3):
-        ax2.append(fig.add_subplot(gs[2*i:2*(i+1),2]))
-    # Make the entire ax just for the density of states
-    ax3 = fig.add_subplot(gs[:,0])
-    ax3.set_ylabel(r'Projected density of states (arb. units)')
-    ax3.set_xlabel(r'$\epsilon - \epsilon_{F}$ (eV)')
-    ax3.set_xlim([-10,6])
-    ax3.set_yticks([])
-    ax3.axvline(x=0, color='tab:grey', linestyle='--')
-    ax3.plot([], [], '-', color=O_COLOR, label='$p$-O*')
-    ax3.plot([], [], '-', color=C_COLOR, label='$p$-C*')
-    ax = np.array([ax1, ax2, ax3], dtype=object)
-
-    for i in range(len(ADSORBATES)):
-        ax[0][i].set_xlabel('DFT $\Delta E_{\mathrm{%s*}}$  (eV)'%ADSORBATES[i])
-        ax[0][i].set_ylabel('$E_{\mathrm{chem}}$  %s* (eV)'%ADSORBATES[i])
-        ax[1][i].set_ylabel('$E_{\mathrm{chem}}$  %s* (eV)'%ADSORBATES[i])
-        ax[1][i].set_xlabel(r'$\epsilon_d$ (eV)')
-    # ax[1][0].legend(loc='best')
-
-    ax[1][2].set_xlabel(r'$E_{\mathrm{chem}}$ C* (eV)')
-    ax[1][2].set_ylabel(r'$E_{\mathrm{chem}}$ O* (eV)')
-    for i, color in enumerate(color_row):
-        ax[0][1].plot([], [], color=color, label=f'{i+3}$d$')
-    ax[0][1].legend(loc='best', fontsize=8)
-
-    return fig, ax
-
 if __name__ == '__main__':
-    """Plot the model chemisorption energies against
-    the DFT energies for C* and O* and also plot
-    the chemisorption energies from the model to show
-    that there is still a lack of scaling relations."""
+    """Plot the model chemisorption energies, hybridisation
+    energies and the orthogonalisation energies for C and O."""
 
     REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
     KEEP_LIST = []
@@ -110,9 +64,6 @@ if __name__ == '__main__':
     anderson_band_width_data = data_from_LMTO['anderson_band_width']
     minmax_parameters = json.load(open('output/minmax_parameters.json'))
 
-    # Load the pdos data
-    pdos_data = json.load(open(f"output/pdos_{COMP_SETUP['dos']}.json"))
-
     # Parameters for the model
     ADSORBATES = ['O', 'C']
     EPS_A_VALUES = [ -5, -1 ] # eV
@@ -126,10 +77,16 @@ if __name__ == '__main__':
         NUMBER_OF_METALS = 10
 
     # Figure layout
-    fig, ax = get_figure_layout()
+    fig, ax = plt.subplots(len(ADSORBATES)+1, 3, figsize=(6.75, 6.75)) 
+    # Create a twin axis for the occupancy
+    ax2 = []
+    for i, a in enumerate(ax[:-1,-1]):
+        ax2.append(a.twinx())
+    ax2 = np.array(ax2)
 
     # Store the scaling energies for each adsorbate
-    scaling_energies = defaultdict(lambda: defaultdict(list))
+    scaling_energies = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+
     # simulatenously iterate over ADSORBATES and EPS_A_VALUES
     for i, (adsorbate, eps_a) in enumerate(zip(ADSORBATES, EPS_A_VALUES)):
         print(f"Plotting parameters for adsorbate {adsorbate} with eps_a {eps_a}")
@@ -167,7 +124,6 @@ if __name__ == '__main__':
             dft_energies.append(adsorption_energy)
 
             # get the idealised parameters 
-            # Vsd = np.sqrt(data_from_LMTO['Vsdsq'][metal])
             Vsd = np.sqrt(dft_Vsdsq[metal])
             parameters['Vsd'].append(Vsd)
 
@@ -198,37 +154,8 @@ if __name__ == '__main__':
 
         fitting_function =  FitParametersNewnsAnderson(**kwargs_fit)
 
-
         # Get the final hybridisation energy
         optimised_hyb = fitting_function.fit_parameters(final_params, parameters['d_band_centre'])
-
-        # plot the parity line
-        x = np.linspace(np.min(dft_energies)-0.3, np.max(dft_energies)+0.3, 2)
-        ax[0][i].plot(x, x, '--', color='tab:grey', linewidth=1)
-
-        # Fix the axes to the same scale 
-        ax[0][i].set_xlim(np.min(x), np.max(x))
-        ax[0][i].set_ylim(np.min(x), np.max(x))
-
-        texts = []
-        for j, metal in enumerate(metals):
-            # Choose the colour based on the row of the TM
-            if metal in FIRST_ROW:
-                colour = color_row[0] 
-            elif metal in SECOND_ROW:
-                colour = color_row[1]
-            elif metal in THIRD_ROW:
-                colour = color_row[2]
-            ax[0][i].plot(dft_energies[j], optimised_hyb[j], 'o', color=colour)
-            # texts.append(ax[0][i].text(dft_energies[j], optimised_hyb[j], metal, color=colour, alpha=0.5 ))
-        # Check the fitting error
-        slope, intercept, r_value, p_value, std_err = stats.linregress(dft_energies, optimised_hyb)
-        print(f'{adsorbate} r2-value:', r_value**2)
-        # Determine mean absolute error
-        mean_absolute_error = np.mean(np.abs(optimised_hyb - dft_energies))
-        print(f'{adsorbate} mean absolute error:', mean_absolute_error)
-        print()
-
 
         # Also plot the chemisorption energies from the 
         # model against a continious variation of eps_d
@@ -277,70 +204,51 @@ if __name__ == '__main__':
             # against a continious variation of eps_d
             chemisorption_energy = fitting_function.fit_parameters( [alpha, beta, constant_offest], eps_d_range)
             hybridisation_energy = fitting_function.hyb_energy
+            occupancy = fitting_function.occupancy
+            filling_factor = fitting_function.filling_factor
+            na_plus_f = occupancy + filling_factor
             ortho_energy = fitting_function.ortho_energy
-            ax[1][i].plot(eps_d_range, chemisorption_energy, color=color_row[j]) 
-            # ax[1][i].plot(eps_d_range, hybridisation_energy, color=color_row[j]) 
-            # ax[1][i].plot(eps_d_range, ortho_energy, color=color_row[j]) 
+            ax[i][0].plot(eps_d_range, chemisorption_energy, color=color_row[j]) 
+            ax[i][1].plot(eps_d_range, hybridisation_energy, color=color_row[j]) 
+            ax[i][2].plot(eps_d_range, ortho_energy, color=color_row[j]) 
+            ax2[i].plot(eps_d_range, na_plus_f, 'o', color=color_row[j], alpha=0.5)
+
             # Store the chemisorption energies in scaling_energies
             # to plot a scaling line
-            scaling_energies[j][adsorbate] = chemisorption_energy
-            # scaling_energies[j][adsorbate] = hybridisation_energy
-            # scaling_energies[j][adsorbate] = ortho_energy
+            scaling_energies['chem'][j][adsorbate] = chemisorption_energy
+            scaling_energies['hyb'][j][adsorbate] = hybridisation_energy
+            scaling_energies['ortho'][j][adsorbate] = ortho_energy
 
-        adjust_text(texts, ax=ax[0][i]) 
-        ax[0][i].set_aspect('equal')
-    
+        ax[i,0].set_ylabel(r'$\Delta E_{\mathrm{chem}}$ %s / eV'%adsorbate)
+        ax[i,1].set_ylabel(r'$\Delta E_{\mathrm{hyb}}$ %s / eV'%adsorbate)
+        ax[i,2].set_ylabel(r'$\Delta E_{\mathrm{ortho}}$ %s (-) / eV'%adsorbate)
+        ax2[i].set_ylabel(r'$\left ( n_a + f \right )$ %s (o) / e'%adsorbate)
+
     # Plot the scaling line
     for j, metal_row in enumerate([FIRST_ROW, SECOND_ROW, THIRD_ROW]):
-        ax[1][2].plot(scaling_energies[j]['C'], scaling_energies[j]['O'], color=color_row[j])
+        ax[i+1][0].plot(scaling_energies['chem'][j]['C'], scaling_energies['chem'][j]['O'], color=color_row[j])
+        ax[i+1][1].plot(scaling_energies['hyb'][j]['C'], scaling_energies['hyb'][j]['O'], color=color_row[j])
+        ax[i+1][2].plot(scaling_energies['ortho'][j]['C'], scaling_energies['ortho'][j]['O'], color=color_row[j])
 
-    # Add figure numbers
-    alphabet = list(string.ascii_lowercase)
-    ax[2].annotate(alphabet[0]+')', xy=(0.1, 0.9), xycoords='axes fraction')
-    for i, a in enumerate(ax[0]):
-        a.annotate(alphabet[i+1]+')', xy=(0.7, 0.1), xycoords='axes fraction')
-    for j, a in enumerate(ax[1]):
-        a.annotate(alphabet[i+j+2]+')', xy=(0.1, 0.5), xycoords='axes fraction')
-
-    #-------- Plot the projected density of states --------#
-    x_add = 0
-    for row_index, row_metals in enumerate([FIRST_ROW,]): 
-        for i, element in enumerate(row_metals):
-            # Get the data for the element
-            if element == 'X':
-                continue
-            if element in REMOVE_LIST:
-                continue
-            try:
-                energies, pdos_metal_d, pdos_metal_sp = pdos_data['slab'][element]
-                energies_C, pdos_C = pdos_data['C'][element]
-                energies_O, pdos_O = pdos_data['O'][element]
-            except KeyError:
-                continue
-            pdos_C = np.array(pdos_C)
-            pdos_O = np.array(pdos_O)
-
-            x_add += np.max(pdos_metal_d)
-            pdos_C *= np.max(pdos_metal_d) / np.max(pdos_C)
-            pdos_O *= np.max(pdos_metal_d) / np.max(pdos_O)
-            pdos_metal_d = normalise_na_quantities(pdos_metal_d, x_add, per_max=False)
-            pdos_metal_sp = normalise_na_quantities(pdos_metal_sp, x_add, per_max=False)
-            pdos_C = normalise_na_quantities(pdos_C, x_add, per_max=False)
-            pdos_O = normalise_na_quantities(pdos_O, x_add, per_max=False)
-            # Set the maximum of the C, O pdos to the maximum of the metal pdos
-
-            # Plot the pdos onto the metal states
-            ax[2].plot(energies, pdos_metal_d, color='k',) 
-            ax[2].fill_between(energies, x_add, pdos_metal_d, color='k',alpha=0.25) 
-            ax[2].annotate(element, xy=(-8.5, pdos_metal_d[-1]+0.5), color='k')
-            # Plot the C (sp) pdos
-            ax[2].plot(energies_C, pdos_C, color=C_COLOR) 
-            # Plot the O (sp) pdos
-            ax[2].plot(energies_O, pdos_O, color=O_COLOR)
+    ax[-1,0].set_xlabel(r'$\Delta E_{\mathrm{chem}}$ C / eV')
+    ax[-1,0].set_ylabel(r'$\Delta E_{\mathrm{chem}}$ O / eV')
+    ax[-1,1].set_xlabel(r'$\Delta E_{\mathrm{hyb}}$ C / eV')
+    ax[-1,1].set_ylabel(r'$\Delta E_{\mathrm{hyb}}$ O / eV')
+    ax[-1,2].set_xlabel(r'$\Delta E_{\mathrm{ortho}}$ C / eV')
+    ax[-1,2].set_ylabel(r'$\Delta E_{\mathrm{ortho}}$ O / eV')
     
-    # ax[2].legend(loc='best', fontsize=8)
-    ax[2].legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
-                mode="expand", borderaxespad=0, ncol=1)
+    
+    for a in ax[:-1,0]:
+        a.set_xlabel('$\epsilon_d$ / eV ')
+    for a in ax[:-1,1]:
+        a.set_xlabel('$\epsilon_d$ / eV')
+    for a in ax[:-1,2]:
+        a.set_xlabel('$\epsilon_d$ / eV')
+    
+    alphabet = list(string.ascii_lowercase)
+    for i, a in enumerate(ax.flatten()):
+        a.annotate(alphabet[i]+')', xy=(0.05, 0.6), xycoords='axes fraction')
+
     fig.tight_layout()
-    fig.savefig(f'output/figure_3_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)
+    fig.savefig(f'output/components_energy_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)
 

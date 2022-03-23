@@ -31,11 +31,11 @@ def calculator(ecutwf, ecutrho, metal, nbnds=None):
         "eopreg": 0.025,
         "eamp": 0.0,
         "nspin":2,
-        "starting_magnetization":{metal: 0.5},
+        "starting_magnetization":{metal: 0.1},
                 },
     "ELECTRONS": {
         "conv_thr": 1e-7,
-        'electron_maxstep': 200,
+        'electron_maxstep': 500,
         'mixing_beta': 0.1,
         'mixing_ndim': 15,
         'diagonalization': 'david',
