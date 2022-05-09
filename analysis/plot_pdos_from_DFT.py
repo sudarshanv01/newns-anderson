@@ -111,8 +111,8 @@ if __name__ == "__main__":
         # get the d-band center and the width
         # Fit a semi-ellipse to the data by passing in the 
         # moments as an initial guess to the curve fitting procedure
-        zeroth_moment, second_moment = get_distribution_moment(energies, pdos, (1, 2)) 
-        popt, pcov = curve_fit(semi_ellipse, energies, pdos, p0=[zeroth_moment, 4*np.sqrt(second_moment), 1])
+        first_moment, second_moment = get_distribution_moment(energies, pdos, (1, 2)) 
+        popt, pcov = curve_fit(semi_ellipse, energies, pdos, p0=[first_moment, 4*np.sqrt(second_moment), 1])
         # The center is just the first element of the popt array
         center =  popt[0]
         # Store the width as the same as the width from the fitting procedure
@@ -123,7 +123,7 @@ if __name__ == "__main__":
         index_max = np.argmax(Lambda)
         # Store the moments
         moments[metal]['d_band_centre'] = center
-        moments[metal]['zeroth_moment'] = zeroth_moment
+        moments[metal]['first_moment'] = first_moment
         moments[metal]['width'] = width
         moments[metal]['d_band_upper_edge'] = energies[index_max]
 

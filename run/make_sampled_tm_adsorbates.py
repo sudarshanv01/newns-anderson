@@ -13,14 +13,16 @@ PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
 
 if __name__ == '__main__':
 
-    STRUCTURES_FULL_GROUP_LABEL = 'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/bulk_structures'
-    ADSORBATE  = 'O'
-    MOL_INDEX = 0
+    STRUCTURES_FULL_GROUP_LABEL = 'PBE/SSSP_precision/gauss_smearing_0.1eV/bulk_structures'
+    ADSORBATE  = 'CO'
+    MOL_INDEX = 1
+    METAL = 'Al'
 
     if ADSORBATE:
-        STRUCTURES_GROUP_LABEL = f'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/{ADSORBATE}' 
+        STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/Al_reference/adsorbates' 
     else:
-        STRUCTURES_GROUP_LABEL = f'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/slab'
+        STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/Al_reference/slab' 
+        # STRUCTURES_GROUP_LABEL = f'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/slab'
 
     subgroup, _ = orm.Group.objects.get_or_create(label=STRUCTURES_GROUP_LABEL)
 
@@ -45,6 +47,9 @@ if __name__ == '__main__':
         bulk_structure = res.outputs.output_structure.get_ase()
 
         metal = bulk_structure.get_chemical_symbols()[0]
+        if metal != METAL:
+            continue
+
         if metal in all_metal_list:
             continue
         else:
@@ -80,7 +85,7 @@ if __name__ == '__main__':
         if ADSORBATE:
 
             # The starting height will be the sum of the covalent radii and of the adsorbate
-            height = covalent_radii[atomic_numbers[metal]] + 0.2
+            height = covalent_radii[atomic_numbers[metal]] + 1.2 #0.5
                     # + covalent_radii[atomic_numbers[list(ADSORBATE)[MOL_INDEX]]] / 2
 
             # Build a molecule adsorbate
@@ -108,17 +113,19 @@ if __name__ == '__main__':
                 sampled_atoms = aaa.get_atoms(ads_slab)
                 # sampled_atoms.wrap()
                 all_structures.append(sampled_atoms)
+        else:
+            surface = surface.repeat(repeats)
 
         if DRY_RUN:
             print(f'Dry run: {surface}')
-            if adsorbate:
+            if ADSORBATE:
                 io.write(f'output/transition_metals/{ADSORBATE}_{metal}_{facets[metal]}.cif', all_structures) 
             else:
                 surface.write(f'output/transition_metals/{ADSORBATE}_{metal}_{facets[metal]}.cif') 
             bulk_structure.write(f'output/transition_metals/{metal}_bulk.cif')
 
         else:
-            if adsorbate:
+            if ADSORBATE:
                 for i, struct in enumerate(all_structures):
                     structure = StructureData(ase=struct)
                     structure.store()
@@ -127,6 +134,7 @@ if __name__ == '__main__':
                     structure.set_extra('metal', metal)
                     structure.set_extra('facets', facets[metal])
                     structure.set_extra('sampled_index', i)
+                    structure.set_extra('adsorbate', ADSORBATE)
 
                     subgroup.add_nodes(structure)
 
@@ -141,6 +149,8 @@ if __name__ == '__main__':
                 # Set extras
                 structure.set_extra('metal', metal)
                 structure.set_extra('facet', facets[metal])
+                structure.set_extra('sampled_index', 0)
+                structure.set_extra('adsorbate', 'NA')
 
                 subgroup.add_nodes(structure)
 

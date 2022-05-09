@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+"""Test the LCAO calculation."""
 
 from ase import build
 from aiida.orm import load_code
@@ -13,13 +13,13 @@ def runner(structure):
     builder.structure = structure
 
     # Code specifications
-    code = load_code('gpaw.21.6.0@dtu_xeon16')
+    code = load_code('gpaw.21.6.0@dtu_xeon40_home')
     builder.gpaw.code = code
 
     # k-point information
     KpointsData = DataFactory('array.kpoints')
     kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([1, 1, 1])
+    kpoints.set_kpoints_mesh([2, 2, 1])
     builder.kpoints = kpoints
 
     # Parameters for an LCAO calculation
@@ -44,8 +44,8 @@ def runner(structure):
                     ],
         'post_lines':[
             "H_skMM, S_kMM = get_lcao_hamiltonian(calculator)",
-            "results['S_kMM'] = S_kMM.tolist()",
-            "results['H_skMM'] = H_skMM.tolist()",
+            "results['S_kMM'] = S_kMM",
+            "results['H_skMM'] = H_skMM",
             "dos = RestartLCAODOS(calculator)",
             "energies, weights = dos.get_atomic_subspace_pdos(range(len(atoms)))",
             f"adsorbate_index = [atom.index for atom in atoms if atom.symbol in list('{ADSORBATE}')]",
@@ -73,21 +73,25 @@ def runner(structure):
 
     # Specifications of the time and resources
     builder.gpaw.metadata.options.resources = {'num_machines': 1}
-    builder.gpaw.metadata.options.max_wallclock_seconds = 15 * 60 * 60
+    builder.gpaw.metadata.options.max_wallclock_seconds = 2 * 60 * 60
 
     calculation = engine.submit(BaseGPAW, **builder)
     
     subgroup.add_nodes(calculation)
 
 if __name__ == '__main__':
-    ADSORBATE = 'NH'
-    GROUP_NAME = f'initial_structures/{ADSORBATE}'
-    CALC_GROUPNAME = f'scf_calculations/{ADSORBATE}'
+    # ADSORBATE = 'NH'
+    # GROUP_NAME = f'initial_structures/{ADSORBATE}'
+    CALC_GROUPNAME = f'LCAO_testing'
     subgroup, _ = orm.Group.objects.get_or_create(label=CALC_GROUPNAME)
 
-    qb = QueryBuilder()
-    qb.append(Group, filters={'label':GROUP_NAME}, tag='Group')
-    qb.append(Node, with_group='Group', tag='Screening')
+    # qb = QueryBuilder()
+    # qb.append(Group, filters={'label':GROUP_NAME}, tag='Group')
+    # qb.append(Node, with_group='Group', tag='Screening')
 
-    for i, node in enumerate(qb.all(flat=True)):
-        runner(node)
+    # for i, node in enumerate(qb.all(flat=True)):
+    #     runner(node)
+    ADSORBATE = 'C'
+    STRUCTURE = load_node(2832)
+
+    runner(STRUCTURE)

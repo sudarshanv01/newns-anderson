@@ -30,8 +30,8 @@ def calculator(ecutwf, ecutrho, metal, nbnd=None):
         "emaxpos": 0.05,
         "eopreg": 0.025,
         "eamp": 0.0,
-        "nspin":2,
-        "starting_magnetization":{metal: 0.5},
+        "nspin": 1,
+        # "starting_magnetization":{metal: 0.5},
                 },
     "ELECTRONS": {
         "conv_thr": 1e-8,
@@ -68,7 +68,7 @@ class DOSSubmissionController(FromGroupSubmissionController):
     def get_extra_unique_keys(self):
         """Return a tuple of the keys of the unique extras that will be used to uniquely identify your workchains.
         """
-        return ['metal', 'facet']
+        return ['metal', 'facets', 'sampled_index', 'adsorbate']
 
     def get_inputs_and_processclass_from_extras(self, extras_values):
         """Return inputs and process class for the submission of this specific process.
@@ -77,9 +77,9 @@ class DOSSubmissionController(FromGroupSubmissionController):
         builder = PpDosChain.get_builder()
         
         # Only the structure is passed
-        structure = self.get_parent_node_from_extras(extras_values)
-        # relax_node = self.get_parent_node_from_extras(extras_values)
-        # structure = relax_node.outputs.output_structure
+        # structure = self.get_parent_node_from_extras(extras_values)
+        relax_node = self.get_parent_node_from_extras(extras_values)
+        structure = relax_node.outputs.output_structure
 
         # Get cutoff information
         family = load_group('SSSP/1.1/PBE/precision')
@@ -88,7 +88,7 @@ class DOSSubmissionController(FromGroupSubmissionController):
         ecutrho = max(600, cutoffs[1])
 
         # Get the number of bands
-        nbnd = get_nbands_data(extras_values[0], structure.get_ase(), family, 300)
+        nbnd = get_nbands_data(extras_values[0], structure.get_ase(), family, 200)
 
         # get the scf information
         # parameters_scf = calculator(ecutwf, ecutrho)
@@ -100,9 +100,9 @@ class DOSSubmissionController(FromGroupSubmissionController):
         # parameters_nscf['SYSTEM']['occupations'] = 'tetrahedra'
 
         # Code related information
-        code_pw = load_code(f'pw_6-7_stage2022{COMPUTER}')
-        code_dos = load_code(f'dos_6-7_stage2022{COMPUTER}')
-        code_projwfc = load_code(f'projwfc_6-7_stage2022{COMPUTER}')
+        code_pw = load_code(f'pw_6-7_intel2021@dtu_xeon40_home')
+        code_dos = load_code(f'dos_6-7_intel2021@dtu_xeon40_home')
+        code_projwfc = load_code(f'projwfc_6-7_intel2021@dtu_xeon40_home')
 
         settings = {'cmdline': ['-nk', '2']}
 
@@ -119,15 +119,15 @@ class DOSSubmissionController(FromGroupSubmissionController):
         # First level of inputs to the Pp workchain 
         builder.structure = structure
 
-        builder.serial_clean = orm.Bool(False)
-        builder.clean_workdir = orm.Bool(False)
+        builder.serial_clean = orm.Bool(True)
+        builder.clean_workdir = orm.Bool(True)
         builder.align_to_fermi = orm.Bool(True)
 
         builder.scf.kpoints = kpoints_scf
         builder.scf.pw.pseudos = family.get_pseudos(structure=structure)
         builder.scf.pw.parameters = orm.Dict(dict=parameters_scf)
         builder.scf.pw.code = code_pw
-        builder.scf.pw.metadata.options.resources = {'num_machines': 4}
+        builder.scf.pw.metadata.options.resources = {'num_machines': 1}
         builder.scf.pw.metadata.options.max_wallclock_seconds =  10 * 60 * 60
         builder.scf.pw.settings = orm.Dict(dict=settings)
 
@@ -136,46 +136,42 @@ class DOSSubmissionController(FromGroupSubmissionController):
         builder.nscf.pw.pseudos = family.get_pseudos(structure=structure) 
         builder.nscf.pw.parameters = orm.Dict(dict=parameters_nscf)
         builder.nscf.pw.code = code_pw
-        builder.nscf.pw.metadata.options.resources = {'num_machines': 4}
+        builder.nscf.pw.metadata.options.resources = {'num_machines': 1}
         builder.nscf.pw.metadata.options.max_wallclock_seconds = 10 * 60 * 60
 
         ## dos inputs to Pp workchain
         dos_parameters = {'DOS':
-                                {'Emin':-20,
+                                {'Emin':-30,
                                 'Emax':20, 
                                 'DeltaE':0.01,
                                 }
                         }
         builder.dos.parameters = orm.Dict(dict=dos_parameters) 
         builder.dos.code = code_dos
-        builder.dos.metadata.options.resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 10}
+        builder.dos.metadata.options.resources = {'num_machines': 1} 
         builder.dos.metadata.options.max_wallclock_seconds = 10 * 60
 
         ## projwfc inputs to the Pp workchain
         projwfc_parameters = {'PROJWFC':
-                                    {'Emin':-20,
+                                    {'Emin':-30,
                                     'Emax':20, 
                                     'DeltaE':0.01},
                                     }
         builder.projwfc.parameters = orm.Dict(dict=projwfc_parameters) 
         builder.projwfc.code = code_projwfc
-        builder.projwfc.metadata.options.resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 20}
+        builder.projwfc.metadata.options.resources = {'num_machines': 1}
         builder.projwfc.metadata.options.max_wallclock_seconds = 60 * 60
 
         return builder, self._process_class
     
 
 if __name__ == '__main__':
-    # For the calculation
-    SYSTEM = sys.argv[1]
-    COMPUTER = '@juwels_scr' # sys.argv[2]
-
     # For the submission controller
     DRY_RUN = False
     MAX_CONCURRENT = 10
-    CODE_LABEL = f'pw_6-7_stage2022{COMPUTER}'
-    STRUCTURES_GROUP_LABEL = f'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/initial/{SYSTEM}'
-    WORKFLOWS_GROUP_LABEL = f'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/dos_scf/{SYSTEM}' 
+    CODE_LABEL = f'pw_6-7_intel2021@dtu_xeon40_home'
+    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampled/relax/Al_reference/adsorbates'
+    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampled/dos/Al_reference/adsorbates'
 
     controller = DOSSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,
@@ -198,4 +194,3 @@ if __name__ == '__main__':
             print(f'{run_process_extras} --> PK = {run_process.pk}')
 
     print()
-

@@ -80,10 +80,10 @@ def create_plot_layout():
 
     # Make a legend on the last plot to show 
     # the different eps_d ranges
-    for i in [0, 1]:
-        ax[-1,i].plot([], [], color='tab:grey', label='Saturated $\epsilon_d$')
-        ax[-1,i].plot([], [], color='k', label='$\epsilon_d$ > $\epsilon_s$')
-        ax[-1,i].legend(loc='lower right', frameon=False, fontsize=6)
+    # for i in [0, 1]:
+    #     ax[-1,i].plot([], [], color='tab:grey', label='Saturated $\epsilon_d$')
+    #     ax[-1,i].plot([], [], color='k', label='$\epsilon_d$ > $\epsilon_s$')
+    #     ax[-1,i].legend(loc='lower right', frameon=False, fontsize=6)
         # ax[-1,i].legend(bbox_to_anchor=(1.04,1), borderaxespad=0)
 
 
@@ -223,7 +223,7 @@ if __name__ == '__main__':
 
     # get a color cycle for the different adsorbates based on viridis
     color = plt.cm.coolwarm_r(np.linspace(0, 1, NUMBER_OF_ADSORBATES))
-    color_row = ['tab:red', 'tab:blue', 'tab:green',]
+    color_row = ['tab:red', 'tab:blue', 'orange',]
     marker_row = ['o', 's', '^']
     ls_row = ['-', '-', '-']
     ls_eps_a = [':', '-', '-.']
@@ -396,29 +396,29 @@ if __name__ == '__main__':
     for i, row_index in enumerate(final_energy_scaling[-1.0].keys()):
         ax[-1,0].plot(final_energy_scaling[-1.0][row_index]['hyb_energy'],
                       final_energy_scaling[-5.0][row_index]['hyb_energy'],
-                      color=color_row[row_index], ls='-', alpha=0.2)
+                      color=color_row[row_index], ls='-',) #alpha=0.2)
         ax[-1,1].plot(final_energy_scaling[-1.0][row_index]['ortho_energy'],
                       final_energy_scaling[-5.0][row_index]['ortho_energy'],
-                      color=color_row[row_index], ls='-', alpha=0.2)
+                      color=color_row[row_index], ls='-',) #alpha=0.2)
         # Get the index where eps_d of eps_d_range is less than eps_s for a row
-        if final_energy_scaling[-5.0][row_index]['eps_s']:
-            eps_d_index = [i for i, eps_d in enumerate(eps_d_range) if eps_d > np.max(final_energy_scaling[-5.0][row_index]['eps_s'])]
-            print(eps_d_index, final_energy_scaling[-1.0][row_index]['eps_s'])
-            ax[-1,0].plot(np.array(final_energy_scaling[-1.0][row_index]['hyb_energy'])[eps_d_index],
-                          np.array(final_energy_scaling[-5.0][row_index]['hyb_energy'])[eps_d_index],
-                          color=color_row[row_index], alpha=0.8, ls='-')
-            ax[-1,1].plot(np.array(final_energy_scaling[-1.0][row_index]['ortho_energy'])[eps_d_index],
-                          np.array(final_energy_scaling[-5.0][row_index]['ortho_energy'])[eps_d_index],
-                          color=color_row[row_index], alpha=0.8, ls='-')
-        else:
-            # There is no saturation point for this row, so all points
-            # are fair to plot
-            ax[-1,0].plot(np.array(final_energy_scaling[-1.0][row_index]['hyb_energy']),
-                          np.array(final_energy_scaling[-5.0][row_index]['hyb_energy']),
-                          color=color_row[row_index], alpha=0.8, ls='-')
-            ax[-1,1].plot(np.array(final_energy_scaling[-1.0][row_index]['ortho_energy']),
-                          np.array(final_energy_scaling[-5.0][row_index]['ortho_energy']),
-                          color=color_row[row_index], alpha=0.8, ls='-')
+        # if final_energy_scaling[-5.0][row_index]['eps_s']:
+        #     eps_d_index = [i for i, eps_d in enumerate(eps_d_range) if eps_d > np.max(final_energy_scaling[-5.0][row_index]['eps_s'])]
+        #     print(eps_d_index, final_energy_scaling[-1.0][row_index]['eps_s'])
+        #     ax[-1,0].plot(np.array(final_energy_scaling[-1.0][row_index]['hyb_energy'])[eps_d_index],
+        #                   np.array(final_energy_scaling[-5.0][row_index]['hyb_energy'])[eps_d_index],
+        #                   color=color_row[row_index], alpha=0.8, ls='-')
+        #     ax[-1,1].plot(np.array(final_energy_scaling[-1.0][row_index]['ortho_energy'])[eps_d_index],
+        #                   np.array(final_energy_scaling[-5.0][row_index]['ortho_energy'])[eps_d_index],
+        #                   color=color_row[row_index], alpha=0.8, ls='-')
+        # else:
+        #     # There is no saturation point for this row, so all points
+        #     # are fair to plot
+        #     ax[-1,0].plot(np.array(final_energy_scaling[-1.0][row_index]['hyb_energy']),
+        #                   np.array(final_energy_scaling[-5.0][row_index]['hyb_energy']),
+        #                   color=color_row[row_index], alpha=0.8, ls='-')
+        #     ax[-1,1].plot(np.array(final_energy_scaling[-1.0][row_index]['ortho_energy']),
+        #                   np.array(final_energy_scaling[-5.0][row_index]['ortho_energy']),
+        #                   color=color_row[row_index], alpha=0.8, ls='-')
 
     # Run the Newns-Anderson model with the parameters to plot the 
     # projected density of states of the adsorbate and the metal

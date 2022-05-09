@@ -30,8 +30,8 @@ def calculator(ecutwf, ecutrho, metal, nbnds=None):
         "emaxpos": 0.05,
         "eopreg": 0.025,
         "eamp": 0.0,
-        "nspin":2,
-        "starting_magnetization":{metal: 0.1},
+        "nspin":1,
+        # "starting_magnetization":{metal: 0.1},
                 },
     "ELECTRONS": {
         "conv_thr": 1e-7,
@@ -68,7 +68,7 @@ class AdsorbateSubmissionController(FromGroupSubmissionController):
     def get_extra_unique_keys(self):
         """Return a tuple of the keys of the unique extras that will be used to uniquely identify your workchains.
         """
-        return ['metal', 'facets', 'sampled_index']
+        return ['metal', 'facets', 'sampled_index', 'adsorbate']
 
     def get_inputs_and_processclass_from_extras(self, extras_values):
         """Return inputs and process class for the submission of this specific process.
@@ -81,6 +81,7 @@ class AdsorbateSubmissionController(FromGroupSubmissionController):
 
         inputs = PwBaseWorkChain.get_builder()
         inputs.pw.code = self._code
+        inputs.clean_workdir = orm.Bool(True)
 
         # k-points to be used in the calculation
         KpointsData = DataFactory('array.kpoints')
@@ -103,7 +104,7 @@ class AdsorbateSubmissionController(FromGroupSubmissionController):
         inputs.pw.pseudos = pseudos
 
         # Constrain metal atoms
-        molecule_symbol = ['C', 'O', 'N', 'H', 'F', 'Cl', 'Br', 'I']
+        molecule_symbol = ['C', 'O', 'N', 'H', 'S', 'F', 'Cl', 'Br', 'I']
         fixed_coords = []
         for atom in ase_structure:
             if atom.symbol in molecule_symbol: 
@@ -116,22 +117,22 @@ class AdsorbateSubmissionController(FromGroupSubmissionController):
 
         inputs.pw.settings = orm.Dict(dict=settings)
 
-        inputs.pw.metadata.options.resources = {'num_machines': 4}
-        inputs.pw.metadata.options.max_wallclock_seconds = 15 * 60 * 60
+        inputs.pw.metadata.options.resources = {'num_machines': 1}
+        inputs.pw.metadata.options.max_wallclock_seconds = 25 * 60 * 60
 
         return inputs, self._process_class
 
 if __name__ == '__main__':
 
     # For the calculation
-    ADSORBATE = sys.argv[1]
+    # ADSORBATE = sys.argv[1]
 
     # For the submission controller
     DRY_RUN = False
-    MAX_CONCURRENT = 50
-    CODE_LABEL = f'pw_6-7_stage2022@juwels_scr'
-    STRUCTURES_GROUP_LABEL = f'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/{ADSORBATE}'
-    WORKFLOWS_GROUP_LABEL = f'PBE_spin/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/{ADSORBATE}'
+    MAX_CONCURRENT = 22
+    CODE_LABEL = f'pw_6-7_intel2021@dtu_xeon40_home'
+    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/Al_reference/adsorbates'
+    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/Al_reference/adsorbates'
 
     controller = AdsorbateSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,

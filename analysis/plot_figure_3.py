@@ -119,7 +119,7 @@ if __name__ == '__main__':
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
     EPS_VALUES = np.linspace(-30, 10, 1000)
-    color_row = ['tab:red', 'tab:blue', 'tab:green',]
+    color_row = ['tab:red', 'tab:blue', 'orange',]
     if GRID_LEVEL == 'high':
         NUMBER_OF_METALS = 120
     elif GRID_LEVEL == 'low':
@@ -304,7 +304,7 @@ if __name__ == '__main__':
 
     #-------- Plot the projected density of states --------#
     x_add = 0
-    for row_index, row_metals in enumerate([FIRST_ROW,]): 
+    for row_index, row_metals in enumerate([SECOND_ROW,]): 
         for i, element in enumerate(row_metals):
             # Get the data for the element
             if element == 'X':

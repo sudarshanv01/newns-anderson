@@ -21,7 +21,7 @@ THIRD_ROW   = [ 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl']
 
 C_COLOR = 'tab:blue'
 O_COLOR = 'tab:red'
-COLORS_ROW = ['tab:red', 'tab:blue', 'tab:green']
+COLORS_ROW = ['tab:red', 'tab:blue', 'orange']
 
 def get_plot_layout():
     """Create the plot layout for Figure 1."""
@@ -109,17 +109,17 @@ if __name__ == '__main__':
             continue
 
         if metal in FIRST_ROW:
-            color = 'tab:red'
             index = FIRST_ROW.index(metal)
             row_i = 0
+            color = COLORS_ROW[0] 
         elif metal in SECOND_ROW:
-            color = 'tab:blue'
             index = SECOND_ROW.index(metal)
             row_i = 1
+            color = COLORS_ROW[1]
         elif metal in THIRD_ROW:
-            color = 'tab:green'
             index = THIRD_ROW.index(metal)
             row_i = 2
+            color = COLORS_ROW[2]
         
         DeltaE_C = ads_energy['C'][metal]
         DeltaE_O = ads_energy['O'][metal]
@@ -205,7 +205,7 @@ if __name__ == '__main__':
             xy=(0.8, 0.1)
         else:
             xy=(0.05, 0.8)
-        a.annotate(alphabet[i]+')', xy=xy, xycoords='axes fraction') 
+        a.annotate(alphabet[i]+')', xy=xy, xycoords='axes fraction', fontsize=10) 
 
     # set_same_limits(ax_r, y_set=True)
     # set_same_limits(ax_d, y_set=True)

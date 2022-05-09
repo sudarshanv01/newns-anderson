@@ -74,7 +74,7 @@ if __name__ == '__main__':
     # Choose a sequence of adsorbates
     ADSORBATES = ['O', 'C']
     EPS_A_VALUES = [ -5, -1 ] # eV
-    EPS_VALUES = np.linspace(-20, 20, 1000)
+    EPS_VALUES = np.linspace(-30, 10, 1000)
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
     CONSTANT_DELTA0 = 0.1
@@ -161,6 +161,11 @@ if __name__ == '__main__':
         total_energy = {}
         range_energy = {}
         metal_energy = defaultdict(list)
+        # Also compute the variation of the chemisorption energy
+        # assuming that both eps_d and w_d vary normally along
+        # the different metals, but Vak is fixed.
+        # This will test if the coupling is responsible for the curvature
+        coupling_test = defaultdict(list)
         analytical_derivative = {}
         metal_derivative = defaultdict(list)
         for i, (adsorbate, eps_a) in enumerate(zip(ADSORBATES, EPS_A_VALUES)):
@@ -211,6 +216,8 @@ if __name__ == '__main__':
             # for a chosen metal value
             for l, vsd_fixed in enumerate(parameters['Vsd'][:-1]):
                 fitting_function.Vsd = vsd_fixed * np.ones(len(eps_d_range))
+                energy_coupling_test = fitting_function.fit_parameters( [alpha, beta, constant], eps_d_range)
+                coupling_test[adsorbate].append(energy_coupling_test)
                 fitting_function.width = parameters['width'][l] * np.ones(len(eps_d_range))                 
                 energy_fixed = fitting_function.fit_parameters( [alpha, beta, constant], eps_d_range)
                 metal_energy[adsorbate].append(energy_fixed)
@@ -229,7 +236,8 @@ if __name__ == '__main__':
             axa[i,j].plot(parameters['d_band_centre'], total_energy[adsorbate], 'o', color='k')
             axa[i,j].plot(eps_d_range, range_energy[ADSORBATES[i]], '-', color='tab:blue')
             for l, energy in enumerate(metal_energy[ADSORBATES[i]]):
-                axa[i,j].plot(eps_d_range, energy, '-', color='tab:orange', alpha=0.5)
+                axa[i,j].plot(eps_d_range, energy, '-', color='tab:orange', alpha=0.3)
+                axa[i,j].plot(eps_d_range, coupling_test[ADSORBATES[i]][l], '-', color='tab:green', alpha=0.3)
 
         ax[j].plot(total_energy['C'], total_energy['O'], 'o', color='k')
         ax[j].plot(range_energy['C'], range_energy['O'], '-', color='tab:blue', label='Across row scaling')
@@ -239,7 +247,7 @@ if __name__ == '__main__':
         text = []
         text_aux = defaultdict(list)
         for m, metal in enumerate(parameters['metal']):
-            text.append(ax[j].text(total_energy['C'][i], total_energy['O'][i], metal, ))
+            text.append(ax[j].text(total_energy['C'][m], total_energy['O'][m], metal, ))
             text_aux['O'].append(axa[0,j].text(parameters['d_band_centre'][m], total_energy['O'][m], metal, ))
             text_aux['C'].append(axa[1,j].text(parameters['d_band_centre'][m], total_energy['C'][m], metal, ))
         adjust_text(text, ax=ax[j])
