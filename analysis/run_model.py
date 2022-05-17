@@ -38,12 +38,9 @@ if __name__ == '__main__':
         restart = False
     
     INCLUDE_REPULSION = 'linear'
-
     # Choose a sequence of adsorbates
-    # ADSORBATES = ['O', 'C']
-    # EPS_A_VALUES = [ -5, -1 ] # eV
-    ADSORBATES = ['CO',]
-    EPS_A_VALUES = [ [-7, 2.5] ] # eV
+    ADSORBATES = [  'CO', ]
+    EPS_A_VALUES = [  [-7, 2.5] ] # eV
     EPS_VALUES = np.linspace(-30, 10, 1000)
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
@@ -54,8 +51,7 @@ if __name__ == '__main__':
     # scf only calculations in order to avoid any noise and look only for 
     # the electronic structure contribution
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
-    # CHOSEN_SETUP = 'sampled'
-    CHOSEN_SETUP = 'relax'
+    CHOSEN_SETUP =  'energy'  # 'sampled' or 'energy'
 
     # get the width and d-band centre parameters
     # The moments of the density of states comes from a DFT calculation 
@@ -70,7 +66,9 @@ if __name__ == '__main__':
     no_of_bonds = yaml.safe_load(open('inputs/number_bonds.yaml', 'r'))
 
     # Plot the fitted and the real adsorption energies
-    fig, ax = plt.subplots(1, len(ADSORBATES), figsize=(6.75, 3), constrained_layout=True)
+    fig, axl = plt.subplots(1, len(ADSORBATES), figsize=(6.75, 3), 
+                            squeeze=False, constrained_layout=True)
+    ax = axl[0,:]
     for i in range(len(ax)):
         ax[i].set_xlabel('DFT energy (eV)')
         ax[i].set_ylabel('Chemisorption energy (eV)')
@@ -156,7 +154,19 @@ if __name__ == '__main__':
             constant_offest = previous_calc['constant_offset']
             initial_guess = [alpha, beta, constant_offest]
         else:
-            initial_guess = [0.01, np.pi*0.6, 0.1]
+            if isinstance(eps_a, list):
+                initial_guess = [ [ 0.01 ]*len(eps_a),
+                                [ np.pi*0.6 ] * len(eps_a),
+                                [ 0.1 ] * len(eps_a) ]
+            elif isinstance(eps_a, float) or isinstance(eps_a, int):
+                initial_guess = [ [ 0.01 ], [ np.pi*0.6 ], [ 0.1 ] ]
+
+        # Flatten the initial guess list
+        try:
+            initial_guess = [item for sublist in initial_guess for item in sublist]
+        except TypeError:
+            # If already a list of floats, do nothing
+            pass
         
         print('Initial guess: ', initial_guess)
 
@@ -193,13 +203,22 @@ if __name__ == '__main__':
         ax[i].set_aspect('equal')
 
         # Write out the fitted parameters as a json file
-        json.dump({
-            'alpha': abs(output.beta[0]),
-            'beta': abs(output.beta[1]),
-            'delta0': CONSTANT_DELTA0, 
-            'constant_offset': output.beta[2],
-            'eps_a': eps_a,
-            # 'no_of_bonds': no_of_bonds,
-        }, open(f'output/{adsorbate}_repulsion_{INCLUDE_REPULSION}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json', 'w'))
+        if isinstance(eps_a, list):
+            json.dump({
+                'alpha': output.beta[0:len(eps_a)].tolist(),
+                'beta': output.beta[len(eps_a):2*len(eps_a)].tolist(),
+                'delta0': CONSTANT_DELTA0, 
+                'constant_offset': output.beta[2*len(eps_a):3*len(eps_a)].tolist(),
+                'eps_a': eps_a,
+            }, open(f'output/{adsorbate}_repulsion_{INCLUDE_REPULSION}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json', 'w'))
+        else:
+            json.dump({
+                'alpha': abs(output.beta[0]),
+                'beta': abs(output.beta[1]),
+                'delta0': CONSTANT_DELTA0, 
+                'constant_offset': output.beta[2],
+                'eps_a': eps_a,
+            }, open(f'output/{adsorbate}_repulsion_{INCLUDE_REPULSION}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json', 'w'))
+
 
     fig.savefig(f'output/figure_3_repulsion_{INCLUDE_REPULSION}_fitting_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)

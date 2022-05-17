@@ -151,7 +151,7 @@ if __name__ == '__main__':
     with open(f"output/C_repulsion_{REPULSION}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         c_parameters = json.load(f)
     adsorbate_params = {'O': o_parameters, 'C': c_parameters}
-    GRID_LEVEL = 'high' # 'high' or 'low'
+    GRID_LEVEL = 'low' # 'high' or 'low'
     color_ads = [O_COLOR, C_COLOR]
 
     # Create range of parameters 
@@ -216,7 +216,6 @@ if __name__ == '__main__':
 
     with open(f"output/spline_objects.pkl", 'rb') as f:
         spline_objects = pickle.load(f)
-
 
     # Get the main figure with the energies and the axes
     # and the supporting figure with the density of states
@@ -397,38 +396,24 @@ if __name__ == '__main__':
     for i, row_index in enumerate(final_energy_scaling[-1.0].keys()):
         ax[-1,0].plot(final_energy_scaling[-1.0][row_index]['hyb_energy'],
                       final_energy_scaling[-5.0][row_index]['hyb_energy'],
-                      color=color_row[row_index], ls='-',) #alpha=0.2)
-        ax[-1,0].quiver(\
-                        final_energy_scaling[-1.0][row_index]['hyb_energy'][0],
-                        final_energy_scaling[-5.0][row_index]['hyb_energy'][0],
-                        final_energy_scaling[-1.0][row_index]['hyb_energy'][1]-\
-                        final_energy_scaling[-5.0][row_index]['hyb_energy'][0],
-                        final_energy_scaling[-5.0][row_index]['hyb_energy'][1]-\
-                        final_energy_scaling[-5.0][row_index]['hyb_energy'][0],
-                        color='k', scale=5,
-        ) 
+                      color=color_row[row_index], ls='-', alpha=0.5)
+        # Iterate every 5 values of final_energy_scaling[-1.0][row_index]['hyb_energy']
+        for j in range(0, len(final_energy_scaling[-1.0][row_index]['hyb_energy']), 3):
+            ax[-1,0].quiver(\
+                            final_energy_scaling[-1.0][row_index]['hyb_energy'][j],
+                            final_energy_scaling[-5.0][row_index]['hyb_energy'][j],
+                            final_energy_scaling[-1.0][row_index]['hyb_energy'][j+1]-\
+                            final_energy_scaling[-5.0][row_index]['hyb_energy'][j],
+                            final_energy_scaling[-5.0][row_index]['hyb_energy'][j+1]-\
+                            final_energy_scaling[-5.0][row_index]['hyb_energy'][j],
+                            color = color_row[row_index], 
+                            scale_units='xy', scale=5, width=.015,
+            ) 
+        # Make arrows along the plot in ax[-1,0]
+
         ax[-1,1].plot(final_energy_scaling[-1.0][row_index]['ortho_energy'],
                       final_energy_scaling[-5.0][row_index]['ortho_energy'],
                       color=color_row[row_index], ls='-',) #alpha=0.2)
-        # Get the index where eps_d of eps_d_range is less than eps_s for a row
-        # if final_energy_scaling[-5.0][row_index]['eps_s']:
-        #     eps_d_index = [i for i, eps_d in enumerate(eps_d_range) if eps_d > np.max(final_energy_scaling[-5.0][row_index]['eps_s'])]
-        #     print(eps_d_index, final_energy_scaling[-1.0][row_index]['eps_s'])
-        #     ax[-1,0].plot(np.array(final_energy_scaling[-1.0][row_index]['hyb_energy'])[eps_d_index],
-        #                   np.array(final_energy_scaling[-5.0][row_index]['hyb_energy'])[eps_d_index],
-        #                   color=color_row[row_index], alpha=0.8, ls='-')
-        #     ax[-1,1].plot(np.array(final_energy_scaling[-1.0][row_index]['ortho_energy'])[eps_d_index],
-        #                   np.array(final_energy_scaling[-5.0][row_index]['ortho_energy'])[eps_d_index],
-        #                   color=color_row[row_index], alpha=0.8, ls='-')
-        # else:
-        #     # There is no saturation point for this row, so all points
-        #     # are fair to plot
-        #     ax[-1,0].plot(np.array(final_energy_scaling[-1.0][row_index]['hyb_energy']),
-        #                   np.array(final_energy_scaling[-5.0][row_index]['hyb_energy']),
-        #                   color=color_row[row_index], alpha=0.8, ls='-')
-        #     ax[-1,1].plot(np.array(final_energy_scaling[-1.0][row_index]['ortho_energy']),
-        #                   np.array(final_energy_scaling[-5.0][row_index]['ortho_energy']),
-        #                   color=color_row[row_index], alpha=0.8, ls='-')
 
     # Run the Newns-Anderson model with the parameters to plot the 
     # projected density of states of the adsorbate and the metal

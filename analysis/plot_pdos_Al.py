@@ -15,6 +15,8 @@ if __name__ == '__main__':
     
     METAL = 'Al'
 
+    data.pop('H')
+
     fig, ax = plt.subplots(1, len(data), figsize=(6.25, 2.5), constrained_layout=True)
 
     # Plot each adsorbate separately
@@ -24,13 +26,14 @@ if __name__ == '__main__':
         ax[i].plot(pdos, energies, '-')
         ax[i].set_title(adsorbate)
 
-        # ax[i].set_ylim([-10, 10])
+        ax[i].set_ylim([-10, 10])
+        ax[i].set_xticks([])
     
     # Set the x-axis label
     # ax[0].set_xlabel('Density of States')
     # Set the y-axis label
-    ax[0].set_ylabel('Energy (eV)')
-
+    ax[0].set_ylabel('$\epsilon - \epsilon_F$ (eV)')
+    fig.supxlabel('Projected Density of States (arb. units.)')
     fig.savefig('output/pdos_Al.png', dpi=300)
 
 
