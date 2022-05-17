@@ -144,10 +144,11 @@ if __name__ == '__main__':
 
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
     CHOSEN_SETUP = open('chosen_setup', 'r').read() 
+    REPULSION = 'linear'
     # Read in scaling parameters from the model.
-    with open(f"output/O_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
+    with open(f"output/O_repulsion_{REPULSION}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         o_parameters = json.load(f)
-    with open(f"output/C_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
+    with open(f"output/C_repulsion_{REPULSION}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         c_parameters = json.load(f)
     adsorbate_params = {'O': o_parameters, 'C': c_parameters}
     GRID_LEVEL = 'high' # 'high' or 'low'
@@ -397,6 +398,15 @@ if __name__ == '__main__':
         ax[-1,0].plot(final_energy_scaling[-1.0][row_index]['hyb_energy'],
                       final_energy_scaling[-5.0][row_index]['hyb_energy'],
                       color=color_row[row_index], ls='-',) #alpha=0.2)
+        ax[-1,0].quiver(\
+                        final_energy_scaling[-1.0][row_index]['hyb_energy'][0],
+                        final_energy_scaling[-5.0][row_index]['hyb_energy'][0],
+                        final_energy_scaling[-1.0][row_index]['hyb_energy'][1]-\
+                        final_energy_scaling[-5.0][row_index]['hyb_energy'][0],
+                        final_energy_scaling[-5.0][row_index]['hyb_energy'][1]-\
+                        final_energy_scaling[-5.0][row_index]['hyb_energy'][0],
+                        color='k', scale=5,
+        ) 
         ax[-1,1].plot(final_energy_scaling[-1.0][row_index]['ortho_energy'],
                       final_energy_scaling[-5.0][row_index]['ortho_energy'],
                       color=color_row[row_index], ls='-',) #alpha=0.2)
@@ -482,8 +492,8 @@ if __name__ == '__main__':
                                 ha='right', va='top', color='k', fontsize=6,
                                 # bbox=dict(boxstyle='round,pad=0.5', fc='white', alpha=0.25),
             )
-    ax[-1,-1].set_xlabel("$\Delta E_{\mathrm{ortho}}$ ($-5$ eV) / eV")
-    ax[-1,-1].set_ylabel("$\Delta E_{\mathrm{ortho}}$ / eV")
+    ax[-1,-1].set_xlabel("$E_{\mathrm{ortho}}$ ($-5$ eV) / eV")
+    ax[-1,-1].set_ylabel("$E_{\mathrm{ortho}}$ / eV")
 
     # Add figure numbers
     alphabet = list(string.ascii_lowercase)

@@ -83,7 +83,7 @@ if __name__ == '__main__':
 
     REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
     KEEP_LIST = []
-    GRID_LEVEL = 'high' # 'high' or 'low'
+    GRID_LEVEL = 'low' # 'high' or 'low'
 
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
     CHOSEN_SETUP = open('chosen_setup', 'r').read() 
@@ -194,6 +194,7 @@ if __name__ == '__main__':
             verbose = True,
             no_of_bonds = parameters['no_of_bonds'],
             store_hyb_energies=True,
+            type_repulsion = 'grimley',
         )
 
         fitting_function =  FitParametersNewnsAnderson(**kwargs_fit)

@@ -68,7 +68,7 @@ class AdsorbateSubmissionController(FromGroupSubmissionController):
     def get_extra_unique_keys(self):
         """Return a tuple of the keys of the unique extras that will be used to uniquely identify your workchains.
         """
-        return ['metal', 'facets', 'sampled_index', 'adsorbate']
+        return ['metal', 'facet',] #'sampled_index', 'adsorbate']
 
     def get_inputs_and_processclass_from_extras(self, extras_values):
         """Return inputs and process class for the submission of this specific process.
@@ -129,10 +129,12 @@ if __name__ == '__main__':
 
     # For the submission controller
     DRY_RUN = False
-    MAX_CONCURRENT = 22
+    MAX_CONCURRENT = 10
     CODE_LABEL = f'pw_6-7_intel2021@dtu_xeon40_home'
-    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/Al_reference/adsorbates'
-    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/Al_reference/adsorbates'
+    # STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/initial/Al_reference/adsorbates'
+    # WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/Al_reference/adsorbates'
+    STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/initial/CO'
+    WORKFLOWS_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/relax/CO'
 
     controller = AdsorbateSubmissionController(
         parent_group_label=STRUCTURES_GROUP_LABEL,

@@ -88,6 +88,15 @@ class DataFromDFT:
             ase_structure = structure.get_ase()
             metal = np.unique(ase_structure.get_chemical_symbols())
             metal = metal[~np.isin(metal, self.adsorbates)]
+            metal = list(metal)
+            for ads in list(self.adsorbates):
+                if ads == 'slab':
+                    continue
+                for element in ads:
+                    try:
+                        metal.remove(element)
+                    except ValueError:
+                        pass
 
             return metal, energy, None, ase_structure 
 
@@ -215,7 +224,7 @@ if __name__ == '__main__':
 
     for root_group in GROUPNAMES:
 
-        ADSORBATES = ['slab', 'C', 'O', 'N']
+        ADSORBATES = ['slab', 'CO', 'C', 'O', 'N']
         # create the groups
         groups = []
         for adsorbate in ADSORBATES:

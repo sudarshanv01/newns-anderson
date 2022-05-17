@@ -36,10 +36,14 @@ if __name__ == '__main__':
             restart = False 
     else:
         restart = False
+    
+    INCLUDE_REPULSION = 'linear'
 
     # Choose a sequence of adsorbates
-    ADSORBATES = ['O', 'N', 'C']
-    EPS_A_VALUES = [ -5, -3, -1 ] # eV
+    # ADSORBATES = ['O', 'C']
+    # EPS_A_VALUES = [ -5, -1 ] # eV
+    ADSORBATES = ['CO',]
+    EPS_A_VALUES = [ [-7, 2.5] ] # eV
     EPS_VALUES = np.linspace(-30, 10, 1000)
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15
@@ -50,7 +54,8 @@ if __name__ == '__main__':
     # scf only calculations in order to avoid any noise and look only for 
     # the electronic structure contribution
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
-    CHOSEN_SETUP = 'sampled'
+    # CHOSEN_SETUP = 'sampled'
+    CHOSEN_SETUP = 'relax'
 
     # get the width and d-band centre parameters
     # The moments of the density of states comes from a DFT calculation 
@@ -102,10 +107,8 @@ if __name__ == '__main__':
                 dft_energies.append(adsorption_energy)
             
             # Get the bond length from the LMTO calculations
-            bond_length = data_from_LMTO['s'][metal]*units.Bohr #\
-                        # + covalent_radii[atomic_numbers[adsorbate]] 
-            bond_length_Cu = data_from_LMTO['s']['Cu']*units.Bohr # \
-                        # + covalent_radii[atomic_numbers[adsorbate]]
+            bond_length = data_from_LMTO['s'][metal]*units.Bohr
+            bond_length_Cu = data_from_LMTO['s']['Cu']*units.Bohr
 
             Vsdsq = create_coupling_elements(s_metal=s_data[metal],
                 s_Cu=s_data['Cu'],
@@ -141,12 +144,13 @@ if __name__ == '__main__':
             eps_a = eps_a,
             verbose = True,
             no_of_bonds = parameters['no_of_bonds'],
+            type_repulsion = INCLUDE_REPULSION,
         )
         fitting_function =  FitParametersNewnsAnderson(**kwargs_fit)
 
         # Is the calculation is a restart one, choose the parameters from the last calculation
         if restart:
-            previous_calc = json.load(open(f'output/{adsorbate}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json'))
+            previous_calc = json.load(open(f'output/{adsorbate}_repulsion_{INCLUDE_REPULSION}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json'))
             alpha = previous_calc['alpha']
             beta = previous_calc['beta']
             constant_offest = previous_calc['constant_offset']
@@ -196,6 +200,6 @@ if __name__ == '__main__':
             'constant_offset': output.beta[2],
             'eps_a': eps_a,
             # 'no_of_bonds': no_of_bonds,
-        }, open(f'output/{adsorbate}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json', 'w'))
+        }, open(f'output/{adsorbate}_repulsion_{INCLUDE_REPULSION}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json', 'w'))
 
-    fig.savefig(f'output/figure_3_fitting_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)
+    fig.savefig(f'output/figure_3_repulsion_{INCLUDE_REPULSION}_fitting_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)

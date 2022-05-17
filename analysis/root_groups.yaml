@@ -6,5 +6,5 @@ groups:
   # - 'RPBE/SSSP_efficiency/gauss_smearing_0.1eV/dos_scf'
   # - 'PBE/SSSP_efficiency/cold_smearing_0.1eV/dos_relax'
   # - 'PBE/SSSP_precision/gauss_smearing_0.1eV/dos_scf'
-  # - 'PBE/SSSP_precision/gauss_smearing_0.1eV/relax'
-  - 'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/relax'
+  - 'PBE/SSSP_precision/gauss_smearing_0.1eV/relax'
+  # - 'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/relax'

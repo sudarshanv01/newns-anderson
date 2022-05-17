@@ -16,7 +16,7 @@ if __name__ == '__main__':
     STRUCTURES_FULL_GROUP_LABEL = 'PBE/SSSP_precision/gauss_smearing_0.1eV/bulk_structures'
     ADSORBATE  = 'CO'
     MOL_INDEX = 1
-    METAL = 'Al'
+    # METAL = 'Al'
 
     if ADSORBATE:
         STRUCTURES_GROUP_LABEL = f'PBE/SSSP_precision/gauss_smearing_0.1eV/sampling/relax/Al_reference/adsorbates' 

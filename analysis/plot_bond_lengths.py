@@ -23,7 +23,7 @@ if __name__ == "__main__":
     metal row."""
 
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
-    COMP_SETUP = COMP_SETUP['energy']
+    COMP_SETUP = COMP_SETUP['sampled']
     with open("inputs/data_from_LMTO.json", "r") as handle:
         data_from_LMTO = json.load(handle)
     filling_data = data_from_LMTO['filling']
@@ -87,9 +87,9 @@ if __name__ == "__main__":
                     text_O2.append(ax[1,1].text(filling_data[metal], bond_length, metal, color=color))
                     ax[2,1].plot(filling_data[metal], anderson_band_width, 'v', color=color)
 
-    for a in ax[0,:]:
+    for j, a in enumerate(ax[0,:]):
         a.set_xlabel('Filling')
-        a.set_ylabel('Bond length C* (Å)')
+        a.set_ylabel(f'Bond length {ADSORBATES[j]}* (Å)')
     for a in ax[1,:]:
         a.set_xlabel('Filling')
         a.set_ylabel('Wigner-Seitz radius, s (Å)')

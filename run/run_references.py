@@ -25,7 +25,7 @@ def calculator(ecutwf, ecutrho):
         'smearing':'gauss',
         'degauss':1.46997236e-2,
         'nosym':False,
-        'input_dft': 'rpbe',
+        # 'input_dft': 'rpbe',
                 },
     "ELECTRONS": {
         "conv_thr": 4e-10,
@@ -74,12 +74,12 @@ def runner(structure):
 
     calculation = submit(builder)
     path = GroupPath()
-    path["RPBE/SSSP_efficiency/references"].get_group().add_nodes(calculation)
+    path["PBE/SSSP_precision/references"].get_group().add_nodes(calculation)
 
 
 if __name__ == '__main__':
     
-    system = molecule('C') 
+    system = molecule('CO') 
     system.set_cell([10, 10, 10])
     StructureData = DataFactory('structure')
     runner(StructureData(ase=system))
