@@ -44,7 +44,8 @@ def create_plot_layout():
         a[0].set_xlabel(r'$\epsilon_d$ / eV')
         a[1].set_xlabel(r'$\epsilon_d$ / eV')
         if i == 1:
-            a[2].set_xlabel(r'$\epsilon_a$ / eV')
+            pass
+            # axf[0].set_xlabel(r'$\epsilon_a$ / eV')
         # Make a twin axis for the hybridisation energy panel
         a[0].set_ylabel(r'$E_{\rm hyb}$  %s* / eV'%ADSORBATES[i])
         ax_p[i].set_ylabel(r'$E_{\rm hyb} ^\prime$  %s* / eV'%ADSORBATES[i], color='tab:grey')
@@ -87,8 +88,8 @@ def create_plot_layout():
         # ax[-1,i].legend(bbox_to_anchor=(1.04,1), borderaxespad=0)
 
 
-    ax[1,2].set_ylabel(r'$\epsilon_s$ (eV)')
-    # ax[0,2].axis('off')
+    ax[1,2].axis('off')
+    ax[2,2].axis('off')
 
     return fig, ax, ax_p, ax_n 
 
@@ -145,13 +146,16 @@ if __name__ == '__main__':
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
     CHOSEN_SETUP = open('chosen_setup', 'r').read() 
     REPULSION = 'linear'
+    ADSORBATE_NAMES = {-5: 'O*', -4: 'S*', -3: 'N*', -1: 'C*'}
+
     # Read in scaling parameters from the model.
     with open(f"output/O_repulsion_{REPULSION}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         o_parameters = json.load(f)
     with open(f"output/C_repulsion_{REPULSION}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         c_parameters = json.load(f)
+
     adsorbate_params = {'O': o_parameters, 'C': c_parameters}
-    GRID_LEVEL = 'low' # 'high' or 'low'
+    GRID_LEVEL = 'high' # 'high' or 'low'
     color_ads = [O_COLOR, C_COLOR]
 
     # Create range of parameters 
@@ -170,7 +174,8 @@ if __name__ == '__main__':
     EPS_RANGE = np.linspace(-30, 20, 1000)
     ADSORBATES = ['O', 'C']
     EPS_A_VALUES = [ -5, -1 ] # eV
-    CHOSEN_EPS_A_TO_PLOT = [ *EPS_A_VALUES, -3]
+    CHOSEN_EPS_A_TO_PLOT = [ *EPS_A_VALUES, -3, -4]
+
     CHOSEN_METAL = 'Rh'
 
     # Fix the energy width of the sp 
@@ -213,26 +218,35 @@ if __name__ == '__main__':
     s_data = data_from_LMTO['s']
     anderson_band_width_data = data_from_LMTO['anderson_band_width']
     minmax_parameters = json.load(open('output/minmax_parameters.json'))
-
     with open(f"output/spline_objects.pkl", 'rb') as f:
         spline_objects = pickle.load(f)
 
     # Get the main figure with the energies and the axes
     # and the supporting figure with the density of states
+    # This figure is figure no. 3 in the manuscript
     fig, ax, ax_p, ax_n  = create_plot_layout() 
+    # Generate also a figure 4 with the eps_s values
+    # and the orthogonalisation scaling values
+    figf, axf = plt.subplots(1, 2, figsize=(4, 2.), constrained_layout=True)
 
     # get a color cycle for the different adsorbates based on viridis
     color = plt.cm.coolwarm_r(np.linspace(0, 1, NUMBER_OF_ADSORBATES))
     color_row = ['tab:red', 'tab:blue', 'orange',]
+    cmap = ['Reds', 'Blues', 'Oranges']
     marker_row = ['o', 's', '^']
     ls_row = ['-', '-', '-']
-    ls_eps_a = [':', '-', '-.']
+    ls_eps_a = [':', '-', '-.', '--']
 
     # Plot the legend for the rows
     for i in range(len(color_row)):
+        axf[-1].plot([], [], color=color_row[i], ls=ls_row[i], label=f'{i+3}' + r'$d$')
         ax[1,2].plot([], [], color=color_row[i], ls=ls_row[i], label=f'{i+3}' + r'$d$')
     # ax[0,2].legend(loc='center', fontsize=12)
-    ax[1,2].legend(bbox_to_anchor=(1.04,1), borderaxespad=0, fontsize=8)
+    axf[-1].legend(bbox_to_anchor=(1.04,1), borderaxespad=0, fontsize=8)
+    ax[1,2].legend(loc='best', fontsize=10)
+    axf[0].set_ylabel(r'$\epsilon_s$ (eV)')
+    axf[0].set_xlabel(r'$\epsilon_a$ (eV)')
+
 
     # Store the final energies to plot in a scaling line
     final_energy_scaling = defaultdict( lambda: defaultdict(lambda: defaultdict(list)))
@@ -330,6 +344,7 @@ if __name__ == '__main__':
                 final_energy_scaling[eps_a][j]['filling'].extend(filling)
                 final_energy_scaling[eps_a][j]['na_plus_f'].extend(na_plus_f)
                 final_energy_scaling[eps_a][j]['chemisorption_energy'].extend(chemisorption_energy)
+                final_energy_scaling[eps_a][j]['eps_d_range'].extend(eps_d_range.tolist())
 
                 # Plot only if it is an adsorbate we compute
                 if eps_a in EPS_A_VALUES:
@@ -388,8 +403,8 @@ if __name__ == '__main__':
     # Plot the eps_s values for each row
     for i, (row, eps_s_row) in enumerate(eps_s.items()):
         if eps_s_row:
-            ax[1,2].plot(eps_a_range, eps_s_row, ls=ls_row[j], color=color_row[i]) 
-        
+            axf[0].plot(eps_a_range, eps_s_row, ls=ls_row[j], color=color_row[i]) 
+
     # Plot the scaling lines between C and O for the hybridisation
     # and orthogonalisation energies
     # for eps_a, row_scaling in final_energy_scaling.items():
@@ -397,23 +412,33 @@ if __name__ == '__main__':
         ax[-1,0].plot(final_energy_scaling[-1.0][row_index]['hyb_energy'],
                       final_energy_scaling[-5.0][row_index]['hyb_energy'],
                       color=color_row[row_index], ls='-', alpha=0.5)
+        # Make a scatter plot between -1 and -5 scaling where
+        # the color is the eps_d_range value
+        ax[-1,0].scatter(final_energy_scaling[-1.0][row_index]['hyb_energy'],
+                        final_energy_scaling[-5.0][row_index]['hyb_energy'],
+                        c=-1*np.array(final_energy_scaling[-5.0][row_index]['eps_d_range']), 
+                        cmap=cmap[row_index], s=3)
         # Iterate every 5 values of final_energy_scaling[-1.0][row_index]['hyb_energy']
-        for j in range(0, len(final_energy_scaling[-1.0][row_index]['hyb_energy']), 3):
-            ax[-1,0].quiver(\
-                            final_energy_scaling[-1.0][row_index]['hyb_energy'][j],
-                            final_energy_scaling[-5.0][row_index]['hyb_energy'][j],
-                            final_energy_scaling[-1.0][row_index]['hyb_energy'][j+1]-\
-                            final_energy_scaling[-5.0][row_index]['hyb_energy'][j],
-                            final_energy_scaling[-5.0][row_index]['hyb_energy'][j+1]-\
-                            final_energy_scaling[-5.0][row_index]['hyb_energy'][j],
-                            color = color_row[row_index], 
-                            scale_units='xy', scale=5, width=.015,
-            ) 
+        # for j in range(0, len(final_energy_scaling[-1.0][row_index]['hyb_energy']), 2):
+        #     ax[-1,0].quiver(\
+        #                     final_energy_scaling[-1.0][row_index]['hyb_energy'][j],
+        #                     final_energy_scaling[-5.0][row_index]['hyb_energy'][j],
+        #                     final_energy_scaling[-1.0][row_index]['hyb_energy'][j+1]-\
+        #                     final_energy_scaling[-5.0][row_index]['hyb_energy'][j],
+        #                     final_energy_scaling[-5.0][row_index]['hyb_energy'][j+1]-\
+        #                     final_energy_scaling[-5.0][row_index]['hyb_energy'][j],
+        #                     color = color_row[row_index], 
+        #                     scale_units='xy', scale=5, width=.015,
+        #     ) 
         # Make arrows along the plot in ax[-1,0]
 
         ax[-1,1].plot(final_energy_scaling[-1.0][row_index]['ortho_energy'],
                       final_energy_scaling[-5.0][row_index]['ortho_energy'],
-                      color=color_row[row_index], ls='-',) #alpha=0.2)
+                      color=color_row[row_index], ls='-', alpha=0.2)
+        ax[-1,1].scatter(final_energy_scaling[-1.0][row_index]['ortho_energy'],
+                        final_energy_scaling[-5.0][row_index]['ortho_energy'],
+                        c=-1*np.array(final_energy_scaling[-5.0][row_index]['eps_d_range']), 
+                        cmap=cmap[row_index], s=3)
 
     # Run the Newns-Anderson model with the parameters to plot the 
     # projected density of states of the adsorbate and the metal
@@ -463,26 +488,27 @@ if __name__ == '__main__':
     for a, eps_a in enumerate(CHOSEN_EPS_A_TO_PLOT):
         for j, metal_row in enumerate([FIRST_ROW, SECOND_ROW, THIRD_ROW]):
             # Plot the energies for each row
-            ax[-1,-1].plot(final_energy_scaling[-5][j]['ortho_energy'],
+            axf[1].plot(final_energy_scaling[-5][j]['ortho_energy'],
                        final_energy_scaling[eps_a][j]['ortho_energy'],
                        color=color_row[j],
                        ls=ls_eps_a[a],
                        label=f"{metal_row}",
-                       alpha=0.5)
+                       )
         # Annotate nearby the line with the eps_a value
-        ax[-1,-1].annotate("$\epsilon_a=$"+f"{eps_a} eV", xy=( final_energy_scaling[-5][j]['ortho_energy'][1]+2,
-                                            final_energy_scaling[eps_a][j]['ortho_energy'][1]+0.5),
+        axf[1].annotate(ADSORBATE_NAMES[eps_a], xy=( 7.5,
+                                            np.max(final_energy_scaling[eps_a][j]['ortho_energy'])-0.3),
                                 xycoords='data',
-                                xytext=(-5, 5), textcoords='offset points',
-                                ha='right', va='top', color='k', fontsize=6,
-                                # bbox=dict(boxstyle='round,pad=0.5', fc='white', alpha=0.25),
+                                color='k', fontsize=6,
+                                bbox=dict(boxstyle='round,pad=0.5', fc='white', alpha=0.25),
             )
-    ax[-1,-1].set_xlabel("$E_{\mathrm{ortho}}$ ($-5$ eV) / eV")
-    ax[-1,-1].set_ylabel("$E_{\mathrm{ortho}}$ / eV")
+    axf[1].set_xlabel("$E_{\mathrm{ortho}}$ ($-5$ eV) / eV")
+    axf[1].set_ylabel("$E_{\mathrm{ortho}}$ / eV")
 
     # Add figure numbers
     alphabet = list(string.ascii_lowercase)
     for i, a in enumerate(ax.T.flatten()):
-        a.annotate(alphabet[i]+')', xy=(0.05, 0.5), fontsize=8, xycoords='axes fraction')
+        if i < 7:
+            a.annotate(alphabet[i]+')', xy=(0.05, 0.5), fontsize=10, xycoords='axes fraction')
 
     fig.savefig(f'output/figure_4_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)
+    figf.savefig(f'output/figure_5_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)

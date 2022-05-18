@@ -76,7 +76,7 @@ def get_plot_layout():
     axp[0,1].set_xlabel('$\epsilon - \epsilon_{F}$ (eV)')
     axp[0,2].set_xlabel('$\epsilon - \epsilon_{F}$ (eV)')
     for i in range(3):
-        axp[0,i].set_xlim([-10,6])
+        # axp[0,i].set_xlim([-30,6])
         axp[0,i].set_yticks([])
         axp[0,i].axvline(x=0, color='tab:grey', linestyle='--')
     axp[0,1].plot([], [], '-', color=O_COLOR, label='$p$-O*')
