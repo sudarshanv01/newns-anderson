@@ -4,3 +4,5 @@ matplotlib
 ase
 PyYAML
 mpmath
+adjustText
+git+https://github.com/sudarshanv01/CatChemi.git

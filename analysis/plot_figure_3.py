@@ -83,14 +83,15 @@ if __name__ == '__main__':
 
     REMOVE_LIST = yaml.safe_load(stream=open('remove_list.yaml', 'r'))['remove']
     KEEP_LIST = []
-    GRID_LEVEL = 'low' # 'high' or 'low'
+    GRID_LEVEL = 'high' # 'high' or 'low'
+    REPULSION = 'linear'
 
     COMP_SETUP = yaml.safe_load(stream=open('chosen_group.yaml', 'r'))
     CHOSEN_SETUP = open('chosen_setup', 'r').read() 
     # Read in scaling parameters from the model.
-    with open(f"output/O_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
+    with open(f"output/O_repulsion_{REPULSION}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         o_parameters = json.load(f)
-    with open(f"output/C_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
+    with open(f"output/C_repulsion_{REPULSION}_parameters_{COMP_SETUP[CHOSEN_SETUP]}.json", 'r') as f:
         c_parameters = json.load(f)
     adsorbate_params = {'O': o_parameters, 'C': c_parameters}
     # Read in the metal fitting splines
@@ -194,7 +195,7 @@ if __name__ == '__main__':
             verbose = True,
             no_of_bonds = parameters['no_of_bonds'],
             store_hyb_energies=True,
-            type_repulsion = 'grimley',
+            type_repulsion = REPULSION,
         )
 
         fitting_function =  FitParametersNewnsAnderson(**kwargs_fit)
@@ -344,4 +345,5 @@ if __name__ == '__main__':
                 mode="expand", borderaxespad=0, ncol=1)
     fig.tight_layout()
     fig.savefig(f'output/figure_3_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)
+    fig.savefig(f'output/figure_3_{COMP_SETUP[CHOSEN_SETUP]}.pdf')
 

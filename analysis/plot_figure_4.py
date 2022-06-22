@@ -91,6 +91,13 @@ def create_plot_layout():
     ax[1,2].axis('off')
     ax[2,2].axis('off')
 
+    # Make an anti-clock wise circle with arrow on ax[-1,0]
+    ax[-1,0].plot([-2],[-6],marker=r'$\circlearrowleft$', ms=12, color='k')
+    ax[-1,0].annotate(r'$\uparrow \epsilon_d$', xy=(-2, -5), color='k', ha='center')
+    ax[-1,1].plot([3],[3.5],marker=r'$\circlearrowright$', ms=12, color='k')
+    ax[-1,1].annotate(r'$\uparrow \epsilon_d$', xy=(3, 4.25), color='k', ha='center')
+
+
     return fig, ax, ax_p, ax_n 
 
 def set_same_limits(axes, y_set=True, x_set=False):
@@ -501,7 +508,7 @@ if __name__ == '__main__':
                                 color='k', fontsize=6,
                                 bbox=dict(boxstyle='round,pad=0.5', fc='white', alpha=0.25),
             )
-    axf[1].set_xlabel("$E_{\mathrm{ortho}}$ ($-5$ eV) / eV")
+    axf[1].set_xlabel("$E_{\mathrm{ortho}}$ (O*) / eV")
     axf[1].set_ylabel("$E_{\mathrm{ortho}}$ / eV")
 
     # Add figure numbers
@@ -509,6 +516,10 @@ if __name__ == '__main__':
     for i, a in enumerate(ax.T.flatten()):
         if i < 7:
             a.annotate(alphabet[i]+')', xy=(0.05, 0.5), fontsize=10, xycoords='axes fraction')
+    for i, a in enumerate(axf.flatten()):
+            a.annotate(alphabet[i]+')', xy=(0.05, 0.5), fontsize=10, xycoords='axes fraction')
 
     fig.savefig(f'output/figure_4_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)
     figf.savefig(f'output/figure_5_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)
+    fig.savefig(f'output/figure_4_{COMP_SETUP[CHOSEN_SETUP]}.pdf')
+    figf.savefig(f'output/figure_5_{COMP_SETUP[CHOSEN_SETUP]}.pdf')

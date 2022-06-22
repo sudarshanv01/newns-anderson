@@ -39,8 +39,10 @@ if __name__ == '__main__':
     
     INCLUDE_REPULSION = 'linear'
     # Choose a sequence of adsorbates
-    ADSORBATES = [  'CO', ]
+    ADSORBATES = ['CO']
+    # ADSORBATES = [  'C', 'O' ]
     EPS_A_VALUES = [  [-7, 2.5] ] # eV
+    # EPS_A_VALUES = [ -1, -5 ] # eV
     EPS_VALUES = np.linspace(-30, 10, 1000)
     EPS_SP_MIN = -15
     EPS_SP_MAX = 15

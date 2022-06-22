@@ -211,3 +211,4 @@ if __name__ == '__main__':
     # set_same_limits(ax_d, y_set=True)
 
     fig.savefig(f'output/figure_1_{COMP_SETUP[CHOSEN_SETUP]}.png', dpi=300)
+    fig.savefig(f'output/figure_1_{COMP_SETUP[CHOSEN_SETUP]}.pdf')
