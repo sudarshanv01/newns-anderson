@@ -1,7 +1,3 @@
-`newns-anderson`
+# `newns-anderson`
 
-Contains
-
-1. Implementation of equations to solve the Newns-Anderson model
-2. Calculations done with LCAO and GPAW
-3. Analysis for those calculations
+Contains necessary scripts to generate figures for [this](https://aip.scitation.org/doi/full/10.1063/5.0096625) paper.
